@@ -127,7 +127,14 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
             try
             {
                 await dbContext.Database.ExecuteSqlRawAsync(
-                    "CREATE TABLE IF NOT EXISTS common_areas (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, Name VARCHAR(150) NOT NULL, Subsystem VARCHAR(50) NOT NULL, Location VARCHAR(255) NULL, Description VARCHAR(500) NULL);",
+                    "CREATE TABLE IF NOT EXISTS common_areas (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, Name VARCHAR(150) NOT NULL, Subsystem VARCHAR(50) NOT NULL, Location VARCHAR(255) NULL, Description VARCHAR(500) NULL);", cancellationToken);
+
+                // Asegura la existencia de las tablas de series temporales y alertas para Analytics
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "CREATE TABLE IF NOT EXISTS consumption_records (Id BIGINT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, DeviceId INT NOT NULL, Subsystem VARCHAR(64) NOT NULL, MetricType VARCHAR(64) NOT NULL, Value DOUBLE NOT NULL, TimestampUtc DATETIME(6) NOT NULL, INDEX idx_cr_proj_time (ProjectId, TimestampUtc), INDEX idx_cr_dev_time (DeviceId, TimestampUtc));", cancellationToken);
+
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "CREATE TABLE IF NOT EXISTS anomaly_alerts (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, DeviceId INT NOT NULL, Subsystem VARCHAR(64) NOT NULL, AlertType VARCHAR(64) NOT NULL, Severity VARCHAR(32) NOT NULL, Title VARCHAR(200) NOT NULL, Description VARCHAR(1000) NOT NULL, EstimatedOvercostSoles DECIMAL(10,2) NOT NULL DEFAULT 0.00, DetectedAtUtc DATETIME(6) NOT NULL, ResolvedAtUtc DATETIME(6) NULL, Status VARCHAR(32) NOT NULL, INDEX idx_aa_proj_status (ProjectId, Status), INDEX idx_aa_dev (DeviceId));",
                     cancellationToken);
 
                 // Asegura las columnas para alícuotas y catastro en la tabla units

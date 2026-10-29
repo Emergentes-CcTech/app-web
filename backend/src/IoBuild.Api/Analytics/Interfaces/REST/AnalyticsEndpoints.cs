@@ -1,17 +1,28 @@
 using IoBuild.Api.Analytics.Application.Internal.QueryServices;
+using IoBuild.Api.Analytics.Domain.Model.Aggregates;
 using IoBuild.Api.Analytics.Domain.Model.Queries;
+using IoBuild.Api.Analytics.Domain.Services;
+using IoBuild.Api.Persistence;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Analytics.Interfaces.REST;
 
+/// <summary>
+/// Solicitud de análisis cognitivo de consumos y variaciones para el asistente AI.
+/// </summary>
+public sealed record AiExplanationRequest(int ProjectId, int? UnitId, string BillingPeriod, string? Question = null);
+
+/// <summary>
+/// Endpoints REST para el contexto de Analytics (métricas comunales, alertas de anomalías y diagnóstico AI).
+/// </summary>
 public static class AnalyticsEndpoints
 {
-    // Dashboards serve only the caller: the JWT user id must equal the route
-    // user id (403 on explicit mismatch, 401 anonymous). Insights are scoped
-    // to projects the caller owns as builder or occupies as unit owner.
+    // Obtiene el identificador del usuario autenticado a partir de sus claims
     private static int SelfId(System.Security.Claims.ClaimsPrincipal user) =>
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
 
+    // Valida que el usuario tenga acceso al condominio (Administrador o Residente)
     private static async Task<bool> MaySeeProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct)
     {
         var self = SelfId(user);
@@ -24,6 +35,65 @@ public static class AnalyticsEndpoints
     {
         var group = app.MapGroup("/api/v1/analytics").WithTags("Analytics");
 
+        // Alertas tempranas de anomalías operativas (fugas nocturnas, sobrecargas eléctricas)
+        group.MapGet("/projects/{projectId:int}/alerts", async (int projectId, [FromQuery] string? status, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            var query = db.AnomalyAlerts.Where(a => a.ProjectId == projectId);
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(a => a.Status.ToLower() == status.ToLower());
+            }
+            var alerts = await query.OrderByDescending(a => a.DetectedAtUtc).ToListAsync(ct);
+            return Results.Ok(alerts);
+        }).RequireAuthorization();
+
+        // Resolución de una alerta de anomalía operativa
+        group.MapPost("/projects/{projectId:int}/alerts/{alertId:int}/resolve", async (int projectId, int alertId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            var alert = await db.AnomalyAlerts.FirstOrDefaultAsync(a => a.Id == alertId && a.ProjectId == projectId, ct);
+            if (alert is null) return Results.NotFound(new { message = $"Alerta #{alertId} no encontrada en el condominio #{projectId}" });
+            alert.Resolve();
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(alert);
+        }).RequireAuthorization();
+
+        // Consulta de series temporales de consumo en áreas comunes
+        group.MapGet("/projects/{projectId:int}/consumption", async (int projectId, [FromQuery] string? subsystem, [FromQuery] DateTime? from, [FromQuery] DateTime? to, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            var query = db.ConsumptionRecords.Where(c => c.ProjectId == projectId);
+            if (!string.IsNullOrWhiteSpace(subsystem))
+            {
+                query = query.Where(c => c.Subsystem.ToLower() == subsystem.ToLower());
+            }
+            if (from.HasValue) query = query.Where(c => c.TimestampUtc >= from.Value);
+            if (to.HasValue) query = query.Where(c => c.TimestampUtc <= to.Value);
+            var records = await query.OrderBy(c => c.TimestampUtc).Take(1000).ToListAsync(ct);
+            return Results.Ok(records);
+        }).RequireAuthorization();
+
+        // Asistente cognitivo determinístico / IA para explicación de variaciones de consumo
+        group.MapPost("/ai/explain", async (AiExplanationRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, IAiCognitiveService cognitive, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, request.ProjectId, ct)) return Results.Forbid();
+            if (request.UnitId.HasValue)
+            {
+                var self = SelfId(user);
+                var isProjectAdmin = await db.Projects.AnyAsync(p => p.Id == request.ProjectId && p.BuilderId == self, ct);
+                if (!isProjectAdmin)
+                {
+                    var ownsUnit = await db.Units.AnyAsync(u => u.Id == request.UnitId.Value && u.ProjectId == request.ProjectId && u.OwnerId == self, ct)
+                        || await db.UnitOwnerProjections.AnyAsync(p => p.UnitId == request.UnitId.Value && p.OwnerUserId == self, ct);
+                    if (!ownsUnit) return Results.Forbid();
+                }
+            }
+            var result = await cognitive.ExplainConsumptionVariationAsync(request.ProjectId, request.UnitId, request.BillingPeriod, request.Question ?? "Explicar variación mensual");
+            return Results.Ok(result);
+        }).RequireAuthorization();
+
+        // Endpoints de métricas existentes
         group.MapGet("/builders/{userId:int}/metrics", async (int userId, System.Security.Claims.ClaimsPrincipal user, IAnalyticsQueryService analytics, CancellationToken ct) =>
         {
             if (SelfId(user) != userId) return Results.Forbid();

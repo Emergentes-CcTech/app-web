@@ -4,6 +4,8 @@ using IoBuild.Api.Analytics.Application.Internal.CommandServices;
 using IoBuild.Api.Analytics.Application.Internal.QueryServices;
 using IoBuild.Api.Analytics.Infrastructure.InfluxDB;
 using IoBuild.Api.Analytics.Interfaces.REST;
+using IoBuild.Api.Analytics.Domain.Services;
+using IoBuild.Api.Analytics.Infrastructure.Adapters;
 using IoBuild.Api.Contracts;
 using IoBuild.Api.CoreBusiness;
 using IoBuild.Api.Devices.Application.Internal.CommandServices;
@@ -111,6 +113,8 @@ builder.Services.AddHttpClient<ILiveEnergyService, LiveEnergyService>(c => c.Tim
 builder.Services.AddHttpClient<ILiveDeviceStatusService, LiveDeviceStatusService>(c => c.Timeout = TimeSpan.FromMilliseconds(500));
 builder.Services.AddScoped<IAnalyticsQueryService, AnalyticsQueryService>();
 builder.Services.AddScoped<AnalyticsProjectionImporter>();
+builder.Services.AddScoped<IAiCognitiveService, MockAiCognitiveAdapter>();
+builder.Services.AddScoped<IAnomalyDetectionEngine, AnomalyDetectionEngine>();
 builder.Services.AddScoped<DeviceCommandService>();
 builder.Services.AddScoped<DeviceTelemetryService>();
 builder.Services.AddScoped<DeviceRegistryService>();

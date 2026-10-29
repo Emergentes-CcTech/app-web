@@ -31,6 +31,8 @@ public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options)
     public DbSet<CommonArea> CommonAreas => Set<CommonArea>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<ConsumptionRecord> ConsumptionRecords => Set<ConsumptionRecord>();
+    public DbSet<AnomalyAlert> AnomalyAlerts => Set<AnomalyAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

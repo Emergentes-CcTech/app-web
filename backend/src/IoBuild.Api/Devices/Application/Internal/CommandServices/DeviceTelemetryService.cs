@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using IoBuild.Api.Analytics.Domain.Model.Aggregates;
 using IoBuild.Api.Devices.Domain.Model.Aggregates;
 using IoBuild.Api.Devices.Domain.Model.Catalog;
 using IoBuild.Api.Devices.Domain.Model.Entities;
@@ -39,7 +40,7 @@ public sealed class DisabledDeviceMqttPublisher : IDeviceMqttPublisher
 /// <summary>
 /// Servicio de aplicación para la ingesta de telemetría IoT con validación de idempotencia y monotonicidad.
 /// </summary>
-public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetrySink influx)
+public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetrySink influx, IoBuild.Api.Analytics.Domain.Services.IAnomalyDetectionEngine? anomalyEngine = null)
 {
     // Procesa e ingesta una lectura de telemetría asegurando aislamiento por dispositivo
     public async Task<bool> IngestAsync(TelemetryMessage message, CancellationToken cancellationToken = default)
@@ -104,6 +105,67 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
             }
         }
 
+        // Evaluación previa en el motor determinístico de anomalías (antes de actualizar LastHeartbeatUtc)
+        if (anomalyEngine is not null)
+        {
+            try
+            {
+                if (device.Type == "GatewayHub")
+                {
+                    // Evalúa el estado del concentrador antes de sobreescribir el último latido
+                    await anomalyEngine.EvaluateGatewayHeartbeatAsync(device, message.OccurredAt, TimeSpan.FromMinutes(15), cancellationToken);
+                }
+                else if (device.Type == "WaterFlowSensor")
+                {
+                    double flowRate = 0.0;
+                    if (!string.IsNullOrEmpty(message.ReportedJson))
+                    {
+                        using var doc = JsonDocument.Parse(message.ReportedJson);
+                        if (doc.RootElement.TryGetProperty("flow_m3h", out var fProp)) flowRate = fProp.GetDouble();
+                        else if (doc.RootElement.TryGetProperty("flow_rate", out var frProp)) flowRate = frProp.GetDouble();
+                        else if (doc.RootElement.TryGetProperty("flow_rate_m3h", out var frmProp)) flowRate = frmProp.GetDouble();
+                    }
+                    if (flowRate > 0.0)
+                    {
+                        await anomalyEngine.EvaluateWaterFlowAsync(device, flowRate, message.OccurredAt, cancellationToken);
+                    }
+                }
+                else if (device.Subsystem == "PressurePumpsRoom" && message.EnergyKwh > 0.0)
+                {
+                    // Deriva la línea base promedio histórica a partir de ConsumptionRecords de este dispositivo
+                    var historicalBaseline = await db.ConsumptionRecords
+                        .Where(r => r.DeviceId == device.Id && r.MetricType == "EnergyKwh")
+                        .OrderByDescending(r => r.TimestampUtc)
+                        .Take(10)
+                        .Select(r => (double?)r.Value)
+                        .AverageAsync(cancellationToken) ?? 2.0;
+
+                    await anomalyEngine.EvaluatePumpElectricalAsync(device, message.EnergyKwh, baselineKwh: historicalBaseline, message.OccurredAt, cancellationToken);
+                }
+            }
+            catch (Exception)
+            {
+                // Silenciamiento controlado para preservar la continuidad de ingesta
+            }
+        }
+
+        // Escritura de la serie temporal en ConsumptionRecord
+        var metricType = device.Type == "WaterFlowSensor" ? "WaterM3" : "EnergyKwh";
+        var metricVal = incomingCumulative ?? message.EnergyKwh;
+        if (metricVal > 0.0)
+        {
+            db.ConsumptionRecords.Add(new ConsumptionRecord
+            {
+                ProjectId = device.ProjectId,
+                DeviceId = device.Id,
+                Subsystem = device.Subsystem,
+                MetricType = metricType,
+                Value = metricVal,
+                TimestampUtc = message.OccurredAt.UtcDateTime
+            });
+        }
+
+        // Actualización del estado operativo y último latido UTC del dispositivo
         device.Status = message.Status;
         device.LastHeartbeatUtc = message.OccurredAt.UtcDateTime;
 
