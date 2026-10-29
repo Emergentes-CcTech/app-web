@@ -6,7 +6,7 @@ const profilesPath = import.meta.env.VITE_PROFILES_ENDPOINT_PATH;
 const usersPath = import.meta.env.VITE_USERS_ENDPOINT_PATH;
 
 export class ResidentApi extends BaseApi {
-    /** Devuelve los datos crudos para armar residentes: unidades asignadas + perfiles + usuarios. */
+    /** Devuelve los datos operationsos para armar residentes: unidades asignadas + perfiles + usuarios. */
     async getRawByCondominium(condominiumId) {
         try {
             // Si el backend expone /residents se usa tal cual

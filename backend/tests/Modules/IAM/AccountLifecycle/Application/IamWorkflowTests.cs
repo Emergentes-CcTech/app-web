@@ -274,6 +274,56 @@ public sealed partial class IamWorkflowTests
         Assert.True(await service.IsRevokedAsync(session.Token));
     }
 
+    [Fact]
+    [Trait("Category", "IAM")]
+    [Trait("Flow", "IAM.REGISTRATION")]
+    public async Task Resident_auto_linking_binds_project_unit_and_aliquot_claims()
+    {
+        await using var db = CreateDb();
+        var service = CreateIamService(db);
+
+        // Pre-asigna la unidad en Cadastre con alícuota legal del 3.8500%
+        var unit = new IoBuild.Api.Publishing.Domain.Model.Aggregates.Unit(projectId: 10, unitNumber: "402", floorNumber: 4, areaM2: 78.5m, aliquotPercentage: 3.8500m)
+        {
+            ResidentEmail = "carla.flores@example.test",
+            ResidentFullName = "Carla Flores"
+        };
+        db.Units.Add(unit);
+        await db.SaveChangesAsync();
+
+        // Registra al residente con rol Resident
+        await service.RegisterAsync(new RegisterUser("carla.flores@example.test", "secret123", "Resident"));
+
+        // Inicia sesión y valida que la auto-vinculación devuelva el departamento y la alícuota
+        var auth = await service.SignInAsync(new SignIn("carla.flores@example.test", "secret123"));
+
+        Assert.Equal(10, auth.ProjectId);
+        Assert.Equal(unit.Id, auth.UnitId);
+        Assert.Equal("402", auth.UnitNumber);
+        Assert.Equal(3.8500m, auth.AliquotPercentage);
+
+        // Verifica que el token JWT contenga los claims de unidad y alícuota
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(auth.Token);
+        Assert.Contains(jwt.Claims, c => c.Type == "unitNumber" && c.Value == "402");
+        Assert.Contains(jwt.Claims, c => c.Type == "aliquotPercentage" && c.Value == "3.8500");
+    }
+
+    [Fact]
+    [Trait("Category", "IAM")]
+    [Trait("Flow", "IAM.REGISTRATION")]
+    public async Task PropertyManager_role_registers_and_authenticates_successfully()
+    {
+        await using var db = CreateDb();
+        var service = CreateIamService(db);
+
+        await service.RegisterAsync(new RegisterUser("admin.condo@example.test", "secret123", "PropertyManager"));
+        var auth = await service.SignInAsync(new SignIn("admin.condo@example.test", "secret123"));
+
+        Assert.Equal("PropertyManager", auth.Role);
+        Assert.False(string.IsNullOrEmpty(auth.Token));
+    }
+
     private static IoBuildDbContext CreateDb() => new(
         new DbContextOptionsBuilder<IoBuildDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 

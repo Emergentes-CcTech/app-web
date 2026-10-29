@@ -76,7 +76,7 @@ The 10 methods (16 discovered cases) occur exactly once.
 | Destination (under `Modules/`) | Original scenarios |
 |---|---|
 | `Publishing/Units/Application/UnitCommandQueryTests.cs` | Unit create/query; owner projection sync; missing user; invalid unit |
-| `Publishing/Clients/Application/ClientCommandQueryTests.cs` | Client CRUD and unit/owner projection linking |
+| `Publishing/Clients/Application/ClientCommandQueryTests.cs` | Client Lifecycle and unit/owner projection linking |
 | `Publishing/Structure/Application/ProjectStructureWorkflowTests.cs` | Provisioned project/units/floor devices/unit devices |
 | `Subscriptions/Plans/Application/PlanCommandQueryTests.cs` | Plan create/query |
 | `Subscriptions/Plans/Unit/PlanResourceTests.cs` | Seven feature-JSON partitions and resource mapping |

@@ -1,11 +1,20 @@
 namespace IoBuild.Api.IAM.Domain.Model.Commands;
 
 /// <summary>
-/// IAM Domain: commands and results. Kept in IoBuild.Api.Iam namespace for
-/// backward compatibility with existing tests and Program.cs.
-/// In DDD terms these are application commands; they live in Domain/Model
-/// to make the ubiquitous language explicit per BC.
+/// Comandos y resultados del dominio en el contexto IAM.
+/// Modela los contratos de registro, inicio de sesión y usuario autenticado con contexto de condominio.
 /// </summary>
 public sealed record RegisterUser(string Email, string Password, string Role);
+
 public sealed record SignIn(string Email, string Password);
-public sealed record AuthenticatedUser(int Id, string Email, string Role, string Token);
+
+// Representa la sesión autenticada con datos del departamento vinculado para residentes
+public sealed record AuthenticatedUser(
+    int Id,
+    string Email,
+    string Role,
+    string Token,
+    int? ProjectId = null,
+    int? UnitId = null,
+    string? UnitNumber = null,
+    decimal? AliquotPercentage = null);

@@ -1,9 +1,19 @@
 namespace IoBuild.Api.IAM.Interfaces.REST.Resources;
 
 /// <summary>
-/// IAM REST resources (DTOs). Wire contracts unchanged (snake/kebab not applied to IAM).
-/// Transform assemblers live in Transform/.
+/// Recursos REST (DTOs) del contexto IAM.
+/// Incluye los campos de auto-vinculación de departamentos y alícuota para residentes.
 /// </summary>
 public sealed record RegisterUserResource(string Email, string Password, string Role);
+
 public sealed record SignInResource(string Email, string Password);
-public sealed record AuthenticatedUserResource(int Id, string Email, string Role, string Token);
+
+public sealed record AuthenticatedUserResource(
+    int Id,
+    string Email,
+    string Role,
+    string Token,
+    int? ProjectId = null,
+    int? UnitId = null,
+    string? UnitNumber = null,
+    decimal? AliquotPercentage = null);
