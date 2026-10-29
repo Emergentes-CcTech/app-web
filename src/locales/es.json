@@ -198,7 +198,8 @@
       "gateways": "{n} Gateway | {n} Gateways",
       "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
       "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
-    }
+    },
+    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos."
   },
   "iam": {
     "logout": "Cerrar Sesión",

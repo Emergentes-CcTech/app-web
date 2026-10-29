@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { useRouter } from "vue-router";
 
 import useSubscriptionStore from "../../application/subscription.store.js";
 import { useCondominiumStore } from "../../../condominiums/application/condominium.store.js";
@@ -29,6 +30,8 @@ const confirm = useConfirm();
 const toast = useToast();
 const store = useSubscriptionStore();
 const condoStore = useCondominiumStore();
+const router = useRouter();
+const condosLoaded = ref(false);
 const selectedCondoId = ref(null);
 const registeredUnits = computed(() => condoStore.condominiums.find(c => c.id === selectedCondoId.value)?.totalUnits || 0);
 const recommendedCode = computed(() => registeredUnits.value ? (recommendedTier(registeredUnits.value)?.code ?? '') : '');
@@ -118,6 +121,7 @@ onMounted(async () => {
 
   try {
     await condoStore.fetchAll();
+    condosLoaded.value = true;
     selectedCondoId.value = condoStore.condominiums[0]?.id ?? null;
     store.selectCondominium(selectedCondoId.value);
   } catch (_) {}
@@ -206,6 +210,10 @@ const confirmPlanChange = async () => {
 };
 
 const handlePayPlan = async (plan) => {
+  if (!selectedCondoId.value) {
+    toast.add({ severity: "warn", summary: t("subscriptions.warning"), detail: t("subscriptions.needsCondominium"), life: TOAST_ERROR_DURATION_MS });
+    return;
+  }
   try {
     isProcessing.value = true;
     const administratorId = getAdministratorId();
@@ -292,6 +300,13 @@ const handlePayPlan = async (plan) => {
         <pv-select :modelValue="selectedCondoId" :options="condoStore.condominiums" optionLabel="name" optionValue="id"
                    :placeholder="t('residents.fields.condominium')" style="min-width: 18rem" @update:modelValue="onCondoChange" />
       </div>
+      <!-- La suscripción es por condominio: sin condominios no hay a qué asignar el plan -->
+      <pv-message v-else-if="condosLoaded" severity="info" :closable="false" class="mb-3">
+        <div class="flex align-items-center justify-content-between gap-3 flex-wrap">
+          <span>{{ t('subscriptions.needsCondominium') }}</span>
+          <pv-button :label="t('condominiums.add')" icon="pi pi-plus" size="small" @click="router.push({ name: 'condominium-new' })" />
+        </div>
+      </pv-message>
 
       <!-- Spinner -->
       <div v-if="store.isLoading && !store.availablePlans.length" class="loading-state">

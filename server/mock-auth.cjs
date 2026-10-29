@@ -4,6 +4,7 @@
  * - DELETE /sessions/current -> 204
  * - POST /users           -> registro con correo normalizado y 409 si ya existe
  * - GET  /sessions        -> sesión activa simulada del usuario (para la sección de seguridad)
+ * - POST /subscriptions/payments/sessions -> simula el pago de Stripe y deja el plan activo
  * Se activa con: npm run server
  */
 const fs = require('fs');
@@ -40,6 +41,39 @@ module.exports = (req, res, next) => {
 
   // GET /authentication/invitation (flujo viejo) no existe en el mock
   if (url.startsWith('/authentication/invitation')) return res.json({ assigned: false, alreadyRegistered: false });
+
+  // ── Suscripciones: el checkout de Stripe se simula creando la suscripción activa ──
+  // Se reescribe a POST /subscriptions para que json-server la guarde; checkoutUrl hace que el frontend
+  // vuelva a "Mi suscripción" como si regresara de Stripe.
+  if (req.method === 'POST' && url === '/subscriptions/payments/sessions') {
+    const { administratorId, condominiumId, planId, successUrl } = req.body || {};
+    const plan = readDb().plans.find(p => String(p.id) === String(planId));
+    if (!plan) return res.status(404).json({ message: 'Plan not found' });
+    const now = new Date();
+    req.url = '/subscriptions';
+    req.body = {
+      administratorId: Number(administratorId), condominiumId: Number(condominiumId), plan: plan.name, planId: plan.id,
+      status: 'active', startDate: now.toISOString(),
+      endDate: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString(),
+      price: plan.monthlyPen, nextBillingDate: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10),
+      checkoutUrl: successUrl,
+    };
+    return next();
+  }
+  if (req.method === 'PATCH' && url.startsWith('/subscriptions/payments/sessions/')) return res.json({ status: 'confirmed' });
+  if (req.method === 'GET' && url === '/subscriptions/payments/invoices') {
+    const administratorId = new URLSearchParams(req.url.split('?')[1] || '').get('administratorId');
+    const rows = readDb().subscriptions.filter(s => String(s.administratorId) === String(administratorId));
+    return res.json(rows.map(s => ({ id: `mock_${s.id}`, description: `Plan ${s.plan}`, amount: s.price, currency: 'PEN',
+      status: 'paid', date: s.startDate, receiptUrl: null })));
+  }
+  const cancel = url.match(/^\/subscriptions\/(\d+)\/cancel$/);
+  if (req.method === 'POST' && cancel) {
+    req.method = 'PATCH';
+    req.url = `/subscriptions/${cancel[1]}`;
+    req.body = { status: 'cancelled' };
+    return next();
+  }
 
   next();
 };

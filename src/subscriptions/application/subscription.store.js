@@ -9,6 +9,9 @@ import { IamFacade } from "../infrastructure/iam.facade.js";
 const subscriptionApi = new SubscriptionApi();
 const planApi = new PlanApi();
 
+// La más reciente primero: al cambiar de plan, la suscripción nueva gana sobre la anterior
+const newestFirst = (list) => [...list].sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0) || (b.id - a.id));
+
 export const useSubscriptionStore = defineStore("subscriptions", () => {
     const subscriptions = ref([]);
     const selectedCondominiumId = ref(null);
@@ -47,7 +50,7 @@ export const useSubscriptionStore = defineStore("subscriptions", () => {
 
     /** Suscripción vigente (o la más reciente) de un condominio */
     function subscriptionFor(condominiumId) {
-        const forCondo = subscriptions.value.filter(s => Number(s.condominiumId) === Number(condominiumId));
+        const forCondo = newestFirst(subscriptions.value.filter(s => Number(s.condominiumId) === Number(condominiumId)));
         return forCondo.find(s => s.isActive()) || forCondo[0] || null;
     }
 
@@ -80,7 +83,7 @@ export const useSubscriptionStore = defineStore("subscriptions", () => {
 
     function pickCurrent() {
         const list = subscriptions.value;
-        const forCondo = selectedCondominiumId.value ? list.filter(s => Number(s.condominiumId) === Number(selectedCondominiumId.value)) : list;
+        const forCondo = newestFirst(selectedCondominiumId.value ? list.filter(s => Number(s.condominiumId) === Number(selectedCondominiumId.value)) : list);
         const chosen = forCondo.find(s => s.isActive()) || forCondo[0] || null;
         currentSubscription.value = chosen;
         return chosen;

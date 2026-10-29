@@ -198,7 +198,8 @@
       "gateways": "{n} Gateway | {n} Gateways",
       "flowMeters": "{n} Flow meter | {n} Flow meters",
       "ctClamps": "{n} CT clamp | {n} CT clamps"
-    }
+    },
+    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments."
   },
   "iam": {
     "logout": "Log Out",

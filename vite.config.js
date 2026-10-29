@@ -34,6 +34,10 @@ export default defineConfig(({ mode }) => {
       fs: {
         caseSensitive: true,
       },
+      // json-server escribe en server/db.json; sin esto cada guardado del mock recargaría la app
+      watch: {
+        ignored: ['**/server/db.json'],
+      },
       proxy: {
         '/api': {
           target: env.VITE_PROXY_TARGET || process.env.VITE_PROXY_TARGET || 'http://localhost:5080',

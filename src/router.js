@@ -91,9 +91,11 @@ router.beforeEach(async (to, from, next) => {
     if (isAuthenticated) {
         const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY) || 'null');
         const isAdministrator = isAdmin(currentUser?.role);
+        // Condominios también se permite: la suscripción es por condominio, así que primero hay que registrarlo.
         const isAllowedWithoutSub = to.path.startsWith(ROUTES.SUBSCRIPTIONS_BASE)
             || to.path.startsWith(ROUTES.IAM_BASE)
-            || to.path.startsWith(ROUTES.PROFILES_BASE);
+            || to.path.startsWith(ROUTES.PROFILES_BASE)
+            || to.path.startsWith(ROUTES.CONDOMINIUMS_BASE);
 
         if (isAdministrator && !isAllowedWithoutSub) {
             // Retry up to 2 times with a short delay to handle the race window
