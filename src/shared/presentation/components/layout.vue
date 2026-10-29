@@ -90,10 +90,10 @@ const handleLogout = async () => {
 
 const items = [
   // Administrador
-  { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home', requiresSubscription: true },
+  { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home' },
   { label: 'option.condominiums', to: ROUTES.CONDOMINIUMS, use_role: ROLES.ADMIN, icon: 'pi pi-building' },
-  { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users', requiresSubscription: true },
-  { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip', requiresSubscription: true },
+  { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users' },
+  { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
   { label: 'option.alerts', to: ROUTES.ALERTS, use_role: ROLES.ADMIN, icon: 'pi pi-bell', requiresSubscription: true },
   { label: 'option.bills', to: ROUTES.BILLING_BILLS, use_role: ROLES.ADMIN, icon: 'pi pi-file', requiresSubscription: true },
   { label: 'option.settlements', to: ROUTES.BILLING_SETTLEMENTS, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
