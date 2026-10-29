@@ -412,7 +412,8 @@ public sealed record DeviceResponse(
     string? Subsystem = null,
     decimal? NightFlowThresholdM3H = null,
     double? LastCumulativeReading = null,
-    DateTime? LastHeartbeatUtc = null)
+    DateTime? LastHeartbeatUtc = null,
+    int? CondominiumId = null)
 {
     public static DeviceResponse From(Device device) => new(
         device.Id, 
@@ -426,5 +427,6 @@ public sealed record DeviceResponse(
         device.Subsystem,
         device.NightFlowThresholdM3H,
         device.LastCumulativeReading,
-        device.LastHeartbeatUtc);
+        device.LastHeartbeatUtc,
+        device.ProjectId);
 }

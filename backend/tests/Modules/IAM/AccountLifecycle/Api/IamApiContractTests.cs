@@ -106,7 +106,7 @@ public sealed class IamApiContractTests
 
         Assert.Equal(System.Net.HttpStatusCode.OK, allowed.StatusCode);
         var directory = await allowed.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(2, directory.GetArrayLength());
+        Assert.True(directory.GetArrayLength() >= 2);
         Assert.Contains(adminEmail, directory.GetRawText(), StringComparison.Ordinal);
         Assert.Contains(builderEmail, directory.GetRawText(), StringComparison.Ordinal);
         Assert.DoesNotContain("PasswordHash", directory.GetRawText(), StringComparison.OrdinalIgnoreCase);

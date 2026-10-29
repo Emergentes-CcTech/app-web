@@ -1,30 +1,25 @@
 """
-IoT Telemetry Simulator for IoBuild.
+Simulador de Telemetría IoT para la Plataforma IoBuild (Áreas Comunes y Prorrateo Legal).
 
-Dynamic device set: devices are discovered at runtime via retained MQTT
-registry/{deviceId} messages published by the Devices module
-(DeviceRegistryService). For each known device the simulator publishes
-telemetry/{deviceId} every 5 seconds and subscribes to commands/{deviceId}
-(QoS 1, retain). On a command it applies the desired attributes and immediately
-echoes telemetry so the backend can reconcile reported state.
+Modela exclusivamente hardware comunal de condominios residenciales:
+  1. GatewayHub: Concentrador de sótano con buffer offline de 72h y respaldo 4G.
+  2. WaterFlowSensor: Caudalímetro no invasivo de pulsos en tubería de cisterna (m3 y caudal m3/h).
+  3. CurrentTransformerCT: Pinza amperimétrica en tableros de bombas, ascensores e iluminación (kWh, corriente A, potencia kW).
 
-Registry contract:
-  registry/{deviceId}  (retained, QoS 1)
-    non-empty {"deviceId": <int>, "type": "<code>"}  -> device present
-    empty payload                                    -> tombstone (remove)
-
-Environment variables:
-  MQTT_HOST  - MQTT broker host (default: localhost)
-  MQTT_PORT  - MQTT broker port (default: 1883)
-  MQTT_USERNAME / MQTT_PASSWORD - broker credentials (optional; anonymous when unset)
+Soporta flags para validación de motores de anomalías:
+  --leak      : Inyecta fuga nocturna en cisterna (flujo > 0.15 m3/h entre 01:00 y 04:00 AM hora Perú UTC-5).
+  --overload  : Inyecta sobrecarga eléctrica en el cuarto de bombas hidroneumáticas (>25% línea base).
+  --replay    : Simula reenvío secuencial desde el buffer local de 72h tras reconexión del Gateway.
 """
 
 import os
+import sys
 import json
 import time
 import random
+import argparse
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import paho.mqtt.client as mqtt
 
@@ -33,178 +28,207 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USERNAME = os.getenv("MQTT_USERNAME")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
-LOCATIONS = ["Sector-A", "Sector-B", "Sector-C", "Sector-D", "Sector-E"]
-STATUS_WEIGHTS = ["online"] * 3 + ["idle"]  # 75% online, 25% idle
+# Catálogo fijo de los 6 equipos IoT comunales en comodato (Condominio Residencial Los Robles)
+DEFAULT_COMMUNAL_DEVICES = {
+    1: {"name": "GW-SOT-01", "type": "GatewayHub", "subsystem": "MainCistern", "mac": "AA:BB:CC:11:00:01", "location": "Sótano 1 - Cisterna"},
+    2: {"name": "WFS-CIS-IN", "type": "WaterFlowSensor", "subsystem": "MainCistern", "mac": "AA:BB:CC:11:00:02", "location": "Sótano 1 - Tubería Matriz Cisterna"},
+    3: {"name": "WFS-CIS-OUT", "type": "WaterFlowSensor", "subsystem": "MainCistern", "mac": "AA:BB:CC:11:00:03", "location": "Sótano 1 - Impulsión Hidroneumática"},
+    4: {"name": "CT-BOMB-01", "type": "CurrentTransformerCT", "subsystem": "PressurePumpsRoom", "mac": "AA:BB:CC:11:00:04", "location": "Sótano 1 - Tablero de Bombas"},
+    5: {"name": "CT-ASC-01", "type": "CurrentTransformerCT", "subsystem": "ElevatorsBank", "mac": "AA:BB:CC:11:00:05", "location": "Azotea - Tablero de Ascensores"},
+    6: {"name": "CT-TAB-GRAL", "type": "CurrentTransformerCT", "subsystem": "GeneralElectricalPanel", "mac": "AA:BB:CC:11:00:06", "location": "Sótano 1 - Tablero Eléctrico General"}
+}
 
-# Dynamic device registry: id -> {"type": str}. Guarded by _lock because paho
-# callbacks run on the network-loop thread while the telemetry loop runs on main.
-_devices: dict[int, dict] = {}
-# Per-device desired state applied from commands/{deviceId}.
-_device_desired: dict[int, dict] = {}
+# Estado de lecturas acumuladas (garantiza monotonicidad estricta)
+_cumulative_readings = {
+    1: 0.0,      # Gateway (heartbeats)
+    2: 420.50,   # Cisterna Entrada (m3)
+    3: 412.10,   # Cisterna Salida (m3)
+    4: 1250.00,  # Bombas (kWh)
+    5: 890.30,   # Ascensores (kWh)
+    6: 2150.80   # Tablero General (kWh)
+}
+
 _lock = threading.Lock()
+_discovered_devices = dict(DEFAULT_COMMUNAL_DEVICES)
 
 
-def _energy_for_ac(desired: dict) -> float:
-    """AirConditioner energy model based on power, mode and targetTemperature."""
-    power = str(desired.get('power', 'off')).lower()
-    if power in ('off', 'false', '0'):
-        return round(random.uniform(0.0, 0.05), 3)  # standby draw
+def generate_communal_telemetry(device_id: int, info: dict, simulate_leak: bool = False, simulate_overload: bool = False, override_timestamp: str = None) -> dict:
+    """Genera paquete de telemetría respetando el contrato de áreas comunes y subsistemas."""
+    dtype = info.get("type", "CurrentTransformerCT")
+    mac = info.get("mac", f"AA:BB:CC:11:00:{device_id:02d}")
+    location = info.get("location", "Área Común")
+    subsystem = info.get("subsystem", "GeneralElectricalPanel")
 
-    mode = str(desired.get('mode', 'cooling')).lower()
-    if mode == 'fan':
-        return round(random.uniform(0.05, 0.2), 2)  # fan-only: low draw
+    now_utc = datetime.now(timezone.utc)
+    ts = override_timestamp or now_utc.isoformat()
 
-    # cooling / heating / auto: scale by how hard the compressor works.
-    # targetTemperature range 16–30 °C.
-    # Cooling: lower target → compressor works harder → more energy.
-    # Heating: higher target → heat pump works harder → more energy.
-    target = float(desired.get('targetTemperature', 22))
-    target = max(16.0, min(30.0, target))
-    if mode == 'heating':
-        factor = (target - 16.0) / 14.0        # 0.0 (16°C) → 1.0 (30°C)
-    else:
-        factor = (30.0 - target) / 14.0        # 1.0 (16°C) → 0.0 (30°C)
+    # Hora de Lima (UTC-5) para evaluación de ventana nocturna
+    lima_tz = timezone(timedelta(hours=-5))
+    local_time = now_utc.astimezone(lima_tz)
+    is_nocturnal_window = (1 <= local_time.hour < 4) or simulate_leak
 
-    base = random.uniform(0.4, 1.2)            # base compressor draw (kWh)
-    return round(base + factor * random.uniform(0.5, 1.8), 2)
+    with _lock:
+        prev_reading = _cumulative_readings.get(device_id, 100.0)
 
+    if dtype == "GatewayHub":
+        payload = {
+            "deviceId": device_id,
+            "macAddress": mac,
+            "timestamp": ts,
+            "subsystem": subsystem,
+            "location": location,
+            "status": "online",
+            "reported": {
+                "uptime_seconds": 86400 + random.randint(100, 5000),
+                "battery_backup_pct": 100,
+                "cellular_backup_signal_dbm": -72,
+                "buffered_packets_count": 0,
+                "firmware_version": "v2.4.0-communal"
+            }
+        }
 
-def _energy_for_smartlight(desired: dict) -> float:
-    """SmartLight energy model: linear with brightness, near-zero when off."""
-    power = str(desired.get('power', 'off')).lower()
-    if power in ('off', 'false', '0'):
-        return round(random.uniform(0.0, 0.005), 4)  # LED standby: negligible
-
-    brightness = max(0.0, min(100.0, float(desired.get('brightness', 100))))
-    scale = brightness / 100.0
-    # Full brightness: 0.08–0.15 kWh; scales linearly down to near-zero at 0%.
-    base = random.uniform(0.08, 0.15)
-    return round(base * scale, 3)
-
-
-def _energy_generic(desired: dict) -> float:
-    """Passive sensor / generic energy model: low fixed draw, no controls affect it."""
-    # Telemetry-only devices (SmartMeter, WaterSensor, SmokeDetector) consume very
-    # little power — they're passive sensors. Range: 0.01–0.05 kWh.
-    return round(random.uniform(0.01, 0.05), 3)
-
-
-def _device_status(desired: dict, device_type: str) -> str:
-    """Derive online/idle status from the device's desired power state.
-
-    Controllable devices (AirConditioner, SmartLight) are 'online' only when
-    powered on. Passive sensors have no power control and are always 'online'.
-    """
-    dtype = device_type.lower()
-    if dtype in ('airconditioner', 'smartlight'):
-        power = str(desired.get('power', 'off')).lower()
-        return 'idle' if power in ('off', 'false', '0') else 'online'
-    # Passive sensors (SmartMeter, WaterSensor, SmokeDetector, custom types)
-    # are always online — they run continuously.
-    return 'online'
-
-
-def generate_payload(device_id: int, desired: dict, device_type: str = '') -> dict:
-    dtype = device_type.lower()
-    if dtype == 'airconditioner':
-        energy_kwh = _energy_for_ac(desired)
-    elif dtype == 'smartlight':
-        energy_kwh = _energy_for_smartlight(desired)
-    else:
-        energy_kwh = _energy_generic(desired)
-
-    is_temp_device = dtype in ('airconditioner', 'thermostat', 'temperature', 'temperaturesensor', 'climatesensor')
-    if is_temp_device:
-        if dtype == 'airconditioner':
-            target = float(desired.get('targetTemperature', 22.0))
-            is_on = desired.get('power', False)
-            temperature_c = round(target + random.uniform(-0.8, 0.8), 1) if is_on else round(random.uniform(22.0, 26.0), 1)
+    elif dtype == "WaterFlowSensor":
+        # Incremento volumétrico continuo (m3)
+        if is_nocturnal_window and simulate_leak:
+            # Fuga nocturna: flujo continuo de 0.28 m3/h (> 0.15 umbral)
+            flow_m3h = round(random.uniform(0.25, 0.35), 3)
+            delta_m3 = (flow_m3h / 3600.0) * 5.0  # incremento en 5 segundos
+        elif is_nocturnal_window:
+            # Ventana nocturna normal: consumo casi nulo (< 0.05 m3/h)
+            flow_m3h = round(random.uniform(0.00, 0.04), 3)
+            delta_m3 = (flow_m3h / 3600.0) * 5.0
         else:
-            temperature_c = round(random.uniform(18.0, 30.0), 1)
-    else:
-        temperature_c = 0.0
+            # Día: consumo regular de áreas comunes
+            flow_m3h = round(random.uniform(0.80, 2.50), 3)
+            delta_m3 = (flow_m3h / 3600.0) * 5.0
 
-    payload = {
-        "deviceId": device_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "energy_kwh": energy_kwh,
-        "temperature_c": temperature_c,
-        "voltage_v": round(random.uniform(215.0, 230.0), 1),
-        "status": _device_status(desired, device_type),
-        "location": LOCATIONS[(device_id - 1) % len(LOCATIONS)],
-    }
-    if desired:
-        payload["reported"] = desired
+        with _lock:
+            new_cumulative = round(prev_reading + delta_m3, 4)
+            _cumulative_readings[device_id] = new_cumulative
+
+        payload = {
+            "deviceId": device_id,
+            "macAddress": mac,
+            "timestamp": ts,
+            "subsystem": subsystem,
+            "location": location,
+            "status": "online",
+            "energy_kwh": 0.0,
+            "reported": {
+                "flow_m3h": flow_m3h,
+                "flow_rate_m3h": flow_m3h,
+                "cumulative_m3": new_cumulative,
+                "cumulative_value": new_cumulative,
+                "water_pressure_bar": round(random.uniform(3.8, 4.5), 2),
+                "pulse_count": int(new_cumulative * 1000)
+            }
+        }
+
+    else:
+        # CurrentTransformerCT (Bombas, Ascensores, Tablero General)
+        if subsystem == "PressurePumpsRoom" and simulate_overload:
+            # Sobrecarga eléctrica en bombas: 5.5 kW (> 25% de la línea base promedio de 2.0 kW)
+            power_kw = round(random.uniform(4.8, 5.8), 2)
+            current_a = round((power_kw * 1000.0) / 220.0, 2)
+        elif subsystem == "PressurePumpsRoom":
+            power_kw = round(random.uniform(1.8, 2.2), 2)
+            current_a = round((power_kw * 1000.0) / 220.0, 2)
+        elif subsystem == "ElevatorsBank":
+            power_kw = round(random.uniform(0.5, 3.5), 2)  # variable con subida/bajada
+            current_a = round((power_kw * 1000.0) / 220.0, 2)
+        else:
+            # Tablero General (iluminación común pasillos y sótanos)
+            power_kw = round(random.uniform(0.9, 1.4), 2)
+            current_a = round((power_kw * 1000.0) / 220.0, 2)
+
+        delta_kwh = (power_kw / 3600.0) * 5.0
+        with _lock:
+            new_cumulative = round(prev_reading + delta_kwh, 4)
+            _cumulative_readings[device_id] = new_cumulative
+
+        payload = {
+            "deviceId": device_id,
+            "macAddress": mac,
+            "timestamp": ts,
+            "subsystem": subsystem,
+            "location": location,
+            "energy_kwh": power_kw,
+            "voltage_v": round(random.uniform(218.0, 222.0), 1),
+            "status": "online",
+            "reported": {
+                "power_kw": power_kw,
+                "current_a": current_a,
+                "cumulative_kwh": new_cumulative,
+                "cumulative_value": new_cumulative,
+                "power_factor": 0.95
+            }
+        }
+
     return payload
 
 
 def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
-        print(f"Connected to MQTT broker at {MQTT_HOST}:{MQTT_PORT}")
-        # Discover devices: retained registry messages are delivered on subscribe.
+        print(f"[MQTT] Conectado exitosamente al broker en {MQTT_HOST}:{MQTT_PORT}")
         client.subscribe("registry/#", qos=1)
-        print("Subscribed to registry/#")
-        # Restore command subscriptions for already-known devices after a reconnect.
-        with _lock:
-            known = list(_devices.keys())
-        for device_id in known:
-            client.subscribe(f"commands/{device_id}", qos=1)
+        client.subscribe("commands/#", qos=1)
+        print("[MQTT] Suscrito a tópicos registry/# y commands/#")
     else:
-        print(f"Failed to connect to MQTT broker, return code {rc}")
-
-
-def _handle_registry(client, device_id: int, raw: bytes):
-    if not raw:  # tombstone -> remove device
-        with _lock:
-            _devices.pop(device_id, None)
-            _device_desired.pop(device_id, None)
-        client.unsubscribe(f"commands/{device_id}")
-        print(f"[REGISTRY] device {device_id} removed (tombstone)")
-        return
-    info = json.loads(raw.decode("utf-8"))
-    dtype = info.get("type", "unknown")
-    with _lock:
-        is_new = device_id not in _devices
-        _devices[device_id] = {"type": dtype}
-    client.subscribe(f"commands/{device_id}", qos=1)
-    if is_new:
-        print(f"[REGISTRY] device {device_id} registered type={dtype}; subscribed commands/{device_id}")
-
-
-def _handle_command(client, device_id: int, raw: bytes):
-    command = json.loads(raw.decode("utf-8"))
-    with _lock:
-        _device_desired.setdefault(device_id, {}).update(command)
-        desired = dict(_device_desired[device_id])
-    applied = ", ".join(f"{k}={v}" for k, v in command.items())
-    print(f"[CMD] device={device_id} applied: {applied} | desired={desired}")
-    with _lock:
-        dtype = _devices.get(device_id, {}).get('type', '')
-    ack = generate_payload(device_id, desired, dtype)
-    client.publish(f"telemetry/{device_id}", json.dumps(ack), qos=1)
-    print(f"[ACK] Published updated telemetry to telemetry/{device_id}")
+        print(f"[MQTT] Error de conexión con código {rc}")
 
 
 def on_message(client, userdata, message):
     topic = message.topic
     try:
         parts = topic.split("/")
-        if len(parts) != 2:
-            print(f"[WARN] Unexpected topic: {topic}")
-            return
-        kind, id_str = parts
-        device_id = int(id_str)
-        if kind == "registry":
-            _handle_registry(client, device_id, message.payload)
-        elif kind == "commands":
-            _handle_command(client, device_id, message.payload)
-        else:
-            print(f"[WARN] Unhandled topic kind: {topic}")
-    except (ValueError, json.JSONDecodeError) as exc:
-        print(f"[ERROR] Failed to process message on {topic}: {exc}")
+        if len(parts) == 2 and parts[0] == "registry":
+            dev_id = int(parts[1])
+            if not message.payload:
+                with _lock:
+                    _discovered_devices.pop(dev_id, None)
+                print(f"[REGISTRY] Dispositivo #{dev_id} desvinculado (tombstone)")
+            else:
+                data = json.loads(message.payload.decode("utf-8"))
+                with _lock:
+                    if dev_id in _discovered_devices:
+                        _discovered_devices[dev_id].update(data)
+                    else:
+                        _discovered_devices[dev_id] = data
+                print(f"[REGISTRY] Dispositivo #{dev_id} registrado: {data.get('type')}")
+    except Exception as ex:
+        print(f"[ERROR] Error procesando mensaje MQTT en {topic}: {ex}")
+
+
+def run_replay_simulation(client, hours: int = 72):
+    """Simula el reenvío ordenado del buffer offline de 72h tras reconexión en sótanos."""
+    print(f"\n=== SIMULACIÓN DE BUFFER OFFLINE ({hours} Horas) ===")
+    start_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+    step_minutes = 60
+    current = start_time
+
+    batch_count = 0
+    while current <= datetime.now(timezone.utc):
+        ts_str = current.isoformat()
+        with _lock:
+            devices_snapshot = list(_discovered_devices.items())
+
+        for dev_id, info in devices_snapshot:
+            payload = generate_communal_telemetry(dev_id, info, override_timestamp=ts_str)
+            client.publish(f"telemetry/{dev_id}", json.dumps(payload), qos=1)
+            batch_count += 1
+
+        current += timedelta(minutes=step_minutes)
+
+    print(f"[REPLAY] {batch_count} paquetes históricos reenviados exitosamente respetando monotonicidad e idempotencia.")
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Simulador IoT IoBuild para Áreas Comunes de Condominios")
+    parser.add_argument("--leak", action="store_true", help="Simula fuga nocturna continua en cisterna (> 0.15 m3/h de 01:00 a 04:00 AM)")
+    parser.add_argument("--overload", action="store_true", help="Simula sobrecarga eléctrica en el cuarto de bombas (> 25% línea base)")
+    parser.add_argument("--replay", action="store_true", help="Simula reenvío secuencial desde el buffer local de 72h")
+    args = parser.parse_args()
+
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
@@ -215,25 +239,40 @@ def main():
         client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
         client.loop_start()
     except Exception as e:
-        print(f"Error connecting to MQTT broker: {e}")
-        return
+        print(f"[ADVERTENCIA] No se pudo conectar al broker MQTT ({e}). Ejecutando en modo consola de prueba.")
 
-    print("Starting dynamic simulator (devices discovered via registry/#)...")
+    if args.replay:
+        run_replay_simulation(client, hours=72)
 
-    while True:
-        with _lock:
-            snapshot = [(d, dict(_device_desired.get(d, {}))) for d in _devices]
-        for device_id, desired in snapshot:
-            dtype = _devices.get(device_id, {}).get('type', '')
-            payload = generate_payload(device_id, desired, dtype)
-            client.publish(f"telemetry/{device_id}", json.dumps(payload), qos=1)
-            print(
-                f"[{payload['timestamp']}] Published to telemetry/{device_id}: "
-                f"energy={payload['energy_kwh']}kWh, temp={payload['temperature_c']}C, "
-                f"voltage={payload['voltage_v']}V, status={payload['status']}"
-                + (f", reported={payload['reported']}" if "reported" in payload else "")
-            )
-        time.sleep(5)
+    print("\nIniciando bucle de telemetría IoT de áreas comunes (intervalo: 5s)...")
+    if args.leak:
+        print(">> MODO ACTIVO: Simulación de Fuga Nocturna en Cisterna (--leak)")
+    if args.overload:
+        print(">> MODO ACTIVO: Simulación de Sobrecarga en Cuarto de Bombas (--overload)")
+
+    try:
+        while True:
+            with _lock:
+                devices_snapshot = list(_discovered_devices.items())
+
+            for dev_id, info in devices_snapshot:
+                payload = generate_communal_telemetry(dev_id, info, simulate_leak=args.leak, simulate_overload=args.overload)
+                try:
+                    client.publish(f"telemetry/{dev_id}", json.dumps(payload), qos=1)
+                except Exception:
+                    pass
+
+                dev_name = info.get('name', f"Dispositivo #{dev_id}")
+                dev_type = info.get('type', 'Device')
+                print(f"[{payload['timestamp']}] {dev_name} ({dev_type}) | "
+                      f"Subsystem: {payload['subsystem']} | "
+                      f"Reported: {json.dumps(payload.get('reported', {}))}")
+
+            time.sleep(5)
+    except KeyboardInterrupt:
+        print("\nDeteniendo simulador IoT.")
+        client.loop_stop()
+        client.disconnect()
 
 
 if __name__ == "__main__":

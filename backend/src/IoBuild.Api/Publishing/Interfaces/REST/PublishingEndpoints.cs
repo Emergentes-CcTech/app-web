@@ -42,24 +42,44 @@ public static class PublishingEndpoints
 
 
 
-    private static bool HasRole(ClaimsPrincipal user, string expectedRole) =>
+    private static bool HasRole(ClaimsPrincipal user, string expectedRole)
+    {
+        var roles = user.FindAll(ClaimTypes.Role)
+            .Concat(user.FindAll("role"))
+            .Select(c => c.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        string.Equals(user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value, expectedRole, StringComparison.OrdinalIgnoreCase);
+        if (roles.Contains(expectedRole)) return true;
+        if (expectedRole.Equals("Builder", StringComparison.OrdinalIgnoreCase) && (roles.Contains("PropertyManager") || roles.Contains("Admin"))) return true;
+        if (expectedRole.Equals("PropertyManager", StringComparison.OrdinalIgnoreCase) && (roles.Contains("Builder") || roles.Contains("Admin"))) return true;
+        if (expectedRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) && (roles.Contains("PropertyManager") || roles.Contains("Builder"))) return true;
+        if (expectedRole.Equals("Resident", StringComparison.OrdinalIgnoreCase) && roles.Contains("Owner")) return true;
+        if (expectedRole.Equals("Owner", StringComparison.OrdinalIgnoreCase) && roles.Contains("Resident")) return true;
+        return false;
+    }
 
+    private static bool OwnsProject(ClaimsPrincipal user, IoBuild.Api.Publishing.Domain.Model.Aggregates.Project project)
+    {
+        var self = SelfId(user);
+        return self == project.BuilderId || self == project.AdministratorId;
+    }
 
-
-    private static bool OwnsProject(ClaimsPrincipal user, IoBuild.Api.Publishing.Domain.Model.Aggregates.Project project) => SelfId(user) == project.BuilderId;
-
-
+    private static async Task<bool> CanReadProjectAsync(ClaimsPrincipal user, IoBuildDbContext db, IoBuild.Api.Publishing.Domain.Model.Aggregates.Project project, CancellationToken ct)
+    {
+        if (OwnsProject(user, project)) return true;
+        var self = SelfId(user);
+        if (HasRole(user, "Resident") || HasRole(user, "Owner"))
+        {
+            var email = user.FindFirst(ClaimTypes.Email)?.Value?.ToLower();
+            return await db.Units.AnyAsync(u => u.ProjectId == project.Id && (u.OwnerId == self || (!string.IsNullOrEmpty(email) && u.OwnerEmail != null && u.OwnerEmail.ToLower() == email)), ct);
+        }
+        return false;
+    }
 
     private static async Task<bool> OwnsProjectIdAsync(ClaimsPrincipal user, IoBuildDbContext db, int projectId, CancellationToken ct)
-
     {
-
         var project = await db.Projects.FindAsync([projectId], ct);
-
         return project is not null && OwnsProject(user, project);
-
     }
 
 
@@ -559,59 +579,48 @@ public static class PublishingEndpoints
 
 
         projects.MapGet("", async (ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
-
         {
-
             var sid = user.FindFirst(ClaimTypes.Sid)?.Value ?? user.FindFirst("sid")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
-
             var builderId = int.TryParse(sid, out var id) ? id : 0;
-
-            var projectList = await db.Projects.Where(project => project.BuilderId == builderId).OrderBy(project => project.Id).ToListAsync(ct);
+            List<IoBuild.Api.Publishing.Domain.Model.Aggregates.Project> projectList;
+            if (HasRole(user, "Resident") || HasRole(user, "Owner"))
+            {
+                var email = user.FindFirst(ClaimTypes.Email)?.Value?.ToLower();
+                var residentProjectIds = await db.Units
+                    .Where(u => u.OwnerId == builderId || (!string.IsNullOrEmpty(email) && u.OwnerEmail != null && u.OwnerEmail.ToLower() == email))
+                    .Select(u => u.ProjectId)
+                    .Distinct()
+                    .ToListAsync(ct);
+                projectList = await db.Projects.Where(p => residentProjectIds.Contains(p.Id)).OrderBy(p => p.Id).ToListAsync(ct);
+            }
+            else
+            {
+                projectList = await db.Projects.Where(project => project.BuilderId == builderId).OrderBy(project => project.Id).ToListAsync(ct);
+            }
 
             var projectIds = projectList.Select(p => p.Id).ToList();
-
             var occupiedCounts = await db.Units
-
                 .Where(u => projectIds.Contains(u.ProjectId) && (!string.IsNullOrEmpty(u.OwnerEmail) || u.OwnerId.HasValue))
-
                 .GroupBy(u => u.ProjectId)
-
                 .Select(g => new { ProjectId = g.Key, Count = g.Count() })
-
                 .ToDictionaryAsync(g => g.ProjectId, g => g.Count, ct);
 
-
-
             var result = projectList.Select(p => new
-
             {
-
                 p.Id,
-
                 p.Name,
-
                 p.Description,
-
                 p.Location,
-
                 p.TotalUnits,
-
                 OccupiedUnits = occupiedCounts.GetValueOrDefault(p.Id, 0),
-
                 p.BuilderId,
-
+                AdministratorId = p.AdministratorId,
                 p.ImageUrl,
-
                 p.StructureDefined,
-
                 p.CreatedAt
-
             });
 
-
-
             return Results.Ok(result);
-
         }).RequireAuthorization();
 
 
@@ -643,43 +652,43 @@ public static class PublishingEndpoints
 
 
         projects.MapGet("/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
-
         {
-
             var item = await db.Projects.FindAsync([id], ct);
-
-            if (item is null || !OwnsProject(user, item)) return Results.NotFound();
+            if (item is null || !await CanReadProjectAsync(user, db, item, ct)) return Results.NotFound();
 
             var occupiedUnits = await db.Units
-
                 .CountAsync(u => u.ProjectId == id && (!string.IsNullOrEmpty(u.OwnerEmail) || u.OwnerId.HasValue), ct);
 
             return Results.Ok(new
-
             {
-
                 item.Id,
-
                 item.Name,
-
                 item.Description,
-
                 item.Location,
-
                 item.TotalUnits,
-
                 OccupiedUnits = occupiedUnits,
-
                 item.BuilderId,
-
+                AdministratorId = item.AdministratorId,
                 item.ImageUrl,
-
                 item.StructureDefined,
-
                 item.CreatedAt
-
             });
+        }).RequireAuthorization();
 
+        // ── GET /projects/{projectId}/units (filtrado por residentUserId u ownerId) ──
+        projects.MapGet("/{projectId:int}/units", async (int projectId, [FromQuery] int? residentUserId, [FromQuery] int? ownerId, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetOwnerId = ownerId ?? residentUserId;
+            IEnumerable<Unit> unitList;
+            if (targetOwnerId.HasValue)
+            {
+                unitList = await db.Units.Where(u => u.ProjectId == projectId && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
+            }
+            else
+            {
+                unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(projectId), ct);
+            }
+            return Results.Ok(unitList.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
         }).RequireAuthorization();
 
 
@@ -996,147 +1005,86 @@ public static class PublishingEndpoints
 
 
 
-        units.MapGet("", async ([FromQuery] int? projectId, [FromQuery] int? ownerId, IUnitQueryService queryService, CancellationToken ct) =>
-
+        units.MapGet("", async ([FromQuery] int? projectId, [FromQuery] int? condominiumId, [FromQuery] int? ownerId, [FromQuery] int? residentUserId, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
         {
-
+            var targetProjectId = projectId ?? condominiumId;
+            var targetOwnerId = ownerId ?? residentUserId;
             IEnumerable<Unit> unitList;
-
-            if (projectId.HasValue)
-
+            if (targetProjectId.HasValue && targetOwnerId.HasValue)
             {
-
-                unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(projectId.Value), ct);
-
+                unitList = await db.Units.Where(u => u.ProjectId == targetProjectId.Value && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
             }
-
-            else if (ownerId.HasValue)
-
+            else if (targetOwnerId.HasValue)
             {
-
-                unitList = await queryService.Handle(new GetUnitsByOwnerIdQuery(ownerId.Value), ct);
-
+                unitList = await queryService.Handle(new GetUnitsByOwnerIdQuery(targetOwnerId.Value), ct);
             }
-
+            else if (targetProjectId.HasValue)
+            {
+                unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(targetProjectId.Value), ct);
+            }
             else
-
             {
-
                 unitList = await queryService.Handle(new GetAllUnitsQuery(), ct);
-
             }
-
             return Results.Ok(unitList.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
-
         }).RequireAuthorization();
-
-
 
         units.MapGet("/{id:int}", async (int id, IUnitQueryService queryService, CancellationToken ct) =>
-
         {
-
             var unit = await queryService.Handle(new GetUnitByIdQuery(id), ct);
-
             return unit is null ? Results.NotFound() : Results.Ok(UnitResourceFromEntityAssembler.ToResourceFromEntity(unit));
-
         }).RequireAuthorization();
-
-
 
         units.MapPost("", async (CreateUnitResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
-
         {
-
             if (!await OwnsProjectIdAsync(user, db, resource.ProjectId, ct)) return Results.NotFound();
-
             var command = new CreateUnitCommand(resource.ProjectId, resource.UnitNumber, resource.OwnerId, resource.Floor, resource.RoomNumber);
-
             int unitId;
-
             try
-
             {
-
                 unitId = await commandService.Handle(command, ct);
-
             }
-
             catch (DbUpdateException ex) when (ex.InnerException is MySqlConnector.MySqlException mysql && mysql.Number == 1062)
-
             {
-
                 // Duplicate (project, floor, room): update it instead of duplicating.
-
                 return Results.Conflict(new { error = "A unit with this floor and room already exists in the project." });
-
             }
-
             var created = await queryService.Handle(new GetUnitByIdQuery(unitId), ct);
-
             return created is null ? Results.Problem(statusCode: 500) : Results.Created($"/api/v1/units/{unitId}", UnitResourceFromEntityAssembler.ToResourceFromEntity(created));
-
         }).RequireAuthorization();
-
-
 
         units.MapPatch("/{id:int}/assign-owner", async (int id, AssignUnitOwnerResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
-
         {
-
             if (!await OwnsUnitIdAsync(user, db, id, ct)) return Results.NotFound();
-
             try
-
             {
-
-                await commandService.Handle(new AssignUnitOwnerEmailCommand(id, resource.OwnerEmail, resource.OwnerId), ct);
-
+                var effectiveOwnerId = resource.OwnerId ?? resource.ResidentUserId;
+                await commandService.Handle(new AssignUnitOwnerEmailCommand(id, resource.OwnerEmail, effectiveOwnerId), ct);
                 var updated = await queryService.Handle(new GetUnitByIdQuery(id), ct);
-
                 return updated is null ? Results.NotFound() : Results.Ok(UnitResourceFromEntityAssembler.ToResourceFromEntity(updated));
-
             }
-
             catch (KeyNotFoundException)
-
             {
-
                 return Results.NotFound();
-
             }
-
         }).RequireAuthorization();
-
-
 
         units.MapPatch("/{id:int}", async (int id, AssignUnitOwnerResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
-
         {
-
             if (!await OwnsUnitIdAsync(user, db, id, ct)) return Results.NotFound();
-
             try
-
             {
-
-                await commandService.Handle(new AssignUnitOwnerEmailCommand(id, resource.OwnerEmail, resource.OwnerId), ct);
-
+                var effectiveOwnerId = resource.OwnerId ?? resource.ResidentUserId;
+                await commandService.Handle(new AssignUnitOwnerEmailCommand(id, resource.OwnerEmail, effectiveOwnerId), ct);
                 var updated = await queryService.Handle(new GetUnitByIdQuery(id), ct);
-
                 return updated is null ? Results.NotFound() : Results.Ok(UnitResourceFromEntityAssembler.ToResourceFromEntity(updated));
-
             }
-
             catch (KeyNotFoundException)
-
             {
-
                 return Results.NotFound();
-
             }
-
         }).RequireAuthorization();
+
 
 
 
@@ -1342,7 +1290,199 @@ public static class PublishingEndpoints
 
         }).RequireAuthorization();
 
-    }
+        // ── Condominiums Compatibility Endpoints (/condominiums -> /projects) ──
+        var condos = app.MapGroup("/api/v1/condominiums").WithTags("Condominiums");
 
+        condos.MapGet("", async ([FromQuery] int? administratorId, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var self = SelfId(user);
+            var query = db.Projects.AsQueryable();
+            if (administratorId.HasValue)
+            {
+                query = query.Where(p => p.BuilderId == administratorId.Value);
+            }
+            else if (HasRole(user, "Resident") || HasRole(user, "Owner"))
+            {
+                var email = user.FindFirst(ClaimTypes.Email)?.Value?.ToLower();
+                var residentProjectIds = await db.Units
+                    .Where(u => u.OwnerId == self || (!string.IsNullOrEmpty(email) && u.OwnerEmail != null && u.OwnerEmail.ToLower() == email))
+                    .Select(u => u.ProjectId)
+                    .Distinct()
+                    .ToListAsync(ct);
+                query = query.Where(p => residentProjectIds.Contains(p.Id));
+            }
+            else if (self > 0)
+            {
+                query = query.Where(p => p.BuilderId == self);
+            }
+            var projectList = await query.OrderBy(p => p.Id).ToListAsync(ct);
+            var projectIds = projectList.Select(p => p.Id).ToList();
+            var commonAreas = await db.CommonAreas.Where(c => projectIds.Contains(c.ProjectId)).ToListAsync(ct);
+            var occupiedCounts = await db.Units
+                .Where(u => projectIds.Contains(u.ProjectId) && (!string.IsNullOrEmpty(u.OwnerEmail) || u.OwnerId.HasValue))
+                .GroupBy(u => u.ProjectId)
+                .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.ProjectId, g => g.Count, ct);
+
+            var result = projectList.Select(p => new
+            {
+                p.Id,
+                AdministratorId = p.AdministratorId,
+                p.BuilderId,
+                p.Name,
+                p.Description,
+                p.Address,
+                Location = p.Address,
+                District = p.District ?? "Jesús María",
+                p.TotalUnits,
+                OccupiedUnits = occupiedCounts.GetValueOrDefault(p.Id, 0),
+                WaterSupplyCode = p.SedapalSupplyCode,
+                ElectricitySupplyCode = p.LuzDelSurSupplyCode,
+                p.SedapalSupplyCode,
+                p.LuzDelSurSupplyCode,
+                Status = string.Equals(p.Status, "Activo", StringComparison.OrdinalIgnoreCase) ? "active" : p.Status.ToLowerInvariant(),
+                p.ImageUrl,
+                p.StructureDefined,
+                p.CreatedAt,
+                CommonAreas = commonAreas.Where(c => c.ProjectId == p.Id).Select(c => new
+                {
+                    c.Id,
+                    c.Name,
+                    Type = c.Subsystem.ToString(),
+                    c.Location,
+                    c.Description
+                })
+            });
+            return Results.Ok(result);
+        }).RequireAuthorization();
+
+        condos.MapGet("/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var p = await db.Projects.FindAsync([id], ct);
+            if (p is null || !await CanReadProjectAsync(user, db, p, ct)) return Results.NotFound();
+            var commonAreas = await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct);
+            var occupiedUnits = await db.Units.CountAsync(u => u.ProjectId == id && (!string.IsNullOrEmpty(u.OwnerEmail) || u.OwnerId.HasValue), ct);
+            return Results.Ok(new
+            {
+                p.Id,
+                AdministratorId = p.AdministratorId,
+                p.BuilderId,
+                p.Name,
+                p.Description,
+                p.Address,
+                Location = p.Address,
+                District = p.District ?? "Jesús María",
+                p.TotalUnits,
+                OccupiedUnits = occupiedUnits,
+                WaterSupplyCode = p.SedapalSupplyCode,
+                ElectricitySupplyCode = p.LuzDelSurSupplyCode,
+                p.SedapalSupplyCode,
+                p.LuzDelSurSupplyCode,
+                Status = string.Equals(p.Status, "Activo", StringComparison.OrdinalIgnoreCase) ? "active" : p.Status.ToLowerInvariant(),
+                p.ImageUrl,
+                p.StructureDefined,
+                p.CreatedAt,
+                CommonAreas = commonAreas.Select(c => new
+                {
+                    c.Id,
+                    c.Name,
+                    Type = c.Subsystem.ToString(),
+                    c.Location,
+                    c.Description
+                })
+            });
+        }).RequireAuthorization();
+
+        condos.MapPost("", async (CreateProjectRequest request, ClaimsPrincipal user, CoreBusinessService service, CancellationToken ct) =>
+        {
+            var tokenBuilderId = SelfId(user);
+            var builderId = request.BuilderId.HasValue && request.BuilderId.Value > 0 ? request.BuilderId.Value : tokenBuilderId;
+            var project = await service.CreateProjectAsync(request.Name, request.Description, request.Location, request.TotalUnits, builderId, request.ImageUrl, ct);
+            return Results.Created($"/api/v1/condominiums/{project.Id}", project);
+        }).RequireAuthorization();
+
+        condos.MapPut("/{id:int}", async (int id, CreateProjectRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var item = await db.Projects.FindAsync([id], ct);
+            if (item is null || !OwnsProject(user, item)) return Results.NotFound();
+            item.Name = request.Name;
+            item.Description = request.Description;
+            item.Location = request.Location;
+            item.TotalUnits = request.TotalUnits;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(item);
+        }).RequireAuthorization();
+
+        condos.MapPatch("/{id:int}", async (int id, [FromBody] System.Text.Json.JsonElement body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var p = await db.Projects.FindAsync([id], ct);
+            if (p is null || !OwnsProject(user, p)) return Results.NotFound();
+            if (body.TryGetProperty("status", out var statusProp))
+            {
+                p.Status = statusProp.GetString() ?? p.Status;
+                await db.SaveChangesAsync(ct);
+            }
+            return Results.Ok(p);
+        }).RequireAuthorization();
+
+        condos.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var item = await db.Projects.FindAsync([id], ct);
+            if (item is null || !OwnsProject(user, item)) return Results.NotFound();
+
+            var clients = await db.Clients.Where(c => c.ProjectId == id).ToListAsync(ct);
+            if (clients.Count > 0) db.Clients.RemoveRange(clients);
+
+            var devices = await db.Devices.Where(d => d.ProjectId == id).ToListAsync(ct);
+            if (devices.Count > 0) db.Devices.RemoveRange(devices);
+
+            var devProjections = await db.DeviceProjections.Where(d => d.ProjectId == id).ToListAsync(ct);
+            if (devProjections.Count > 0) db.DeviceProjections.RemoveRange(devProjections);
+
+            var units = await db.Units.Where(u => u.ProjectId == id).ToListAsync(ct);
+            if (units.Count > 0) db.Units.RemoveRange(units);
+
+            var unitProjections = await db.UnitProjections.Where(u => u.ProjectId == id).ToListAsync(ct);
+            if (unitProjections.Count > 0) db.UnitProjections.RemoveRange(unitProjections);
+
+            var projectProjections = await db.ProjectProjections.Where(p => p.ProjectId == id).ToListAsync(ct);
+            if (projectProjections.Count > 0) db.ProjectProjections.RemoveRange(projectProjections);
+
+            db.Projects.Remove(item);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        // ── Residents Directory Endpoint ──
+        app.MapGet("/api/v1/residents", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var project = await db.Projects.FindAsync([targetProjectId], ct);
+            var units = await db.Units.Where(u => u.ProjectId == targetProjectId && (!string.IsNullOrEmpty(u.ResidentFullName) || u.OwnerId.HasValue)).ToListAsync(ct);
+            var profiles = await db.Profiles.ToListAsync(ct);
+            var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+
+            var residents = units.Select(u =>
+            {
+                var profile = u.OwnerId.HasValue && profilesByUserId.TryGetValue(u.OwnerId.Value, out var prof) ? prof : null;
+                return new
+                {
+                    id = u.Id,
+                    userId = u.OwnerId ?? u.Id,
+                    fullName = u.ResidentFullName ?? profile?.Name ?? $"Residente Dpto. {u.UnitNumber}",
+                    dni = "45892147",
+                    email = u.ResidentEmail ?? u.OwnerEmail ?? "residente@iobuild.pe",
+                    phoneNumber = profile?.PhoneNumber ?? "+51 912345678",
+                    condominiumId = u.ProjectId,
+                    condominiumName = project?.Name ?? "Residencial Los Robles",
+                    unitId = u.Id,
+                    unitNumber = u.UnitNumber,
+                    relation = "owner",
+                    collectionStatus = "current"
+                };
+            });
+            return Results.Ok(residents);
+        }).RequireAuthorization();
+    }
 }
 

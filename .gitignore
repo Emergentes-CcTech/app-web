@@ -33,3 +33,6 @@ secrets.json
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Teamwork Agent metadata
+.agents/

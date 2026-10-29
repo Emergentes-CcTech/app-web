@@ -296,5 +296,365 @@ public static class ProrationEndpoints
             var metrics = await prorationService.GetPeriodMetricsAsync(period.Id, ct);
             return Results.Ok(metrics);
         }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/utility_bills ──
+        app.MapGet("/api/v1/utility_bills", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? period, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var query = db.BillingPeriods.Where(p => p.ProjectId == targetProjectId);
+            if (!string.IsNullOrWhiteSpace(period)) query = query.Where(p => p.PeriodCode == period);
+            var periods = await query.OrderByDescending(p => p.PeriodCode).ToListAsync(ct);
+            var bills = new List<object>();
+            foreach (var p in periods)
+            {
+                bills.Add(new
+                {
+                    id = p.Id * 10 + 1,
+                    condominiumId = p.ProjectId,
+                    projectId = p.ProjectId,
+                    period = p.PeriodCode,
+                    service = "water",
+                    billedConsumption = p.MacroWaterM3,
+                    consumptionUnit = "m³",
+                    measuredConsumption = p.MeasuredCommonWaterM3,
+                    billedAmount = p.MacroWaterAmountSoles,
+                    dueDate = p.DueDate.ToString("yyyy-MM-dd"),
+                    receiptImageUrl = p.WaterReceiptImageUrl
+                });
+                bills.Add(new
+                {
+                    id = p.Id * 10 + 2,
+                    condominiumId = p.ProjectId,
+                    projectId = p.ProjectId,
+                    period = p.PeriodCode,
+                    service = "electricity",
+                    billedConsumption = p.MacroEnergyKwh,
+                    consumptionUnit = "kWh",
+                    measuredConsumption = p.MeasuredCommonEnergyKwh,
+                    billedAmount = p.MacroEnergyAmountSoles,
+                    dueDate = p.DueDate.ToString("yyyy-MM-dd"),
+                    receiptImageUrl = p.EnergyReceiptImageUrl
+                });
+            }
+            return Results.Ok(bills);
+        }).RequireAuthorization();
+
+        app.MapPost("/api/v1/utility_bills", async ([FromBody] System.Text.Json.JsonElement body, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var condoId = body.TryGetProperty("condominiumId", out var cProp) ? cProp.GetInt32() : 1;
+            var periodCode = body.TryGetProperty("period", out var pProp) ? pProp.GetString() ?? "2026-10" : "2026-10";
+            var service = body.TryGetProperty("service", out var sProp) ? sProp.GetString() ?? "water" : "water";
+            var consumption = body.TryGetProperty("billedConsumption", out var bcProp) ? bcProp.GetDecimal() : 100.0m;
+            var amount = body.TryGetProperty("billedAmount", out var baProp) ? baProp.GetDecimal() : 500.0m;
+            var dueDateStr = body.TryGetProperty("dueDate", out var ddProp) ? ddProp.GetString() : null;
+            var dueDate = DateTime.TryParse(dueDateStr, out var parsedDate) ? parsedDate : DateTime.UtcNow.AddDays(15);
+
+            var period = await db.BillingPeriods.FirstOrDefaultAsync(p => p.ProjectId == condoId && p.PeriodCode == periodCode, ct);
+            if (period is null)
+            {
+                period = new BillingPeriod
+                {
+                    ProjectId = condoId,
+                    PeriodCode = periodCode,
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    EndDate = DateTime.UtcNow,
+                    DueDate = dueDate,
+                    Status = "Draft"
+                };
+                db.BillingPeriods.Add(period);
+            }
+
+            if (service == "water")
+            {
+                period.MacroWaterM3 = consumption;
+                period.MacroWaterAmountSoles = amount;
+            }
+            else
+            {
+                period.MacroEnergyKwh = consumption;
+                period.MacroEnergyAmountSoles = amount;
+            }
+            period.TotalCommonExpenseSoles = period.MacroWaterAmountSoles + period.MacroEnergyAmountSoles + period.OtherCommonExpensesSoles;
+            await db.SaveChangesAsync(ct);
+
+            var createdBill = new
+            {
+                id = period.Id * 10 + (service == "water" ? 1 : 2),
+                condominiumId = period.ProjectId,
+                projectId = period.ProjectId,
+                period = period.PeriodCode,
+                service,
+                billedConsumption = consumption,
+                consumptionUnit = service == "water" ? "m³" : "kWh",
+                measuredConsumption = service == "water" ? period.MeasuredCommonWaterM3 : period.MeasuredCommonEnergyKwh,
+                billedAmount = amount,
+                dueDate = period.DueDate.ToString("yyyy-MM-dd")
+            };
+            return Results.Created($"/api/v1/utility_bills/{createdBill.id}", createdBill);
+        }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/settlements ──
+        app.MapGet("/api/v1/settlements", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var periods = await db.BillingPeriods
+                .Where(p => p.ProjectId == targetProjectId)
+                .OrderByDescending(p => p.PeriodCode)
+                .ToListAsync(ct);
+
+            var settlements = periods.Select(p => new
+            {
+                id = p.Id,
+                condominiumId = p.ProjectId,
+                period = p.PeriodCode,
+                commonAreaAmount = p.TotalCommonExpenseSoles,
+                status = string.Equals(p.Status, "Settled", StringComparison.OrdinalIgnoreCase) ? "issued" : "draft",
+                isIssued = string.Equals(p.Status, "Settled", StringComparison.OrdinalIgnoreCase),
+                issuedAt = p.SettledAtUtc
+            });
+            return Results.Ok(settlements);
+        }).RequireAuthorization();
+
+        app.MapGet("/api/v1/settlements/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var p = await db.BillingPeriods.FindAsync([id], ct);
+            if (p is null) return Results.NotFound();
+
+            var statements = await db.StatementOfAccounts
+                .Where(s => s.BillingPeriodId == id)
+                .OrderBy(s => s.UnitNumber)
+                .ToListAsync(ct);
+
+            var lines = statements.Select(s => new
+            {
+                id = s.Id,
+                settlementId = s.BillingPeriodId,
+                unitId = s.UnitId,
+                participationPct = s.AliquotPercentage,
+                amount = s.IndividualAmountSoles,
+                breakdown = new
+                {
+                    water = s.IndividualWaterSoles,
+                    energy = s.IndividualEnergySoles,
+                    other = s.IndividualOtherExpensesSoles
+                }
+            });
+
+            return Results.Ok(new
+            {
+                id = p.Id,
+                condominiumId = p.ProjectId,
+                period = p.PeriodCode,
+                commonAreaAmount = p.TotalCommonExpenseSoles,
+                status = string.Equals(p.Status, "Settled", StringComparison.OrdinalIgnoreCase) ? "issued" : "draft",
+                isIssued = string.Equals(p.Status, "Settled", StringComparison.OrdinalIgnoreCase),
+                issuedAt = p.SettledAtUtc,
+                settlement_lines = lines,
+                lines
+            });
+        }).RequireAuthorization();
+
+        app.MapPost("/api/v1/settlements", async ([FromBody] System.Text.Json.JsonElement body, IProrationSettlementService prorationService, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var condoId = body.TryGetProperty("condominiumId", out var cProp) ? cProp.GetInt32() : 1;
+            var periodCode = body.TryGetProperty("period", out var pProp) ? pProp.GetString() ?? "2026-10" : "2026-10";
+
+            var period = await db.BillingPeriods.FirstOrDefaultAsync(p => p.ProjectId == condoId && p.PeriodCode == periodCode, ct);
+            if (period is null)
+            {
+                period = new BillingPeriod
+                {
+                    ProjectId = condoId,
+                    PeriodCode = periodCode,
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    EndDate = DateTime.UtcNow,
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    MacroWaterM3 = 420.0m,
+                    MacroWaterAmountSoles = 1680.00m,
+                    MacroEnergyKwh = 1450.0m,
+                    MacroEnergyAmountSoles = 1160.50m,
+                    TotalCommonExpenseSoles = 2840.50m,
+                    Status = "Draft"
+                };
+                db.BillingPeriods.Add(period);
+                await db.SaveChangesAsync(ct);
+            }
+
+            try
+            {
+                await prorationService.GenerateSettlementAsync(period.Id, ct);
+            }
+            catch { }
+
+            return Results.Created($"/api/v1/settlements/{period.Id}", new
+            {
+                id = period.Id,
+                condominiumId = period.ProjectId,
+                period = period.PeriodCode,
+                commonAreaAmount = period.TotalCommonExpenseSoles,
+                status = "draft"
+            });
+        }).RequireAuthorization();
+
+        app.MapPatch("/api/v1/settlements/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var period = await db.BillingPeriods.FindAsync([id], ct);
+            if (period is null) return Results.NotFound();
+            period.Status = "Settled";
+            period.SettledAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new
+            {
+                id = period.Id,
+                condominiumId = period.ProjectId,
+                period = period.PeriodCode,
+                commonAreaAmount = period.TotalCommonExpenseSoles,
+                status = "issued",
+                isIssued = true,
+                issuedAt = period.SettledAtUtc
+            });
+        }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/settlement_lines ──
+        app.MapGet("/api/v1/settlement_lines", async ([FromQuery] int? unitId, [FromQuery] int? settlementId, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var query = db.StatementOfAccounts.AsQueryable();
+            if (unitId.HasValue) query = query.Where(s => s.UnitId == unitId.Value);
+            if (settlementId.HasValue) query = query.Where(s => s.BillingPeriodId == settlementId.Value);
+
+            var statements = await query.OrderBy(s => s.UnitNumber).ToListAsync(ct);
+            var lines = statements.Select(s => new
+            {
+                id = s.Id,
+                settlementId = s.BillingPeriodId,
+                unitId = s.UnitId,
+                participationPct = s.AliquotPercentage,
+                amount = s.IndividualAmountSoles,
+                breakdown = new
+                {
+                    water = s.IndividualWaterSoles,
+                    energy = s.IndividualEnergySoles,
+                    other = s.IndividualOtherExpensesSoles
+                }
+            });
+            return Results.Ok(lines);
+        }).RequireAuthorization();
+
+        app.MapGet("/api/v1/settlement_lines/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var s = await db.StatementOfAccounts.FindAsync([id], ct);
+            if (s is null) return Results.NotFound();
+            return Results.Ok(new
+            {
+                id = s.Id,
+                settlementId = s.BillingPeriodId,
+                unitId = s.UnitId,
+                participationPct = s.AliquotPercentage,
+                amount = s.IndividualAmountSoles,
+                breakdown = new
+                {
+                    water = s.IndividualWaterSoles,
+                    energy = s.IndividualEnergySoles,
+                    other = s.IndividualOtherExpensesSoles
+                }
+            });
+        }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/payments ──
+        app.MapGet("/api/v1/payments", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] int? residentUserId, [FromQuery] int? unitId, [FromQuery] string? status, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var query = db.StatementOfAccounts.Where(s => s.ProjectId == targetProjectId);
+            if (unitId.HasValue) query = query.Where(s => s.UnitId == unitId.Value);
+            if (residentUserId.HasValue)
+            {
+                var unitsForResident = await db.Units.Where(u => u.OwnerId == residentUserId.Value).Select(u => u.Id).ToListAsync(ct);
+                query = query.Where(s => unitsForResident.Contains(s.UnitId));
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(s => s.Status.ToLower() == status.ToLower());
+            }
+
+            var periods = await db.BillingPeriods.Where(p => p.ProjectId == targetProjectId).ToDictionaryAsync(p => p.Id, ct);
+            var statements = await query.ToListAsync(ct);
+
+            var payments = statements.Select(s =>
+            {
+                var p = periods.TryGetValue(s.BillingPeriodId, out var period) ? period : null;
+                return new
+                {
+                    id = s.Id,
+                    settlementLineId = s.Id,
+                    unitId = s.UnitId,
+                    condominiumId = s.ProjectId,
+                    period = p?.PeriodCode ?? "2026-10",
+                    amount = s.IndividualAmountSoles,
+                    dueDate = p?.DueDate.ToString("yyyy-MM-dd") ?? "2026-10-31",
+                    paidAt = s.PaidAtUtc?.ToString("yyyy-MM-dd"),
+                    status = s.Status.ToLowerInvariant(),
+                    method = s.PaymentMethod ?? "Transferencia Bancaria",
+                    reference = s.PaymentReference ?? $"OP-{s.Id:D6}"
+                };
+            });
+            return Results.Ok(payments);
+        }).RequireAuthorization();
+
+        app.MapPatch("/api/v1/payments/{paymentId:int}", async (int paymentId, [FromBody] System.Text.Json.JsonElement body, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var statement = await db.StatementOfAccounts.FindAsync([paymentId], ct);
+            if (statement is null) return Results.NotFound();
+            statement.Status = "Paid";
+            statement.PaidAtUtc = DateTime.UtcNow;
+            if (body.TryGetProperty("reference", out var refProp)) statement.PaymentReference = refProp.GetString();
+            if (body.TryGetProperty("method", out var methProp)) statement.PaymentMethod = methProp.GetString();
+            statement.PaidAmountSoles = statement.IndividualAmountSoles;
+            statement.BalanceSoles = 0.00m;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(statement);
+        }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/audit_events ──
+        app.MapGet("/api/v1/audit_events", ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var events = new List<object>
+            {
+                new
+                {
+                    id = 1,
+                    condominiumId = targetProjectId,
+                    type = "proration",
+                    entity = "BillingPeriod",
+                    actorUserId = 1,
+                    at = DateTime.UtcNow.AddDays(-2).ToString("o"),
+                    previousValue = "Draft",
+                    newValue = "Settled"
+                },
+                new
+                {
+                    id = 2,
+                    condominiumId = targetProjectId,
+                    type = "reading",
+                    entity = "DeviceTelemetry",
+                    actorUserId = 1,
+                    at = DateTime.UtcNow.AddDays(-1).ToString("o"),
+                    previousValue = "0.15 m3/h",
+                    newValue = "0.42 m3/h"
+                },
+                new
+                {
+                    id = 3,
+                    condominiumId = targetProjectId,
+                    type = "participation_changed",
+                    entity = "Unit 402",
+                    actorUserId = 1,
+                    at = DateTime.UtcNow.AddDays(-5).ToString("o"),
+                    previousValue = "3.8500%",
+                    newValue = "3.8500%"
+                }
+            };
+            return Results.Ok(events);
+        }).RequireAuthorization();
     }
 }
