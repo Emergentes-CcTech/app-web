@@ -368,9 +368,46 @@ public sealed record CreateProfileRequest(
 public sealed record CreateSubscriptionRequest(int BuilderId, int PlanId, DateTimeOffset StartDate, DateTimeOffset? EndDate);
 public sealed record ReplaceProfilePhotoRequest(string ExpectedReference, string Content);
 public sealed record ProjectStructureRequest(int Floors, int UnitsPerFloor, List<int>? FloorNumbers);
-public sealed record CreateDeviceRequest(string Name, string Type, string Location, string? MacAddress, int ProjectId, string Status, int? UnitId = null);
+public sealed record CreateDeviceRequest(
+    string Name, 
+    string Type, 
+    string Location, 
+    string? MacAddress, 
+    int ProjectId, 
+    string Status, 
+    int? UnitId = null,
+    string? Subsystem = null,
+    int? CommonAreaId = null,
+    string? LocationArea = null,
+    decimal? NightFlowThresholdM3H = null);
+
 public sealed record DeviceCommandRequest(string Attribute, JsonElement Value);
-public sealed record DeviceResponse(int Id, string Name, string Type, string Location, string? MacAddress, int ProjectId, string Status, int? UnitId = null)
+
+public sealed record DeviceResponse(
+    int Id, 
+    string Name, 
+    string Type, 
+    string Location, 
+    string? MacAddress, 
+    int ProjectId, 
+    string Status, 
+    int? UnitId = null,
+    string? Subsystem = null,
+    decimal? NightFlowThresholdM3H = null,
+    double? LastCumulativeReading = null,
+    DateTime? LastHeartbeatUtc = null)
 {
-    public static DeviceResponse From(Device device) => new(device.Id, device.Name, device.Type, device.Location, device.MacAddress, device.ProjectId, device.Status, device.UnitId);
+    public static DeviceResponse From(Device device) => new(
+        device.Id, 
+        device.Name, 
+        device.Type, 
+        string.IsNullOrEmpty(device.LocationArea) ? device.Location : device.LocationArea, 
+        device.MacAddress, 
+        device.ProjectId, 
+        device.Status, 
+        device.UnitId,
+        device.Subsystem,
+        device.NightFlowThresholdM3H,
+        device.LastCumulativeReading,
+        device.LastHeartbeatUtc);
 }
