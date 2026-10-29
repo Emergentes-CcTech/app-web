@@ -1,5 +1,6 @@
 using System.Text.Json;
 using IoBuild.Api.Devices.Application.Internal.CommandServices;
+using IoBuild.Api.Devices.Domain.Model.Aggregates;
 using IoBuild.Api.Devices.Domain.Model.Catalog;
 using IoBuild.Api.Persistence;
 using Microsoft.AspNetCore.Mvc;
@@ -7,26 +8,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Devices.Interfaces.REST;
 
+/// <summary>
+/// Endpoints REST para la gestión de dispositivos IoT de áreas comunes (Gateway, Caudalímetro, Transformador CT).
+/// </summary>
 public static class DevicesEndpoints
 {
-    // Mutations need a manager: the unit owner for unit devices, the project
-    // builder for project (floor) devices. Anything else reads as not found.
+    // Verifica si el usuario autenticado tiene permisos sobre el dispositivo (Administrador de condominio o residente)
     private static async Task<bool> ManagesDeviceAsync(System.Security.Claims.ClaimsPrincipal user, IoBuild.Api.Persistence.IoBuildDbContext db, IoBuild.Api.Devices.Domain.Model.Aggregates.Device device, CancellationToken ct)
     {
         if (!int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id)) return false;
         var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        if (device.UnitId.HasValue && string.Equals(role, "Owner", StringComparison.Ordinal)
+        if (device.UnitId.HasValue && (string.Equals(role, "Owner", StringComparison.Ordinal) || string.Equals(role, "Resident", StringComparison.OrdinalIgnoreCase))
             && await db.UnitOwnerProjections.AnyAsync(item => item.UnitId == device.UnitId && item.OwnerUserId == id, ct)) return true;
         var project = await db.Projects.FindAsync([device.ProjectId], ct);
-        return project is not null && string.Equals(role, "Builder", StringComparison.OrdinalIgnoreCase) && project.BuilderId == id;
+        return project is not null && (string.Equals(role, "Builder", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "PropertyManager", StringComparison.OrdinalIgnoreCase)) && project.BuilderId == id;
     }
 
     public static void MapDevicesEndpoints(this WebApplication app)
     {
+        // Catálogo de tipos de hardware IoT comunal
         var deviceTypesResult = new
         {
             deviceTypes = new object[]
             {
+                new { code = "GatewayHub", displayName = "Gateway Hub (Concentrador Sótano)", scope = "common_area", controllableAttributes = Array.Empty<object>() },
+                new { code = "WaterFlowSensor", displayName = "Caudalímetro No Invasivo (Cisterna)", scope = "common_area", controllableAttributes = Array.Empty<object>() },
+                new { code = "CurrentTransformerCT", displayName = "Transformador de Corriente CT (Tableros/Bombas/Ascensores)", scope = "common_area", controllableAttributes = Array.Empty<object>() },
+                // Compatibilidad con contratos existentes
                 new { code = "SmartMeter", displayName = "Smart Meter", scope = "floor", controllableAttributes = Array.Empty<object>() },
                 new { code = "WaterSensor", displayName = "Water Sensor", scope = "floor", controllableAttributes = Array.Empty<object>() },
                 new { code = "SmokeDetector", displayName = "Smoke Detector", scope = "floor", controllableAttributes = Array.Empty<object>() },
@@ -61,7 +69,24 @@ public static class DevicesEndpoints
                 if (await db.Devices.AnyAsync(item => item.ProjectId == request.ProjectId && item.UnitId == request.UnitId && item.Type == request.Type, ct)) return Results.Conflict(new { error = "A device of this type already exists in this unit." });
             }
             else if (!string.IsNullOrWhiteSpace(request.MacAddress) && await db.Devices.AnyAsync(item => item.MacAddress == request.MacAddress, ct)) return Results.Conflict(new { error = "A device with the same MAC address already exists." });
-            var device = new Device { Name = request.Name, Type = request.Type, Location = request.Location, MacAddress = isOwnerCustom ? null : request.MacAddress, ProjectId = request.ProjectId, UnitId = request.UnitId, Source = isOwnerCustom ? "OwnerCustom" : null, Status = request.Status, OwnerId = ownerId };
+            
+            // Creación del dispositivo comunal vinculado a áreas comunes y proyecto
+            var device = new Device
+            {
+                Name = request.Name,
+                Type = request.Type,
+                Location = request.Location,
+                MacAddress = isOwnerCustom ? null : request.MacAddress,
+                ProjectId = request.ProjectId,
+                UnitId = request.UnitId,
+                Subsystem = string.IsNullOrWhiteSpace(request.Subsystem) ? "MainCistern" : request.Subsystem,
+                CommonAreaId = request.CommonAreaId,
+                LocationArea = request.LocationArea ?? request.Location,
+                NightFlowThresholdM3H = request.NightFlowThresholdM3H ?? 0.15m,
+                Source = isOwnerCustom ? "OwnerCustom" : null,
+                Status = request.Status ?? "Online",
+                OwnerId = ownerId
+            };
             db.Devices.Add(device);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return Results.Conflict(new { error = isOwnerCustom ? "A device of this type already exists in this unit." : "A device with the same MAC address already exists." }); }
@@ -79,14 +104,40 @@ public static class DevicesEndpoints
             await db.SaveChangesAsync(ct);
             await registry.AnnounceAsync(device, ct); return Results.Created($"/api/v1/devices/{device.Id}", DeviceResponse.From(device));
         }).RequireAuthorization();
-        group.MapPut("/devices/{id:int}", async (int id, CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) => { var device = await db.Devices.FindAsync([id], ct); if (device is null || !await ManagesDeviceAsync(user, db, device, ct)) return Results.NotFound(); device.Name = request.Name; device.Type = request.Type; device.Location = request.Location; device.MacAddress = request.MacAddress; device.ProjectId = request.ProjectId; device.Status = request.Status; await db.SaveChangesAsync(ct); await registry.AnnounceAsync(device, ct); return Results.NoContent(); }).RequireAuthorization();
+        group.MapPut("/devices/{id:int}", async (int id, CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) =>
+        {
+            var device = await db.Devices.FindAsync([id], ct);
+            if (device is null || !await ManagesDeviceAsync(user, db, device, ct)) return Results.NotFound();
+            device.Name = request.Name;
+            device.Type = request.Type;
+            device.Location = request.Location;
+            device.LocationArea = request.LocationArea ?? request.Location;
+            device.MacAddress = request.MacAddress;
+            device.ProjectId = request.ProjectId;
+            device.Status = request.Status;
+            if (request.Subsystem is not null) device.Subsystem = request.Subsystem;
+            if (request.CommonAreaId.HasValue) device.CommonAreaId = request.CommonAreaId;
+            if (request.NightFlowThresholdM3H.HasValue) device.NightFlowThresholdM3H = request.NightFlowThresholdM3H.Value;
+            await db.SaveChangesAsync(ct);
+            await registry.AnnounceAsync(device, ct);
+            return Results.NoContent();
+        }).RequireAuthorization();
         group.MapDelete("/devices/{id:int}", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) => { var device = await db.Devices.FindAsync([id], ct); if (device is null || !await ManagesDeviceAsync(user, db, device, ct)) return Results.NotFound(); registry.QueueTombstone(id); var devProj = await db.DeviceProjections.FindAsync([id], ct); if (devProj is not null) db.DeviceProjections.Remove(devProj); db.Devices.Remove(device); await db.SaveChangesAsync(ct); try { await registry.ReconcileAsync(ct); } catch (HttpRequestException) { } return Results.NoContent(); }).RequireAuthorization();
         group.MapPost("/devices/{id:int}/commands", async (int id, DeviceCommandRequest request, System.Security.Claims.ClaimsPrincipal user, DeviceCommandService commands, CancellationToken ct) => { var ownerId = int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var value) ? value : 0; var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value; try { var command = await commands.SendAuthorizedAsync(id, ownerId, role, request.Attribute, request.Value, ct); return Results.Ok(new { deviceId = id, attribute = request.Attribute, value = request.Value, acceptedAt = command.IssuedAt }); } catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); } catch (UnauthorizedAccessException exception) { return Results.Json(new { error = exception.Message }, statusCode: 403); } catch (KeyNotFoundException exception) { return Results.NotFound(new { error = exception.Message }); } catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); } catch (HttpRequestException exception) { return Results.Json(new { error = exception.Message }, statusCode: 503); } }).RequireAuthorization();
         group.MapPost("/devices/telemetry", async (TelemetryMessage request, DeviceTelemetryService telemetry, CancellationToken ct) =>
         {
             if (request.DeviceId <= 0 || string.IsNullOrWhiteSpace(request.EventId) || request.Status is null || request.ReportedJson is null)
                 return Results.BadRequest(new { error = "Telemetry requires deviceId, eventId, status, and reportedJson." });
-            return await telemetry.IngestAsync(request, ct) ? Results.Ok(new { received = true }) : Results.NotFound();
+            try
+            {
+                // Ingesta con validación de monotonicidad e idempotencia
+                return await telemetry.IngestAsync(request, ct) ? Results.Ok(new { received = true }) : Results.NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Manejo de lecturas decrecientes o no monótonas
+                return Results.BadRequest(new { error = ex.Message });
+            }
         }).AllowAnonymous();
         group.MapPost("/devices/telemetry/replay", async (DeviceTelemetryService telemetry, CancellationToken ct) => Results.Ok(new { replayed = await telemetry.ReplayInfluxAsync(ct) })).RequireAuthorization();
         group.MapPost("/devices/reconcile", async (DeviceRegistryService registry, CancellationToken ct) => { await registry.ReconcileAsync(ct); return Results.Ok(new { reconciled = true }); }).AllowAnonymous();

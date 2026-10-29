@@ -8,7 +8,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Devices.Application.Internal.CommandServices;
 
-public sealed record TelemetryMessage(int DeviceId, string EventId, DateTimeOffset OccurredAt, string Status, string ReportedJson, double EnergyKwh, double TemperatureC = 0, double VoltageV = 0);
+/// <summary>
+/// Mensaje de telemetría emitido por un dispositivo IoT comunal (Gateway, Caudalímetro, Transformador CT).
+/// </summary>
+public sealed record TelemetryMessage(
+    int DeviceId,
+    string EventId,
+    DateTimeOffset OccurredAt,
+    string Status,
+    string ReportedJson,
+    double EnergyKwh,
+    double TemperatureC = 0,
+    double VoltageV = 0,
+    string? MacAddress = null,
+    double? CumulativeValue = null);
+
 public interface IInfluxTelemetrySink { Task WriteAsync(TelemetryMessage message, CancellationToken cancellationToken = default); }
 public interface IDeviceMqttPublisher { Task PublishAsync(string topic, string payload, bool qos1, bool retain, CancellationToken cancellationToken = default); }
 
@@ -22,8 +36,12 @@ public sealed class DisabledDeviceMqttPublisher : IDeviceMqttPublisher
     public Task PublishAsync(string topic, string payload, bool qos1, bool retain, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
+/// <summary>
+/// Servicio de aplicación para la ingesta de telemetría IoT con validación de idempotencia y monotonicidad.
+/// </summary>
 public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetrySink influx)
 {
+    // Procesa e ingesta una lectura de telemetría asegurando aislamiento por dispositivo
     public async Task<bool> IngestAsync(TelemetryMessage message, CancellationToken cancellationToken = default)
     {
         using var lease = await DeviceStateLocks.EnterAsync(message.DeviceId, cancellationToken);
@@ -32,7 +50,16 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
 
     private async Task<bool> IngestLockedAsync(TelemetryMessage message, CancellationToken cancellationToken)
     {
-        var existing = await db.DeviceTelemetry.SingleOrDefaultAsync(item => item.EventId == message.EventId, cancellationToken);
+        var device = await db.Devices.FindAsync([message.DeviceId], cancellationToken);
+        if (device is null) return false;
+
+        // Regla de Ingesta 1: Idempotencia por EventId o por tupla (MacAddress, TimestampUtc)
+        // Permite la recepción segura de lotes reenviados desde el buffer local de 72h tras reconexión
+        var mac = message.MacAddress ?? device.MacAddress;
+        var existing = await db.DeviceTelemetry.FirstOrDefaultAsync(item =>
+            item.EventId == message.EventId ||
+            (!string.IsNullOrEmpty(mac) && item.DeviceId == message.DeviceId && item.OccurredAt == message.OccurredAt), cancellationToken);
+
         if (existing is not null)
         {
             if (existing.InfluxWrittenAt is null)
@@ -45,26 +72,84 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
                 try { await ReplayExistingAsync(existing, cancellationToken); }
                 catch (HttpRequestException) { }
             }
+            // Registro ya procesado: idempotencia garantizada sin duplicar
             return true;
         }
-        var device = await db.Devices.FindAsync([message.DeviceId], cancellationToken);
-        if (device is null) return false;
+
+        // Regla de Ingesta 2: Monotonicidad en lecturas acumuladas (CumulativeValue, cumulative_m3 o cumulative_kwh)
+        double? incomingCumulative = message.CumulativeValue;
+        if (!incomingCumulative.HasValue && !string.IsNullOrEmpty(message.ReportedJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(message.ReportedJson);
+                if (doc.RootElement.TryGetProperty("cumulative_m3", out var m3Prop)) incomingCumulative = m3Prop.GetDouble();
+                else if (doc.RootElement.TryGetProperty("cumulative_kwh", out var kwhProp)) incomingCumulative = kwhProp.GetDouble();
+                else if (doc.RootElement.TryGetProperty("cumulative_value", out var valProp)) incomingCumulative = valProp.GetDouble();
+            }
+            catch { }
+        }
+
+        if (incomingCumulative.HasValue && incomingCumulative.Value > 0.0)
+        {
+            var isChronologicallyNewer = !device.LastHeartbeatUtc.HasValue || message.OccurredAt.UtcDateTime >= device.LastHeartbeatUtc.Value;
+            if (isChronologicallyNewer)
+            {
+                if (device.LastCumulativeReading > 0.0 && incomingCumulative.Value < device.LastCumulativeReading)
+                {
+                    // Rechaza paquetes corruptos con lecturas acumuladas decrecientes
+                    throw new InvalidOperationException($"Lectura no monotónica rechazada para dispositivo {device.Id}: lectura recibida {incomingCumulative.Value} < acumulada {device.LastCumulativeReading}.");
+                }
+                device.LastCumulativeReading = incomingCumulative.Value;
+            }
+        }
+
         device.Status = message.Status;
+        device.LastHeartbeatUtc = message.OccurredAt.UtcDateTime;
+
         var devProj = await db.DeviceProjections.FindAsync([message.DeviceId], cancellationToken);
         if (devProj is not null)
         {
             devProj.Status = message.Status;
             devProj.LastEventAt = message.OccurredAt.UtcDateTime;
         }
+
         var shadow = await db.DeviceShadows.FindAsync([message.DeviceId], cancellationToken);
         var isNewer = shadow is null || message.OccurredAt > shadow.ReportedAt;
-        var record = new DeviceTelemetry { DeviceId = message.DeviceId, EventId = message.EventId, OccurredAt = message.OccurredAt, Status = message.Status, ReportedJson = message.ReportedJson, EnergyKwh = message.EnergyKwh, TemperatureC = message.TemperatureC, VoltageV = message.VoltageV };
+
+        var record = new DeviceTelemetry
+        {
+            DeviceId = message.DeviceId,
+            EventId = message.EventId,
+            OccurredAt = message.OccurredAt,
+            Status = message.Status,
+            ReportedJson = message.ReportedJson,
+            EnergyKwh = message.EnergyKwh,
+            TemperatureC = message.TemperatureC,
+            VoltageV = message.VoltageV
+        };
         db.DeviceTelemetry.Add(record);
+
         if (isNewer)
         {
-            if (shadow is null) { shadow = new DeviceShadow { DeviceId = message.DeviceId, ReportedJson = message.ReportedJson, ReportedAt = message.OccurredAt, UpdatedAt = DateTimeOffset.UtcNow }; db.DeviceShadows.Add(shadow); }
-            else { shadow.ReportedJson = message.ReportedJson; shadow.ReportedAt = message.OccurredAt; }
+            if (shadow is null)
+            {
+                shadow = new DeviceShadow
+                {
+                    DeviceId = message.DeviceId,
+                    ReportedJson = message.ReportedJson,
+                    ReportedAt = message.OccurredAt,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+                db.DeviceShadows.Add(shadow);
+            }
+            else
+            {
+                shadow.ReportedJson = message.ReportedJson;
+                shadow.ReportedAt = message.OccurredAt;
+            }
         }
+
         var command = await db.DeviceCommands.SingleOrDefaultAsync(item => item.CommandId == message.EventId, cancellationToken);
         if (command is null)
         {
@@ -74,11 +159,14 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
                 .ToListAsync(cancellationToken);
             command = pending.FirstOrDefault(item => EquivalentJson(item.DesiredJson, message.ReportedJson));
         }
+
         if (command is not null) command.AcknowledgedAt = message.OccurredAt;
         db.TelemetryRecoveries.Add(new TelemetryRecovery { EventId = message.EventId, CreatedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(cancellationToken);
+
         try { await ReplayExistingAsync(record, cancellationToken); }
         catch (Exception) { }
+
         return true;
     }
 
@@ -94,7 +182,7 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
         }
         catch (Exception)
         {
-            // Influx is auxiliary; failure must never break or crash telemetry ingestion.
+            // La falla en InfluxDB no debe abortar la ingesta en el almacenamiento relacional
         }
     }
 
@@ -106,7 +194,8 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
 
     public async Task<int> ReplayInfluxAsync(CancellationToken cancellationToken = default)
     {
-        var recoveries = await db.TelemetryRecoveries.OrderBy(item => item.Id).ToListAsync(cancellationToken); var replayed = 0;
+        var recoveries = await db.TelemetryRecoveries.OrderBy(item => item.Id).ToListAsync(cancellationToken);
+        var replayed = 0;
         foreach (var recovery in recoveries)
         {
             var record = await db.DeviceTelemetry.SingleAsync(item => item.EventId == recovery.EventId, cancellationToken);
