@@ -1,13 +1,20 @@
-# Despliegue en Netlify como demo: sin backend, la app usa server/db.json en el navegador
-# (ver "Demo publicada sin backend" en el README).
+# Despliegue en Netlify conectado al backend.
+# La app llama a VITE_API_URL (por defecto /api/v1, ver .env.production). Dos formas de apuntar al backend:
+#   a) En Netlify > Site configuration > Environment variables, define VITE_API_URL=https://<backend>/api/v1
+#      (el backend debe permitir CORS desde el dominio de Netlify).
+#   b) Deja VITE_API_URL=/api/v1 y descomenta el proxy de abajo con la URL del backend (sin CORS).
+# Para una demo sin backend, define VITE_DEMO=true (ver README).
 [build]
   command = "npm run build"
   publish = "dist"
 
-  [build.environment]
-    VITE_DEMO = "true"
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://<backend>/api/:splat"
+#   status = 200
+#   force = true
 
-# SPA: cualquier ruta (p. ej. /iam/login) sirve index.html y la resuelve vue-router
+# SPA: cualquier otra ruta (p. ej. /iam/login) sirve index.html y la resuelve vue-router
 [[redirects]]
   from = "/*"
   to = "/index.html"
