@@ -137,6 +137,15 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                     "CREATE TABLE IF NOT EXISTS anomaly_alerts (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, DeviceId INT NOT NULL, Subsystem VARCHAR(64) NOT NULL, AlertType VARCHAR(64) NOT NULL, Severity VARCHAR(32) NOT NULL, Title VARCHAR(200) NOT NULL, Description VARCHAR(1000) NOT NULL, EstimatedOvercostSoles DECIMAL(10,2) NOT NULL DEFAULT 0.00, DetectedAtUtc DATETIME(6) NOT NULL, ResolvedAtUtc DATETIME(6) NULL, Status VARCHAR(32) NOT NULL, INDEX idx_aa_proj_status (ProjectId, Status), INDEX idx_aa_dev (DeviceId));",
                     cancellationToken);
 
+                // Asegura la existencia de las tablas del contexto de Prorrateo y Liquidación (Proration)
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "CREATE TABLE IF NOT EXISTS billing_periods (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, PeriodCode VARCHAR(32) NOT NULL, StartDate DATETIME(6) NOT NULL, EndDate DATETIME(6) NOT NULL, DueDate DATETIME(6) NOT NULL, MacroWaterM3 DECIMAL(18,4) NOT NULL, MacroWaterAmountSoles DECIMAL(18,2) NOT NULL, WaterReceiptImageUrl VARCHAR(500) NULL, MacroEnergyKwh DECIMAL(18,4) NOT NULL, MacroEnergyAmountSoles DECIMAL(18,2) NOT NULL, EnergyReceiptImageUrl VARCHAR(500) NULL, MeasuredCommonWaterM3 DECIMAL(18,4) NOT NULL, MeasuredCommonEnergyKwh DECIMAL(18,4) NOT NULL, WaterLossM3 DECIMAL(18,4) NOT NULL, EnergyLossKwh DECIMAL(18,4) NOT NULL, OtherCommonExpensesSoles DECIMAL(18,2) NOT NULL, TotalCommonExpenseSoles DECIMAL(18,2) NOT NULL, Status VARCHAR(32) NOT NULL, ReconciledAtUtc DATETIME(6) NULL, SettledAtUtc DATETIME(6) NULL, TotalBilledSoles DECIMAL(18,2) NOT NULL, TotalCollectedSoles DECIMAL(18,2) NOT NULL, DelinquencyRate DECIMAL(5,2) NOT NULL, UNIQUE KEY uq_bp_proj_period (ProjectId, PeriodCode));",
+                    cancellationToken);
+
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "CREATE TABLE IF NOT EXISTS statement_of_accounts (Id INT AUTO_INCREMENT PRIMARY KEY, BillingPeriodId INT NOT NULL, ProjectId INT NOT NULL, UnitId INT NOT NULL, UnitNumber VARCHAR(32) NOT NULL, ResidentFullName VARCHAR(150) NULL, ResidentEmail VARCHAR(150) NULL, AliquotPercentage DECIMAL(10,4) NOT NULL, IndividualWaterSoles DECIMAL(18,2) NOT NULL, IndividualEnergySoles DECIMAL(18,2) NOT NULL, IndividualOtherExpensesSoles DECIMAL(18,2) NOT NULL, IndividualAmountSoles DECIMAL(18,2) NOT NULL, PaidAmountSoles DECIMAL(18,2) NOT NULL DEFAULT 0.00, BalanceSoles DECIMAL(18,2) NOT NULL DEFAULT 0.00, Status VARCHAR(32) NOT NULL, PaidAtUtc DATETIME(6) NULL, PaymentReference VARCHAR(100) NULL, PaymentMethod VARCHAR(50) NULL, UNIQUE KEY uq_soa_period_unit (BillingPeriodId, UnitId), INDEX idx_soa_proj (ProjectId));",
+                    cancellationToken);
+
                 // Asegura las columnas para alícuotas y catastro en la tabla units
                 var existingUnitCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 using var unitCmd = connection.CreateCommand();

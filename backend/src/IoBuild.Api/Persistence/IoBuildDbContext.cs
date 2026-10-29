@@ -1,4 +1,5 @@
 using IoBuild.Api.Analytics.Domain.Model.Aggregates;
+using IoBuild.Api.Proration.Domain.Model.Aggregates;
 using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Persistence;
@@ -33,6 +34,8 @@ public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options)
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<ConsumptionRecord> ConsumptionRecords => Set<ConsumptionRecord>();
     public DbSet<AnomalyAlert> AnomalyAlerts => Set<AnomalyAlert>();
+    public DbSet<BillingPeriod> BillingPeriods => Set<BillingPeriod>();
+    public DbSet<StatementOfAccount> StatementOfAccounts => Set<StatementOfAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +52,7 @@ public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options)
         global::IoBuild.Api.Subscriptions.Infrastructure.Persistence.EFC.Configuration.PlanConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Devices.Infrastructure.Persistence.EFC.Configuration.DeviceConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Analytics.Infrastructure.Persistence.EFC.Configuration.AnalyticsConfiguration.Configure(modelBuilder);
+        global::IoBuild.Api.Proration.Infrastructure.Persistence.EFC.Configuration.ProrationConfiguration.Configure(modelBuilder);
 
         // Mapeo de la entidad de áreas comunes de condominios
         modelBuilder.Entity<CommonArea>(entity =>

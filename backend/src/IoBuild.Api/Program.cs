@@ -38,6 +38,9 @@ using IoBuild.Api.Subscriptions.Domain.Services;
 using IoBuild.Api.Subscriptions.Infrastructure.Persistence.EFC.Repositories;
 using IoBuild.Api.Subscriptions.Infrastructure.Stripe;
 using IoBuild.Api.Subscriptions.Interfaces.REST;
+using IoBuild.Api.Proration.Application.Internal.CommandServices;
+using IoBuild.Api.Proration.Domain.Services;
+using IoBuild.Api.Proration.Interfaces.REST;
 using IoBuild.Api.Workflows;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -115,6 +118,7 @@ builder.Services.AddScoped<IAnalyticsQueryService, AnalyticsQueryService>();
 builder.Services.AddScoped<AnalyticsProjectionImporter>();
 builder.Services.AddScoped<IAiCognitiveService, MockAiCognitiveAdapter>();
 builder.Services.AddScoped<IAnomalyDetectionEngine, AnomalyDetectionEngine>();
+builder.Services.AddScoped<IProrationSettlementService, ProrationSettlementService>();
 builder.Services.AddScoped<DeviceCommandService>();
 builder.Services.AddScoped<DeviceTelemetryService>();
 builder.Services.AddScoped<DeviceRegistryService>();
@@ -225,6 +229,12 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "Bounded Context de Analytics: Métricas y Series temporales."
     });
+    options.SwaggerDoc("proration", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "IoBuild - Proration",
+        Version = "v1",
+        Description = "Bounded Context de Prorrateo: Conciliación de Recibos Matrices y Liquidación Ley N.° 27157."
+    });
 
     options.DocInclusionPredicate((docName, apiDesc) =>
     {
@@ -248,6 +258,7 @@ builder.Services.AddSwaggerGen(options =>
                                || relativePath.Contains("subscriptions") || relativePath.Contains("plans") || relativePath.Contains("webhooks/stripe"),
             "profiles" => tags.Any(t => t.Contains("profile")) || relativePath.Contains("profiles"),
             "analytics" => tags.Any(t => t.Contains("analytic")) || relativePath.Contains("analytics"),
+            "proration" => tags.Any(t => t.Contains("proration")) || relativePath.Contains("proration"),
             _ => false
         };
     });
@@ -288,6 +299,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/subscriptions/swagger.json", "Subscriptions & Plans");
     c.SwaggerEndpoint("/swagger/profiles/swagger.json", "Profiles");
     c.SwaggerEndpoint("/swagger/analytics/swagger.json", "Analytics");
+    c.SwaggerEndpoint("/swagger/proration/swagger.json", "Proration & Settlement");
     c.RoutePrefix = "swagger";
 });
 
@@ -347,6 +359,7 @@ app.MapProfilesEndpoints();
 app.MapSubscriptionsEndpoints();
 app.MapDevicesEndpoints();
 app.MapAnalyticsEndpoints();
+app.MapProrationEndpoints();
 app.MapCutoverEndpoints();
 
 app.Run();
