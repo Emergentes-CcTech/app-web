@@ -1,0 +1,14 @@
+# Despliegue en Netlify como demo: sin backend, la app usa server/db.json en el navegador
+# (ver "Demo publicada sin backend" en el README).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+  [build.environment]
+    VITE_DEMO = "true"
+
+# SPA: cualquier ruta (p. ej. /iam/login) sirve index.html y la resuelve vue-router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
