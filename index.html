@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="description" content="IoBuild mide el consumo de agua y energía de las áreas comunes con medidores IoT y calcula el prorrateo de cada departamento de forma transparente." />
+    <title>IoBuild - Administración inteligente de condominios</title>
+    <script>
+      // Discover the unchanged CSS hero early, only on direct auth entries.
+      if (/^\/iam\/(login|register-administrator|register-resident)\/?$/.test(window.location.pathname)) {
+        const hero = document.createElement('link');
+        hero.rel = 'preload';
+        hero.as = 'image';
+        hero.fetchPriority = 'high';
+        hero.href = 'https://img.freepik.com/free-photo/modern-business-building-with-glass-wall-from-empty-floor_1127-3091.jpg?semt=ais_hybrid&w=740&q=80';
+        document.head.appendChild(hero);
+      }
+    </script>
+    
+    <!-- Google Fonts for better typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

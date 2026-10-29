@@ -1,0 +1,788 @@
+{
+  "header": {
+    "welcome": "Welcome"
+  },
+  "profile": {
+    "title": "Profile",
+    "edit": "Edit Profile",
+    "accountInformation": "Account Information",
+    "fullName": "Full Name",
+    "email": "Email",
+    "phoneNumber": "Phone Number",
+    "address": "Address",
+    "secondEmail": "Alternate Email",
+    "appLanguage": "App Language",
+    "languageEnglish": "English",
+    "languageSpanish": "Spanish",
+    "toggleOn": "Enabled",
+    "toggleOff": "Disabled",
+    "save": "Save Changes",
+    "cancel": "Cancel editing",
+    "saveSuccess": "Profile updated successfully.",
+    "saveError": "Could not update the profile. Please try again.",
+    "administratorRole": "Administrator",
+    "residentRole": "Apartment owner",
+    "companyName": "Company name",
+    "ruc": "RUC",
+    "legalRepresentative": "Legal representative",
+    "dni": "DNI",
+    "notifications": {
+      "title": "Notifications",
+      "save": "Save preferences",
+      "email": "Email notifications",
+      "sms": "SMS alerts",
+      "criticalAlerts": "Critical alerts",
+      "billingReminders": "Billing reminders",
+      "newSettlement": "New settlement notice",
+      "dueDates": "Due dates",
+      "condominiumAlerts": "Condominium alerts"
+    },
+    "security": {
+      "title": "Account security",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "changePassword": "Change password",
+      "sameAsCurrent": "The new password must differ from the current one.",
+      "passwordChanged": "Password updated.",
+      "passwordError": "Could not change the password.",
+      "sessions": "Active sessions",
+      "noSessions": "No sessions to show.",
+      "closeSession": "Sign out",
+      "twoFactor": "Two-factor authentication (2FA)",
+      "comingSoon": "Coming soon"
+    }
+  },
+  "subscriptions": {
+    "title": "My Subscription",
+    "pageDescription": "Manage the plan of each condominium, review its IoT device kit and download your billing receipts.",
+    "loading": "Loading subscription information...",
+    "startUsingIoBuild": "Start operating with IoBuild",
+    "noSubscriptionDescription": "Choose your condominium plan to connect IoT meters in common areas, calculate proration and manage resident billing.",
+    "allPlansDescription": "Scale your plan to the number of units in each condominium.",
+    "invoicesLoading": "Loading Stripe invoices...",
+    "invoicesEmptyDescription": "Your payment invoices and receipts will appear here automatically for viewing and download.",
+    "invoice-description-default": "IoBuild subscription",
+    "invoice-plan-description": "IoBuild {planName} subscription",
+    "close": "Close",
+    "connectingToStripe": "Connecting to Stripe...",
+    "warning": "Warning",
+    "errors": {
+      "authentication": "Could not verify your account. Please sign in again.",
+      "stripeNotConfigured": "Payment processing is not configured.",
+      "stripeInitializationFailed": "Stripe could not be initialized.",
+      "paymentRedirectFailed": "Could not redirect to payment.",
+      "checkoutSessionMissing": "The server did not return a checkout URL or session ID.",
+      "paymentStartFailed": "Could not start the payment. Please try again."
+    },
+    "messages": {
+      "paymentProcessedRefresh": "Your payment was processed. Refresh the page if your new plan is not visible."
+    },
+    "current-plan": "Current Plan",
+    "change-plan": "Change Plan",
+    "month": "month",
+    "status": "Status",
+    "status-active": "Active",
+    "status-cancelled": "Cancelled",
+    "status-expired": "Expired",
+    "renew-plan": "Renew Plan",
+    "cancel-plan": "Cancel Plan",
+    "no-subscription": "You don't have an active subscription",
+    "confirm-renew": "Are you sure you want to renew your current plan?",
+    "renew-header": "Renew Subscription",
+    "confirm-cancel": "Are you sure you want to cancel your current subscription?",
+    "cancel-header": "Cancel Subscription",
+    "confirm-change": "Are you sure you want to change to the {planName} plan?",
+    "change-header": "Change Plan",
+    "success": "Success",
+    "error": "Error",
+    "renewed-successfully": "Your plan has been renewed successfully",
+    "cancelled-successfully": "Your subscription has been cancelled",
+    "plan-changed": "You have successfully changed to the {planName} plan",
+    "renew-failed": "Failed to renew plan",
+    "status-Active": "Active",
+    "status-Expired": "Expired",
+    "status-Cancelled": "Cancelled",
+    "status-Pending": "Pending",
+    "cancel-failed": "Failed to cancel subscription",
+    "change-failed": "Failed to change plan",
+    "payment-success": "Payment completed successfully",
+    "previous-invoices": "Previous invoices",
+    "previous-invoices-button": "Previous invoices",
+    "invoice-due-date-label": "Due Date",
+    "invoice-billing-period-label": "Billing Period",
+    "invoice-view-details": "View Details",
+    "invoice-status-paid": "Paid",
+    "invoice-status-pending": "Pending",
+    "no-invoices": "No previous invoices",
+    "usage-title": "Plan Usage & Quotas",
+    "validThrough": "Valid through {date}",
+    "usage-unlimited": "Unlimited",
+    "usage-warning": "You are nearing your plan's device limit. Upgrade to connect more devices.",
+    "usage-exceeded": "You have exceeded your plan's device limit ({current}/{max} devices). Upgrade your plan to connect more devices and maintain service reliability.",
+    "quotaPlanLabel": "Plan {plan} — Device Limit: {max}",
+    "quotaDevicesCalc": "{current} in use + ~{newDevs} new = {total} / {max}",
+    "quotaAlreadyExceededMsg": "You have already reached or exceeded your plan's limit ({current}/{max} devices). Please upgrade your subscription to define more structures or connect more devices.",
+    "quotaExceededTitle": "Plan Device Limit Exceeded",
+    "quotaExceededToast": "This structure exceeds the limit of {max} devices for your {plan} plan. Please upgrade your subscription to proceed.",
+    "next-billing": "Next renewal",
+    "billing-cycle": "Price per condominium · billed monthly",
+    "billed-via": "Securely billed via Stripe",
+    "upgrade": "Upgrade Plan",
+    "downgrade": "Change Plan",
+    "current-plan-badge": "Your Current Plan",
+    "most-popular": "Most Popular",
+    "all-plans": "Available Plans",
+    "compare-plans": "Compare all plans",
+    "compare-modal-title": "Benefits Comparison Matrix",
+    "feature-devices": "IoT Device Limit",
+    "feature-admins": "Admin Accounts",
+    "feature-reports": "Reports & Analytics",
+    "feature-support": "Support Tier",
+    "feature-api": "API Access",
+    "feature-sla": "SLA Guarantee",
+    "view-invoices": "View Invoices & Receipts",
+    "invoices-title": "My Invoices & Receipts",
+    "invoice-date": "Date",
+    "invoice-description": "Description",
+    "invoice-amount": "Amount",
+    "invoice-status": "Status",
+    "invoice-receipt": "Receipt",
+    "download-receipt": "Download PDF",
+    "no-invoices-found": "No invoices recorded yet.",
+    "confirm-change-title": "Confirm Plan Change",
+    "confirm-change-subtitle": "You are about to change your subscription tier",
+    "current-tier": "Current Plan",
+    "new-tier": "New Plan",
+    "secure-stripe": "Processed securely via Stripe Checkout",
+    "proceed-stripe": "Proceed to Secure Stripe Checkout",
+    "cancelled-notice": "Your subscription is cancelled. You will retain access until the end of your billing cycle.",
+    "reactivate-plan": "Reactivate Plan",
+    "unlocked-benefits": "Benefits you'll unlock",
+    "choose-plan": "Choose {planName}",
+    "features-included": "Included features",
+    "comparison": {
+      "feature": "Feature",
+      "close": "Close",
+      "features": {
+        "support": "Support",
+        "sla": "SLA guarantee",
+        "api": "Telemetry API access",
+        "units": "Apartments",
+        "price": "Monthly price",
+        "hardware": "Devices included",
+        "kit": "Kit detail"
+      }
+    },
+    "planCatalog": {
+      "boutique": {
+        "description": "For small condominiums with up to 20 apartments."
+      },
+      "urbano": {
+        "description": "For buildings with 21 to 50 apartments."
+      },
+      "gran-torre": {
+        "description": "For towers with 51 to 80 apartments."
+      }
+    },
+    "usage-units": "Registered apartments",
+    "hardwareIncluded": "Device kit on loan",
+    "nextBilling": "Next billing",
+    "recommended": "Recommended",
+    "unitsUpTo": "Up to {max} apartments",
+    "unitsRange": "{min} to {max} apartments",
+    "planTooSmall": "Does not cover {units} apartments",
+    "exceedsCatalog": "This condominium has {units} apartments and plans cover up to {max}. Contact us for a custom offer.",
+    "kit": {
+      "title": "Kit of {n} devices",
+      "gateways": "{n} Gateway | {n} Gateways",
+      "flowMeters": "{n} Flow meter | {n} Flow meters",
+      "ctClamps": "{n} CT clamp | {n} CT clamps"
+    }
+  },
+  "iam": {
+    "logout": "Log Out",
+    "actions": {
+      "next": "Next",
+      "back": "Back",
+      "changePhoto": "Change photo",
+      "photoSelected": "Photo selected",
+      "removePhoto": "Remove photo",
+      "photoPreviewAlt": "Profile photo preview"
+    },
+    "messages": {
+      "registrationSuccess": "Registration completed successfully.",
+      "profileCreationFailed": "Could not complete your profile setup. Please sign in manually."
+    },
+    "login": {
+      "title": "Sign In",
+      "subtitle": "Welcome back! Please login to your account.",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "submitButton": "Sign In",
+      "noAccount": "Don't have an account?",
+      "registerAdministrator": "Register my administration company",
+      "registerResident": "I am an apartment owner"
+    },
+    "validation": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordRequired": "Password is required.",
+      "passwordMinLength": "At least 8 characters with uppercase, lowercase, number and special character.",
+      "confirmPasswordRequired": "Please confirm your password.",
+      "passwordMismatch": "Passwords do not match.",
+      "completeAccountInfo": "Please complete the required account fields.",
+      "completeProfileInfo": "Please correct the highlighted fields before continuing.",
+      "companyNameRequired": "Company name is required.",
+      "companyNameMinLength": "Company name must be 3 to 120 characters.",
+      "fullNameRequired": "Full name is required.",
+      "fullNameMinLength": "Full name must have at least 2 characters.",
+      "phoneRequired": "Phone number is required.",
+      "phoneInvalid": "Enter a valid phone number (7 to 15 digits).",
+      "emailAlreadyRegistered": "This email is already registered. Please sign in.",
+      "credentialsInvalid": "Invalid email or password.",
+      "registrationDataInvalid": "Registration details are invalid. Please review the form and try again.",
+      "registrationFailed": "Registration failed. Please try again.",
+      "rucRequired": "RUC is required.",
+      "rucInvalid": "RUC must be a valid 11-digit number.",
+      "legalRepresentativeRequired": "Legal representative is required.",
+      "nameInvalid": "Enter a valid name.",
+      "activationCodeRequired": "Activation code is required.",
+      "dniRequired": "DNI is required.",
+      "dniInvalid": "DNI must have 8 digits.",
+      "privacyRequired": "You must accept the privacy policies."
+    },
+    "registerAdministrator": {
+      "title": "Administrator sign-up",
+      "subtitle": "Create your administrator account to manage condominiums.",
+      "userInfoSection": "Account Information",
+      "profileInfoSection": "Company Information",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "photoUrl": "Profile Photo",
+      "photoUrlPlaceholder": "Enter photo URL (optional)",
+      "uploadPhoto": "Upload Photo",
+      "phoneNumber": "Phone",
+      "phoneNumberPlaceholder": "+51 987 654 321",
+      "submitButton": "Register",
+      "cancelButton": "Cancel",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "Vista Verde Administration S.A.C.",
+      "ruc": "RUC",
+      "rucPlaceholder": "20601234567",
+      "legalRepresentative": "Legal representative",
+      "legalRepresentativePlaceholder": "Full name",
+      "address": "Tax address (optional)",
+      "addressPlaceholder": "123 Main Ave"
+    },
+    "registerResident": {
+      "title": "Apartment owner sign-up",
+      "subtitle": "Finish your registration with the code given by the administration.",
+      "userInfoSection": "Account Information",
+      "profileInfoSection": "Personal Information",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "photoUrl": "Profile Photo",
+      "photoUrlPlaceholder": "Enter photo URL (optional)",
+      "uploadPhoto": "Upload Photo",
+      "phoneNumber": "Phone",
+      "phoneNumberPlaceholder": "+51 987 654 321",
+      "submitButton": "Register",
+      "cancelButton": "Cancel",
+      "activationCode": "Apartment activation code",
+      "activationCodePlaceholder": "LA-201-7K3Q",
+      "activationCodeHint": "Given by the administration along with the keys.",
+      "invalidCode": "The code is invalid or has already been used.",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Full name",
+      "dni": "DNI",
+      "dniPlaceholder": "12345678",
+      "acceptPrivacy": "I accept the privacy and telemetry data policies"
+    }
+  },
+  "common": {
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "view": "View",
+    "actions": "Actions"
+  },
+  "option": {
+    "dashboard": "Dashboard",
+    "condominiums": "Condominiums",
+    "residents": "Residents",
+    "devices": "Devices",
+    "alerts": "Alerts",
+    "bills": "Utility bills",
+    "settlements": "Proration & settlements",
+    "delinquency": "Delinquency",
+    "audit": "Audit trail",
+    "subscription": "Subscription",
+    "profile": "Profile",
+    "myConsumption": "My consumption",
+    "accountStatement": "Account statement",
+    "analytics": "Analytics"
+  },
+  "condominiums": {
+    "title": "Condominiums",
+    "add": "Register condominium",
+    "newTitle": "New condominium",
+    "editTitle": "Edit condominium",
+    "deactivate": "Deactivate",
+    "confirmDeactivate": "The condominium will become inactive. All readings, settlements and audit history are kept.",
+    "search": "Search",
+    "empty": "You have no condominiums yet.",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "fields": {
+      "name": "Name",
+      "address": "Address",
+      "district": "District",
+      "totalUnits": "Number of apartments",
+      "waterSupplyCode": "Water supply code",
+      "electricitySupplyCode": "Electricity supply code"
+    },
+    "unitTypes": {
+      "apartment": "Apartment",
+      "storage": "Storage",
+      "parking": "Parking"
+    },
+    "units": {
+      "count": "{n} units",
+      "add": "Register unit",
+      "save": "Save roll",
+      "number": "Number",
+      "type": "Type",
+      "area": "Area m²",
+      "participation": "Participation %",
+      "resident": "Owner / resident",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned",
+      "activationCode": "Activation code",
+      "registry": "Unit registry and shares"
+    },
+    "stats": {
+      "totalUnits": "Total units",
+      "assigned": "Assigned units",
+      "sum": "Participation sum",
+      "average": "Average participation"
+    },
+    "participation": {
+      "balanced": "Exact sum: 100 %",
+      "missing": "{n} % missing to reach 100 %",
+      "exceeds": "Exceeds by {n} %",
+      "saveDisabled": "Participation must add up to exactly 100 % to save the roll."
+    },
+    "validation": {
+      "required": "Required field.",
+      "length": "Must be between {min} and {max} characters.",
+      "units": "Enter a whole number between 1 and {max} (Gran Torre plan maximum).",
+      "supplyCode": "The code must have 6 to 12 digits.",
+      "duplicateUnit": "A unit with that number already exists.",
+      "area": "Enter a valid area.",
+      "percentage": "Enter a value between 0.01 and 100 with up to 2 decimals.",
+      "commonAreasRequired": "Register at least one common area.",
+      "commonAreaName": "Each common area needs a name of 2 to 60 characters."
+    },
+    "messages": {
+      "saved": "Condominium saved.",
+      "saveError": "Could not save. Try again.",
+      "padronSaved": "Roll saved.",
+      "deactivated": "Condominium deactivated."
+    },
+    "apartmentsCount": "{n} apartments",
+    "suggestedPlan": "Matching plan: {plan}",
+    "subscription": "Subscription",
+    "noSubscription": "No subscription",
+    "manageSubscription": "Manage subscription",
+    "commonAreas": {
+      "title": "Common areas",
+      "hint": "Register the common areas of the condominium. A meter installed in an area of the same type reports its consumption.",
+      "add": "Add common area",
+      "type": "Area type",
+      "name": "Area name",
+      "namePlaceholder": "E.g. Main pool",
+      "empty": "No common areas registered.",
+      "count": "{n} common area | {n} common areas",
+      "types": {
+        "lobby": "Lobby",
+        "pool": "Pool",
+        "gym": "Gym",
+        "event_room": "Event room",
+        "garden": "Garden",
+        "parking": "Parking",
+        "elevator": "Elevator",
+        "pump_room": "Pump room",
+        "cistern": "Cistern",
+        "laundry": "Laundry",
+        "other": "Other"
+      }
+    }
+  },
+  "residents": {
+    "title": "Residents",
+    "add": "Assign resident",
+    "addDialogTitle": "Assign resident to a unit",
+    "editDialogTitle": "Edit resident",
+    "search": "Search",
+    "empty": "No residents.",
+    "freeUnit": "Free unit",
+    "generateCode": "Generate activation code",
+    "codeHint": "Give this code to the resident to finish their registration.",
+    "or": "or",
+    "assignByEmail": "Assign an already registered user (email)",
+    "assign": "Assign",
+    "confirmUnassign": "Unlink {name} from unit {unit}? Their history is kept.",
+    "fields": {
+      "fullName": "Name",
+      "dni": "DNI",
+      "email": "Email",
+      "contact": "Contact",
+      "phoneNumber": "Phone",
+      "condominium": "Condominium",
+      "unit": "Unit",
+      "relation": "Relation",
+      "collectionStatus": "Collection status",
+      "activationCode": "Code"
+    },
+    "relation": {
+      "owner": "Owner",
+      "tenant": "Tenant"
+    },
+    "status": {
+      "current": "Up to date",
+      "overdue": "Delinquent",
+      "pending": "Pending"
+    },
+    "actions": {
+      "view": "View profile",
+      "edit": "Edit",
+      "resendCode": "Resend activation code",
+      "unassign": "Unlink from unit"
+    },
+    "profile": {
+      "personal": "Personal data",
+      "unit": "Assigned unit",
+      "account": "Account statement",
+      "noSettlements": "No settlements yet."
+    },
+    "validation": {
+      "unitRequired": "Select a free unit.",
+      "userNotFound": "No user with that email."
+    },
+    "messages": {
+      "error": "The action could not be completed.",
+      "unassigned": "Resident unlinked.",
+      "updated": "Resident updated.",
+      "alreadyLinked": "Unit {unit} already has a linked resident; no code needed."
+    }
+  },
+  "devices": {
+    "title": "IoT devices",
+    "add": "Register device",
+    "edit": "Edit device",
+    "search": "Search by ID or MAC",
+    "empty": "No devices registered.",
+    "confirmUnlink": "Unlink {id}? Reading history is kept.",
+    "fields": {
+      "deviceId": "ID",
+      "type": "Type",
+      "measurementPoint": "Measurement point",
+      "macAddress": "MAC",
+      "installedAt": "Installed",
+      "lastSeenAt": "Last signal",
+      "status": "Status",
+      "nightFlowThresholdLpm": "Night flow threshold",
+      "baselineAmps": "Current baseline"
+    },
+    "types": {
+      "water_pulse_meter": "Water pulse meter",
+      "current_sensor": "Current sensor",
+      "gateway": "Gateway"
+    },
+    "points": {
+      "cistern": "Cistern",
+      "pump_room": "Pump room",
+      "panel": "Panel",
+      "elevator": "Elevator",
+      "lobby": "Lobby",
+      "pool": "Pool",
+      "gym": "Gym",
+      "event_room": "Event room",
+      "garden": "Garden",
+      "parking": "Parking",
+      "laundry": "Laundry"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "No signal"
+    },
+    "stats": {
+      "total": "Total devices",
+      "online": "Online",
+      "offline": "No signal",
+      "sampling": "Sampling rate"
+    },
+    "actions": {
+      "edit": "Edit",
+      "unlink": "Unlink"
+    },
+    "validation": {
+      "required": "Required field.",
+      "deviceId": "The ID must be 3 to 40 characters.",
+      "idTaken": "A device with that ID already exists in the condominium.",
+      "mac": "Enter a valid MAC address."
+    },
+    "messages": {
+      "saved": "Device saved.",
+      "error": "Could not save the device.",
+      "unlinked": "Device unlinked."
+    }
+  },
+  "telemetry": {
+    "monitoringTitle": "Monitoring",
+    "alertsTitle": "Alerts",
+    "live": "Live",
+    "daily": "Daily",
+    "monthly": "Monthly",
+    "noAlerts": "No alerts.",
+    "severity": "Severity",
+    "type": "Type",
+    "date": "Date",
+    "acknowledge": "Acknowledge",
+    "acknowledged": "Alert acknowledged.",
+    "severities": {
+      "critical": "Critical",
+      "warning": "Warning"
+    },
+    "alertTypes": {
+      "night_leak": "Possible night leak",
+      "pump_over_baseline": "Pump above baseline",
+      "no_signal": "Device without signal"
+    },
+    "alertStatus": {
+      "open": "Open",
+      "acknowledged": "Acknowledged"
+    }
+  },
+  "billing": {
+    "bills": {
+      "title": "Utility bills",
+      "service": "Service",
+      "water": "Water",
+      "electricity": "Electricity",
+      "period": "Period",
+      "billedConsumption": "Billed consumption",
+      "measuredConsumption": "Measured consumption",
+      "amount": "Amount (S/)",
+      "dueDate": "Due date",
+      "attachment": "Attachment (URL)",
+      "empty": "No bills registered.",
+      "saved": "Bill registered."
+    },
+    "reconciliation": {
+      "title": "Reconciliation: billed vs measured",
+      "billed": "Billed",
+      "measured": "Measured",
+      "differenceUnits": "Difference (units)",
+      "differenceAmount": "Difference (S/)",
+      "warning": "The difference exceeds {n} %. Review before calculating (does not block)."
+    },
+    "settlements": {
+      "title": "Proration & settlements",
+      "detailTitle": "Settlement",
+      "calculate": "Calculate proration",
+      "issue": "Issue settlement",
+      "confirmIssue": "An issued settlement is read-only. Issue it?",
+      "issued": "Settlement issued.",
+      "readOnly": "Issued settlement: read-only. Adjustments go through a separate flow and are audited.",
+      "empty": "No settlements yet.",
+      "status": {
+        "draft": "Draft",
+        "issued": "Issued"
+      },
+      "total": "Total",
+      "check": "Sum of lines = common expense",
+      "share": "Common-area share",
+      "issuance": "Issuance"
+    },
+    "breakdown": {
+      "formula": "Common expense × participation",
+      "sourceBill": "Source bill",
+      "readings": "Readings used"
+    },
+    "validation": {
+      "period": "Select a period.",
+      "positive": "Enter a value greater than 0."
+    },
+    "messages": {
+      "error": "The operation could not be completed.",
+      "notBalanced": "The condominium participation does not add up to 100 %. Fix the roll before calculating.",
+      "noBill": "No utility bill registered for that period."
+    }
+  },
+  "payments": {
+    "statement": {
+      "title": "Account statement",
+      "pending": "Pending payment",
+      "dueDate": "Due",
+      "payNow": "Pay by card",
+      "upToDate": "You are up to date",
+      "history": "History",
+      "period": "Period",
+      "concept": "Concept",
+      "conceptValue": "Common-area fee",
+      "amount": "Amount",
+      "status": "Status",
+      "viewBreakdown": "View breakdown",
+      "download": "Receipt",
+      "empty": "You have no settlements yet.",
+      "paidToast": "Payment recorded.",
+      "checkoutError": "Could not start the payment.",
+      "receipt": "Payment receipt"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "overdue": "Overdue"
+    },
+    "delinquency": {
+      "title": "Delinquency",
+      "rate": "Delinquency %",
+      "overdueAmount": "Overdue amount",
+      "units": "Delinquent units",
+      "resident": "Resident",
+      "periods": "Overdue periods",
+      "daysOverdue": "Days overdue",
+      "register": "Register payment",
+      "empty": "No units with overdue debt."
+    },
+    "register": {
+      "amount": "Amount",
+      "amountInvalid": "Enter an amount greater than 0.",
+      "paidAt": "Payment date",
+      "method": "Method",
+      "reference": "Reference",
+      "saved": "Payment registered.",
+      "methods": {
+        "cash": "Cash",
+        "transfer": "Transfer",
+        "card": "Card"
+      }
+    }
+  },
+  "audit": {
+    "title": "Audit trail",
+    "residentTitle": "Support for my settlement",
+    "empty": "No events.",
+    "entity": "Entity",
+    "actor": "User",
+    "previous": "Previous value",
+    "new": "New value",
+    "exportCsv": "Export CSV",
+    "from": "From",
+    "to": "To",
+    "participationChanges": "Participation changes for your unit",
+    "types": {
+      "reading": "Reading",
+      "proration": "Proration",
+      "manual_adjustment": "Manual adjustment",
+      "participation_changed": "Participation change"
+    }
+  },
+  "dashboard": {
+    "admin": {
+      "title": "Condominium dashboard",
+      "refresh": "Refresh",
+      "water": "Water",
+      "energy": "Energy",
+      "currentMonth": "Current month",
+      "recentAlerts": "Recent open alerts",
+      "devicesOnline": "{online} of {total} devices online",
+      "stats": {
+        "waterMonth": "Water consumption this month",
+        "pumpEnergy": "Common-area energy",
+        "projection": "End-of-month projection",
+        "alerts": "Active alerts",
+        "delinquency": "Delinquency"
+      },
+      "charts": {
+        "daily": "Daily consumption this month",
+        "comparison": "Current vs previous month"
+      },
+      "consumptionTitle": "Common-area consumption",
+      "portfolio": {
+        "title": "My condominiums",
+        "condominiums": "Condominiums",
+        "apartments": "Apartments",
+        "commonAreas": "Common areas",
+        "subscriptions": "Active subscriptions",
+        "plan": "Plan",
+        "status": "Status"
+      }
+    },
+    "resident": {
+      "myStatement": "My {month} settlement",
+      "viewBreakdown": "View breakdown",
+      "commonConsumption": "Common-area consumption this month",
+      "recent": "Latest settlements"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Common-area report for {condominium} · {month}",
+    "myUnit": "Apartment {unit}",
+    "water": "Water",
+    "energy": "Energy",
+    "noPrevious": "No data for last month",
+    "vsPrevious": "{pct} % vs same period last month",
+    "noUnit": "Your account is not linked to an apartment yet. Ask the administration for your activation code.",
+    "noAreas": "The administration has not registered the common areas of your condominium yet.",
+    "noData": "No readings this month yet.",
+    "loadError": "The report could not be loaded. Please try again.",
+    "stats": {
+      "water": "Common-area water",
+      "energy": "Common-area energy",
+      "projection": "Month-end projection",
+      "projectionHint": "If consumption stays the same",
+      "monitored": "Monitored areas",
+      "monitoredHint": "With an installed meter"
+    },
+    "charts": {
+      "byArea": "Consumption by area ({unit})",
+      "daily": "Daily consumption this month ({unit})"
+    },
+    "table": {
+      "title": "Detail by common area",
+      "area": "Common area",
+      "water": "Water",
+      "energy": "Energy",
+      "meter": "Meter",
+      "lastReading": "Last reading",
+      "note": "These figures are the basis for prorating common expenses to your apartment."
+    },
+    "status": {
+      "online": "Online",
+      "offline": "No signal",
+      "noMeter": "No meter"
+    }
+  }
+}

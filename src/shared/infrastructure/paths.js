@@ -1,0 +1,36 @@
+/**
+ * Centralized route path constants — single source of truth for navigation.
+ */
+
+export const ROUTES = {
+    IAM_LOGIN: '/iam/login',
+    IAM_REGISTER_ADMIN: '/iam/register-administrator',
+    IAM_REGISTER_RESIDENT: '/iam/register-resident',
+    LOGIN: '/login',
+    HOME: '/home',
+    DASHBOARD: '/telemetry/dashboard',
+    MONITORING: '/telemetry/monitoring',
+    ALERTS: '/telemetry/alerts',
+    ANALYTICS: '/telemetry/analytics',
+    CONDOMINIUMS: '/condominiums',
+    RESIDENTS: '/residents',
+    DEVICES: '/devices/device-management',
+    BILLING_BILLS: '/billing/bills',
+    BILLING_SETTLEMENTS: '/billing/settlements',
+    ACCOUNT_STATEMENT: '/payments/account-statement',
+    DELINQUENCY: '/payments/delinquency',
+    AUDIT: '/audit',
+    SUBSCRIPTIONS: '/subscriptions',
+    SUBSCRIPTION_DETAIL: '/subscriptions/my-subscription',
+    PROFILES: '/profiles/profile',
+    IAM_BASE: '/iam',
+    TELEMETRY_BASE: '/telemetry',
+    DEVICES_BASE: '/devices',
+    PROFILES_BASE: '/profiles',
+    CONDOMINIUMS_BASE: '/condominiums',
+    RESIDENTS_BASE: '/residents',
+    BILLING_BASE: '/billing',
+    PAYMENTS_BASE: '/payments',
+    AUDIT_BASE: '/audit',
+    SUBSCRIPTIONS_BASE: '/subscriptions',
+};

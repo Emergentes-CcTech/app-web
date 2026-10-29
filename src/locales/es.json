@@ -1,0 +1,788 @@
+{
+  "header": {
+    "welcome": "Bienvenido"
+  },
+  "profile": {
+    "title": "Perfil",
+    "edit": "Editar perfil",
+    "accountInformation": "Información de la cuenta",
+    "fullName": "Nombre completo",
+    "email": "Correo electrónico",
+    "phoneNumber": "Número de teléfono",
+    "address": "Dirección",
+    "secondEmail": "Correo alternativo",
+    "appLanguage": "Idioma de la aplicación",
+    "languageEnglish": "Inglés",
+    "languageSpanish": "Español",
+    "toggleOn": "Activado",
+    "toggleOff": "Desactivado",
+    "save": "Guardar Cambios",
+    "cancel": "Cancelar Edición",
+    "saveSuccess": "Perfil actualizado correctamente",
+    "saveError": "No se pudo actualizar el perfil. Inténtalo de nuevo.",
+    "administratorRole": "Administrador",
+    "residentRole": "Dueño de departamento",
+    "companyName": "Razón social",
+    "ruc": "RUC",
+    "legalRepresentative": "Representante legal",
+    "dni": "DNI",
+    "notifications": {
+      "title": "Notificaciones",
+      "save": "Guardar preferencias",
+      "email": "Notificaciones por correo",
+      "sms": "Alertas por SMS",
+      "criticalAlerts": "Alertas críticas",
+      "billingReminders": "Recordatorios de cobranza",
+      "newSettlement": "Aviso de nueva liquidación",
+      "dueDates": "Vencimientos",
+      "condominiumAlerts": "Alertas del condominio"
+    },
+    "security": {
+      "title": "Seguridad de la cuenta",
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "confirm": "Confirmar nueva contraseña",
+      "changePassword": "Cambiar contraseña",
+      "sameAsCurrent": "La nueva contraseña debe ser distinta de la actual.",
+      "passwordChanged": "Contraseña actualizada.",
+      "passwordError": "No se pudo cambiar la contraseña.",
+      "sessions": "Sesiones activas",
+      "noSessions": "Sin sesiones para mostrar.",
+      "closeSession": "Cerrar sesión",
+      "twoFactor": "Autenticación en dos pasos (2FA)",
+      "comingSoon": "Próximamente"
+    }
+  },
+  "subscriptions": {
+    "title": "Mi Suscripción",
+    "pageDescription": "Administra el plan de cada condominio, revisa su kit de equipos IoT y descarga tus comprobantes de facturación.",
+    "loading": "Cargando información de suscripción...",
+    "startUsingIoBuild": "Comienza a operar en IoBuild",
+    "noSubscriptionDescription": "Elige el plan de tu condominio para conectar medidores IoT en las áreas comunes, calcular el prorrateo y llevar la cobranza de tus residentes.",
+    "allPlansDescription": "Escala tu plan según la cantidad de unidades de cada condominio.",
+    "invoicesLoading": "Cargando comprobantes de Stripe...",
+    "invoicesEmptyDescription": "Tus facturas y recibos de pagos aparecerán aquí automáticamente para su consulta y descarga.",
+    "invoice-description-default": "Suscripción a IoBuild",
+    "invoice-plan-description": "Suscripción al plan {planName} de IoBuild",
+    "close": "Cerrar",
+    "connectingToStripe": "Conectando con Stripe...",
+    "warning": "Advertencia",
+    "errors": {
+      "authentication": "No se pudo verificar la cuenta. Inicia sesión nuevamente.",
+      "stripeNotConfigured": "El procesamiento de pagos no está configurado.",
+      "stripeInitializationFailed": "No se pudo inicializar Stripe.",
+      "paymentRedirectFailed": "No se pudo redirigir al pago.",
+      "checkoutSessionMissing": "El servidor no devolvió una URL de pago ni un identificador de sesión.",
+      "paymentStartFailed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+    },
+    "messages": {
+      "paymentProcessedRefresh": "El pago se procesó. Actualiza la página si no aparece tu nuevo plan."
+    },
+    "current-plan": "Plan Actual",
+    "change-plan": "Cambiar Plan",
+    "month": "mes",
+    "status": "Estado",
+    "status-active": "Activo",
+    "status-cancelled": "Cancelado",
+    "status-expired": "Expirado",
+    "renew-plan": "Renovar Plan",
+    "cancel-plan": "Cancelar Plan",
+    "no-subscription": "No tienes una suscripción activa",
+    "confirm-renew": "¿Está seguro de que desea renovar su plan actual?",
+    "renew-header": "Renovar Suscripción",
+    "confirm-cancel": "¿Está seguro de que desea cancelar su suscripción actual?",
+    "cancel-header": "Cancelar Suscripción",
+    "confirm-change": "¿Está seguro de que desea cambiar al plan {planName}?",
+    "change-header": "Cambiar Plan",
+    "success": "Éxito",
+    "error": "Error",
+    "renewed-successfully": "Su plan ha sido renovado exitosamente",
+    "cancelled-successfully": "Su suscripción ha sido cancelada",
+    "plan-changed": "Ha cambiado exitosamente al plan {planName}",
+    "renew-failed": "Error al renovar el plan",
+    "status-Active": "Activo",
+    "status-Expired": "Expirado",
+    "status-Cancelled": "Cancelado",
+    "status-Pending": "Pendiente",
+    "cancel-failed": "Error al cancelar la suscripción",
+    "change-failed": "Error al cambiar el plan",
+    "payment-success": "Pago realizado exitosamente",
+    "previous-invoices": "Facturas anteriores",
+    "previous-invoices-button": "Facturas anteriores",
+    "invoice-due-date-label": "Fecha de vencimiento",
+    "invoice-billing-period-label": "Periodo de facturación",
+    "invoice-view-details": "Ver detalles",
+    "invoice-status-paid": "Pagada",
+    "invoice-status-pending": "Pendiente",
+    "no-invoices": "Sin facturas anteriores",
+    "usage-title": "Consumo y Cuotas del Plan",
+    "validThrough": "Vigente hasta {date}",
+    "usage-unlimited": "Ilimitados",
+    "usage-warning": "Estás cerca del límite de dispositivos de tu plan. Mejora tu plan para conectar más dispositivos.",
+    "usage-exceeded": "Has superado el límite de dispositivos de tu plan ({current}/{max} dispositivos). Actualiza tu plan para conectar más dispositivos y mantener la estabilidad del servicio.",
+    "quotaPlanLabel": "Plan {plan} — Límite de dispositivos: {max}",
+    "quotaDevicesCalc": "{current} en uso + ~{newDevs} nuevos = {total} / {max}",
+    "quotaAlreadyExceededMsg": "Ya has alcanzado o superado el límite de tu plan ({current}/{max} dispositivos). Por favor actualiza tu suscripción para definir más estructuras o conectar más dispositivos.",
+    "quotaExceededTitle": "Límite de dispositivos del plan excedido",
+    "quotaExceededToast": "Esta estructura supera el límite de {max} dispositivos de tu plan {plan}. Por favor actualiza tu suscripción para continuar.",
+    "next-billing": "Próxima renovación",
+    "billing-cycle": "Precio por condominio · facturación mensual",
+    "billed-via": "Facturado de forma segura a través de Stripe",
+    "upgrade": "Mejorar Plan",
+    "downgrade": "Cambiar Plan",
+    "current-plan-badge": "Tu Plan Actual",
+    "most-popular": "Más Popular",
+    "all-plans": "Planes Disponibles",
+    "compare-plans": "Comparar todos los planes",
+    "compare-modal-title": "Matriz Comparativa de Beneficios",
+    "feature-devices": "Límite de Dispositivos IoT",
+    "feature-admins": "Cuentas de Administrador",
+    "feature-reports": "Reportes y Analíticas",
+    "feature-support": "Nivel de Soporte",
+    "feature-api": "Acceso a API",
+    "feature-sla": "Garantía SLA",
+    "view-invoices": "Ver Facturas y Recibos",
+    "invoices-title": "Mis Facturas y Recibos",
+    "invoice-date": "Fecha",
+    "invoice-description": "Descripción",
+    "invoice-amount": "Importe",
+    "invoice-status": "Estado",
+    "invoice-receipt": "Recibo",
+    "download-receipt": "Descargar PDF",
+    "no-invoices-found": "Aún no tienes facturas registradas.",
+    "confirm-change-title": "Confirmar Cambio de Plan",
+    "confirm-change-subtitle": "Estás a punto de actualizar tu nivel de suscripción",
+    "current-tier": "Plan Actual",
+    "new-tier": "Nuevo Plan",
+    "secure-stripe": "Procesado de forma segura mediante Stripe Checkout",
+    "proceed-stripe": "Continuar al Pago Seguro con Stripe",
+    "cancelled-notice": "Tu suscripción se encuentra cancelada. Mantendrás acceso a las funciones hasta el término del periodo.",
+    "reactivate-plan": "Reactivar Plan",
+    "unlocked-benefits": "Beneficios que desbloquearás",
+    "choose-plan": "Elegir {planName}",
+    "features-included": "Características incluidas",
+    "comparison": {
+      "feature": "Característica",
+      "close": "Cerrar",
+      "features": {
+        "support": "Soporte",
+        "sla": "Garantía de SLA",
+        "api": "Acceso a la API de telemetría",
+        "units": "Departamentos",
+        "price": "Precio mensual",
+        "hardware": "Equipos incluidos",
+        "kit": "Detalle del kit"
+      }
+    },
+    "planCatalog": {
+      "boutique": {
+        "description": "Para condominios pequeños de hasta 20 departamentos."
+      },
+      "urbano": {
+        "description": "Para edificios de 21 a 50 departamentos."
+      },
+      "gran-torre": {
+        "description": "Para torres de 51 a 80 departamentos."
+      }
+    },
+    "usage-units": "Departamentos registrados",
+    "hardwareIncluded": "Kit de equipos en comodato",
+    "nextBilling": "Próximo cobro",
+    "recommended": "Recomendado",
+    "unitsUpTo": "Hasta {max} departamentos",
+    "unitsRange": "{min} a {max} departamentos",
+    "planTooSmall": "No cubre {units} departamentos",
+    "exceedsCatalog": "Este condominio tiene {units} departamentos y los planes cubren hasta {max}. Escríbenos para una propuesta a medida.",
+    "kit": {
+      "title": "Kit de {n} equipos",
+      "gateways": "{n} Gateway | {n} Gateways",
+      "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
+      "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
+    }
+  },
+  "iam": {
+    "logout": "Cerrar Sesión",
+    "actions": {
+      "next": "Siguiente",
+      "back": "Atrás",
+      "changePhoto": "Cambiar foto",
+      "photoSelected": "Foto seleccionada",
+      "removePhoto": "Eliminar foto",
+      "photoPreviewAlt": "Vista previa de la foto de perfil"
+    },
+    "messages": {
+      "registrationSuccess": "Registro completado correctamente.",
+      "profileCreationFailed": "No se pudo completar la configuración del perfil. Inicie sesión manualmente."
+    },
+    "login": {
+      "title": "Iniciar Sesión",
+      "subtitle": "¡Bienvenido de nuevo! Ingrese a su cuenta.",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "Ingrese su correo electrónico",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Ingrese su contraseña",
+      "submitButton": "Iniciar Sesión",
+      "noAccount": "¿No tienes una cuenta?",
+      "registerAdministrator": "Registrar mi administradora",
+      "registerResident": "Soy dueño de departamento"
+    },
+    "validation": {
+      "emailRequired": "El correo electrónico es obligatorio.",
+      "emailInvalid": "Ingrese un formato de correo electrónico válido.",
+      "passwordRequired": "La contraseña es obligatoria.",
+      "passwordMinLength": "Mínimo 8 caracteres con mayúscula, minúscula, número y carácter especial.",
+      "confirmPasswordRequired": "Debe confirmar su contraseña.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "completeAccountInfo": "Complete los campos obligatorios de la cuenta.",
+      "completeProfileInfo": "Corrija los campos marcados antes de continuar.",
+      "companyNameRequired": "La razón social es obligatoria.",
+      "companyNameMinLength": "La razón social debe tener entre 3 y 120 caracteres.",
+      "fullNameRequired": "El nombre completo es obligatorio.",
+      "fullNameMinLength": "El nombre completo debe tener al menos 2 caracteres.",
+      "phoneRequired": "El número de teléfono es obligatorio.",
+      "phoneInvalid": "Ingrese un número telefónico válido (de 7 a 15 dígitos).",
+      "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Inicie sesión.",
+      "credentialsInvalid": "Correo o contraseña incorrectos.",
+      "registrationDataInvalid": "Los datos de registro no son válidos. Revise el formulario e inténtelo de nuevo.",
+      "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
+      "rucRequired": "El RUC es obligatorio.",
+      "rucInvalid": "El RUC debe tener 11 dígitos válidos.",
+      "legalRepresentativeRequired": "El representante legal es obligatorio.",
+      "nameInvalid": "Ingrese un nombre válido.",
+      "activationCodeRequired": "El código de activación es obligatorio.",
+      "dniRequired": "El DNI es obligatorio.",
+      "dniInvalid": "El DNI debe tener 8 dígitos.",
+      "privacyRequired": "Debes aceptar las políticas de privacidad."
+    },
+    "registerAdministrator": {
+      "title": "Registro de administrador",
+      "subtitle": "Crea tu cuenta de administrador para gestionar condominios.",
+      "userInfoSection": "Información de Cuenta",
+      "profileInfoSection": "Información de la Empresa",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "Ingrese su correo electrónico",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Ingrese su contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "confirmPasswordPlaceholder": "Confirme su contraseña",
+      "photoUrl": "Foto de Perfil",
+      "photoUrlPlaceholder": "Ingrese URL de foto (opcional)",
+      "uploadPhoto": "Subir Foto",
+      "phoneNumber": "Teléfono",
+      "phoneNumberPlaceholder": "+51 987 654 321",
+      "submitButton": "Registrarse",
+      "cancelButton": "Cancelar",
+      "companyName": "Razón social",
+      "companyNamePlaceholder": "Administradora Vista Verde S.A.C.",
+      "ruc": "RUC",
+      "rucPlaceholder": "20601234567",
+      "legalRepresentative": "Representante legal",
+      "legalRepresentativePlaceholder": "Nombre y apellidos",
+      "address": "Dirección fiscal (opcional)",
+      "addressPlaceholder": "Av. Javier Prado 1234"
+    },
+    "registerResident": {
+      "title": "Registro de dueño de departamento",
+      "subtitle": "Completa tu registro con el código que te entregó la administración.",
+      "userInfoSection": "Información de Cuenta",
+      "profileInfoSection": "Información Personal",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "Ingrese su correo electrónico",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Ingrese su contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "confirmPasswordPlaceholder": "Confirme su contraseña",
+      "photoUrl": "Foto de Perfil",
+      "photoUrlPlaceholder": "Ingrese URL de foto (opcional)",
+      "uploadPhoto": "Subir Foto",
+      "phoneNumber": "Teléfono",
+      "phoneNumberPlaceholder": "+51 987 654 321",
+      "submitButton": "Registrarse",
+      "cancelButton": "Cancelar",
+      "activationCode": "Código de activación del departamento",
+      "activationCodePlaceholder": "LA-201-7K3Q",
+      "activationCodeHint": "Lo entregó la administración junto con las llaves.",
+      "invalidCode": "El código no es válido o ya fue utilizado.",
+      "fullName": "Nombre completo",
+      "fullNamePlaceholder": "Nombre y apellidos",
+      "dni": "DNI",
+      "dniPlaceholder": "12345678",
+      "acceptPrivacy": "Acepto las políticas de privacidad y de datos de telemetría"
+    }
+  },
+  "common": {
+    "success": "Éxito",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "add": "Agregar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "view": "Ver",
+    "actions": "Acciones"
+  },
+  "option": {
+    "dashboard": "Panel",
+    "condominiums": "Condominios",
+    "residents": "Residentes",
+    "devices": "Dispositivos",
+    "alerts": "Alertas",
+    "bills": "Recibos matriz",
+    "settlements": "Prorrateo y liquidación",
+    "delinquency": "Morosidad",
+    "audit": "Auditoría",
+    "subscription": "Suscripción",
+    "profile": "Perfil",
+    "myConsumption": "Mi consumo",
+    "accountStatement": "Estado de cuenta",
+    "analytics": "Analytics"
+  },
+  "condominiums": {
+    "title": "Condominios",
+    "add": "Registrar condominio",
+    "newTitle": "Nuevo condominio",
+    "editTitle": "Editar condominio",
+    "deactivate": "Dar de baja",
+    "confirmDeactivate": "El condominio quedará inactivo. Se conserva todo el histórico de lecturas, liquidaciones y auditoría.",
+    "search": "Buscar",
+    "empty": "Aún no tienes condominios registrados.",
+    "status": {
+      "active": "Activo",
+      "inactive": "Baja"
+    },
+    "fields": {
+      "name": "Nombre",
+      "address": "Dirección",
+      "district": "Distrito",
+      "totalUnits": "Número de departamentos",
+      "waterSupplyCode": "Código de suministro de agua",
+      "electricitySupplyCode": "Código de suministro de luz"
+    },
+    "unitTypes": {
+      "apartment": "Departamento",
+      "storage": "Depósito",
+      "parking": "Estacionamiento"
+    },
+    "units": {
+      "count": "{n} unidades",
+      "add": "Registrar unidad",
+      "save": "Guardar padrón",
+      "number": "Número",
+      "type": "Tipo",
+      "area": "Área m²",
+      "participation": "% de participación",
+      "resident": "Propietario / residente",
+      "assigned": "Asignada",
+      "unassigned": "Sin asignar",
+      "activationCode": "Código de activación",
+      "registry": "Padrón de unidades y alícuotas"
+    },
+    "stats": {
+      "totalUnits": "Total de unidades",
+      "assigned": "Unidades asignadas",
+      "sum": "Suma de alícuotas",
+      "average": "Alícuota promedio"
+    },
+    "participation": {
+      "balanced": "Suma exacta: 100 %",
+      "missing": "Falta {n} % para llegar a 100 %",
+      "exceeds": "Excede en {n} %",
+      "saveDisabled": "La suma de participaciones debe ser exactamente 100 % para guardar el padrón."
+    },
+    "validation": {
+      "required": "Campo obligatorio.",
+      "length": "Debe tener entre {min} y {max} caracteres.",
+      "units": "Ingrese un entero entre 1 y {max} (máximo del plan Gran Torre).",
+      "supplyCode": "El código debe tener de 6 a 12 dígitos.",
+      "duplicateUnit": "Ya existe una unidad con ese número.",
+      "area": "Ingrese un área válida.",
+      "percentage": "Ingrese un valor entre 0.01 y 100 con hasta 2 decimales.",
+      "commonAreasRequired": "Registra al menos un área común.",
+      "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres."
+    },
+    "messages": {
+      "saved": "Condominio guardado.",
+      "saveError": "No se pudo guardar. Inténtalo de nuevo.",
+      "padronSaved": "Padrón guardado.",
+      "deactivated": "Condominio dado de baja."
+    },
+    "apartmentsCount": "{n} departamentos",
+    "suggestedPlan": "Plan que corresponde: {plan}",
+    "subscription": "Suscripción",
+    "noSubscription": "Sin suscripción",
+    "manageSubscription": "Gestionar suscripción",
+    "commonAreas": {
+      "title": "Áreas comunes",
+      "hint": "Registra las áreas comunes del condominio. Un medidor instalado en un área del mismo tipo reporta su consumo.",
+      "add": "Agregar área común",
+      "type": "Tipo de área",
+      "name": "Nombre del área",
+      "namePlaceholder": "Ej. Piscina principal",
+      "empty": "Sin áreas comunes registradas.",
+      "count": "{n} área común | {n} áreas comunes",
+      "types": {
+        "lobby": "Lobby",
+        "pool": "Piscina",
+        "gym": "Gimnasio",
+        "event_room": "Salón de eventos",
+        "garden": "Jardín",
+        "parking": "Estacionamiento",
+        "elevator": "Ascensor",
+        "pump_room": "Cuarto de bombas",
+        "cistern": "Cisterna",
+        "laundry": "Lavandería",
+        "other": "Otra"
+      }
+    }
+  },
+  "residents": {
+    "title": "Residentes",
+    "add": "Asignar residente",
+    "addDialogTitle": "Asignar residente a una unidad",
+    "editDialogTitle": "Editar residente",
+    "search": "Buscar",
+    "empty": "No hay residentes.",
+    "freeUnit": "Unidad libre",
+    "generateCode": "Generar código de activación",
+    "codeHint": "Entrega este código al residente para que complete su registro.",
+    "or": "o",
+    "assignByEmail": "Asignar a un usuario ya registrado (correo)",
+    "assign": "Asignar",
+    "confirmUnassign": "¿Desvincular a {name} de la unidad {unit}? Se conserva su historial.",
+    "fields": {
+      "fullName": "Nombre",
+      "dni": "DNI",
+      "email": "Correo",
+      "contact": "Contacto",
+      "phoneNumber": "Teléfono",
+      "condominium": "Condominio",
+      "unit": "Unidad",
+      "relation": "Relación",
+      "collectionStatus": "Estado de cobranza",
+      "activationCode": "Código"
+    },
+    "relation": {
+      "owner": "Propietario",
+      "tenant": "Inquilino"
+    },
+    "status": {
+      "current": "Al día",
+      "overdue": "Moroso",
+      "pending": "Pendiente"
+    },
+    "actions": {
+      "view": "Ver perfil",
+      "edit": "Editar",
+      "resendCode": "Reenviar código de activación",
+      "unassign": "Desvincular de la unidad"
+    },
+    "profile": {
+      "personal": "Datos personales",
+      "unit": "Unidad asignada",
+      "account": "Estado de cuenta",
+      "noSettlements": "Aún no hay liquidaciones."
+    },
+    "validation": {
+      "unitRequired": "Selecciona una unidad libre.",
+      "userNotFound": "No existe un usuario con ese correo."
+    },
+    "messages": {
+      "error": "No se pudo completar la acción.",
+      "unassigned": "Residente desvinculado.",
+      "updated": "Residente actualizado.",
+      "alreadyLinked": "La unidad {unit} ya tiene un residente vinculado; no requiere código."
+    }
+  },
+  "devices": {
+    "title": "Dispositivos IoT",
+    "add": "Registrar dispositivo",
+    "edit": "Editar dispositivo",
+    "search": "Buscar por ID o MAC",
+    "empty": "No hay dispositivos registrados.",
+    "confirmUnlink": "¿Desvincular {id}? El histórico de lecturas se conserva.",
+    "fields": {
+      "deviceId": "ID",
+      "type": "Tipo",
+      "measurementPoint": "Punto de medición",
+      "macAddress": "MAC",
+      "installedAt": "Instalado",
+      "lastSeenAt": "Última señal",
+      "status": "Estado",
+      "nightFlowThresholdLpm": "Umbral de flujo nocturno",
+      "baselineAmps": "Línea base de corriente"
+    },
+    "types": {
+      "water_pulse_meter": "Medidor de pulsos de agua",
+      "current_sensor": "Sensor de corriente",
+      "gateway": "Gateway"
+    },
+    "points": {
+      "cistern": "Cisterna",
+      "pump_room": "Cuarto de bombas",
+      "panel": "Tablero",
+      "elevator": "Ascensor",
+      "lobby": "Lobby",
+      "pool": "Piscina",
+      "gym": "Gimnasio",
+      "event_room": "Salón de eventos",
+      "garden": "Jardín",
+      "parking": "Estacionamiento",
+      "laundry": "Lavandería"
+    },
+    "status": {
+      "online": "En línea",
+      "offline": "Sin señal"
+    },
+    "stats": {
+      "total": "Total de equipos",
+      "online": "En línea",
+      "offline": "Sin señal",
+      "sampling": "Frecuencia de muestreo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "unlink": "Desvincular"
+    },
+    "validation": {
+      "required": "Campo obligatorio.",
+      "deviceId": "El ID debe tener entre 3 y 40 caracteres.",
+      "idTaken": "Ya existe un dispositivo con ese ID en el condominio.",
+      "mac": "Ingrese una dirección MAC válida."
+    },
+    "messages": {
+      "saved": "Dispositivo guardado.",
+      "error": "No se pudo guardar el dispositivo.",
+      "unlinked": "Dispositivo desvinculado."
+    }
+  },
+  "telemetry": {
+    "monitoringTitle": "Monitoreo",
+    "alertsTitle": "Alertas",
+    "live": "En vivo",
+    "daily": "Diario",
+    "monthly": "Mensual",
+    "noAlerts": "No hay alertas.",
+    "severity": "Severidad",
+    "type": "Tipo",
+    "date": "Fecha",
+    "acknowledge": "Reconocer",
+    "acknowledged": "Alerta reconocida.",
+    "severities": {
+      "critical": "Crítica",
+      "warning": "Advertencia"
+    },
+    "alertTypes": {
+      "night_leak": "Posible fuga nocturna",
+      "pump_over_baseline": "Bomba sobre su línea base",
+      "no_signal": "Dispositivo sin señal"
+    },
+    "alertStatus": {
+      "open": "Abierta",
+      "acknowledged": "Reconocida"
+    }
+  },
+  "billing": {
+    "bills": {
+      "title": "Recibos matriz",
+      "service": "Servicio",
+      "water": "Agua",
+      "electricity": "Luz",
+      "period": "Periodo",
+      "billedConsumption": "Consumo facturado",
+      "measuredConsumption": "Consumo medido",
+      "amount": "Monto (S/)",
+      "dueDate": "Vencimiento",
+      "attachment": "Comprobante (URL)",
+      "empty": "No hay recibos registrados.",
+      "saved": "Recibo registrado."
+    },
+    "reconciliation": {
+      "title": "Conciliación: facturado vs medido",
+      "billed": "Facturado",
+      "measured": "Medido",
+      "differenceUnits": "Diferencia (unidades)",
+      "differenceAmount": "Diferencia (S/)",
+      "warning": "La diferencia supera el {n} %. Revisa antes de calcular (no bloquea)."
+    },
+    "settlements": {
+      "title": "Prorrateo y liquidación",
+      "detailTitle": "Liquidación",
+      "calculate": "Calcular prorrateo",
+      "issue": "Emitir liquidación",
+      "confirmIssue": "Una liquidación emitida es de solo lectura. ¿Emitir?",
+      "issued": "Liquidación emitida.",
+      "readOnly": "Liquidación emitida: solo lectura. Los ajustes se registran por un flujo aparte y quedan en auditoría.",
+      "empty": "Aún no hay liquidaciones.",
+      "status": {
+        "draft": "Borrador",
+        "issued": "Emitida"
+      },
+      "total": "Total",
+      "check": "Suma de líneas = gasto común",
+      "share": "Cuota de áreas comunes",
+      "issuance": "Emisión"
+    },
+    "breakdown": {
+      "formula": "Gasto común × participación",
+      "sourceBill": "Recibo de origen",
+      "readings": "Lecturas usadas"
+    },
+    "validation": {
+      "period": "Selecciona un periodo.",
+      "positive": "Ingrese un valor mayor que 0."
+    },
+    "messages": {
+      "error": "No se pudo completar la operación.",
+      "notBalanced": "El condominio no tiene participación sumando 100 %. Corrige el padrón antes de calcular.",
+      "noBill": "No hay recibo matriz registrado para ese periodo."
+    }
+  },
+  "payments": {
+    "statement": {
+      "title": "Estado de cuenta",
+      "pending": "Pendiente de pago",
+      "dueDate": "Vence",
+      "payNow": "Pagar con tarjeta",
+      "upToDate": "Estás al día",
+      "history": "Historial",
+      "period": "Periodo",
+      "concept": "Concepto",
+      "conceptValue": "Cuota de áreas comunes",
+      "amount": "Importe",
+      "status": "Estado",
+      "viewBreakdown": "Ver desglose",
+      "download": "Comprobante",
+      "empty": "Aún no tienes liquidaciones.",
+      "paidToast": "Pago registrado correctamente.",
+      "checkoutError": "No se pudo iniciar el pago.",
+      "receipt": "Comprobante de pago"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagado",
+      "overdue": "Vencido"
+    },
+    "delinquency": {
+      "title": "Morosidad",
+      "rate": "% de morosidad",
+      "overdueAmount": "Monto vencido",
+      "units": "Unidades morosas",
+      "resident": "Residente",
+      "periods": "Periodos vencidos",
+      "daysOverdue": "Días de atraso",
+      "register": "Registrar pago",
+      "empty": "No hay unidades con deuda vencida."
+    },
+    "register": {
+      "amount": "Monto",
+      "amountInvalid": "Ingrese un monto mayor que 0.",
+      "paidAt": "Fecha de pago",
+      "method": "Método",
+      "reference": "Referencia",
+      "saved": "Pago registrado.",
+      "methods": {
+        "cash": "Efectivo",
+        "transfer": "Transferencia",
+        "card": "Tarjeta"
+      }
+    }
+  },
+  "audit": {
+    "title": "Historial de auditoría",
+    "residentTitle": "Sustento de mi liquidación",
+    "empty": "No hay eventos.",
+    "entity": "Entidad",
+    "actor": "Usuario",
+    "previous": "Valor anterior",
+    "new": "Valor nuevo",
+    "exportCsv": "Exportar CSV",
+    "from": "Desde",
+    "to": "Hasta",
+    "participationChanges": "Cambios de porcentaje de tu unidad",
+    "types": {
+      "reading": "Lectura",
+      "proration": "Prorrateo",
+      "manual_adjustment": "Ajuste manual",
+      "participation_changed": "Cambio de participación"
+    }
+  },
+  "dashboard": {
+    "admin": {
+      "title": "Panel del condominio",
+      "refresh": "Actualizar",
+      "water": "Agua",
+      "energy": "Energía",
+      "currentMonth": "Mes actual",
+      "recentAlerts": "Alertas abiertas recientes",
+      "devicesOnline": "{online} de {total} dispositivos en línea",
+      "stats": {
+        "waterMonth": "Consumo de agua del mes",
+        "pumpEnergy": "Energía de áreas comunes",
+        "projection": "Proyección al cierre",
+        "alerts": "Alertas activas",
+        "delinquency": "Morosidad"
+      },
+      "charts": {
+        "daily": "Consumo diario del mes",
+        "comparison": "Mes actual vs anterior"
+      },
+      "consumptionTitle": "Consumo de áreas comunes",
+      "portfolio": {
+        "title": "Mis condominios",
+        "condominiums": "Condominios",
+        "apartments": "Departamentos",
+        "commonAreas": "Áreas comunes",
+        "subscriptions": "Suscripciones activas",
+        "plan": "Plan",
+        "status": "Estado"
+      }
+    },
+    "resident": {
+      "myStatement": "Mi liquidación de {month}",
+      "viewBreakdown": "Ver desglose",
+      "commonConsumption": "Consumo de áreas comunes este mes",
+      "recent": "Últimas liquidaciones"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Reporte de áreas comunes de {condominium} · {month}",
+    "myUnit": "Departamento {unit}",
+    "water": "Agua",
+    "energy": "Energía",
+    "noPrevious": "Sin datos del mes anterior",
+    "vsPrevious": "{pct} % vs mismo periodo del mes anterior",
+    "noUnit": "Tu cuenta aún no está vinculada a un departamento. Pide a la administración tu código de activación.",
+    "noAreas": "La administración aún no registró las áreas comunes de tu condominio.",
+    "noData": "Aún no hay lecturas este mes.",
+    "loadError": "No se pudo cargar el reporte. Inténtalo de nuevo.",
+    "stats": {
+      "water": "Agua de áreas comunes",
+      "energy": "Energía de áreas comunes",
+      "projection": "Proyección al cierre",
+      "projectionHint": "Si el consumo sigue igual",
+      "monitored": "Áreas monitoreadas",
+      "monitoredHint": "Con medidor instalado"
+    },
+    "charts": {
+      "byArea": "Consumo por área ({unit})",
+      "daily": "Consumo diario del mes ({unit})"
+    },
+    "table": {
+      "title": "Detalle por área común",
+      "area": "Área común",
+      "water": "Agua",
+      "energy": "Energía",
+      "meter": "Medidor",
+      "lastReading": "Última lectura",
+      "note": "Estos consumos son la base del prorrateo de gastos comunes de tu departamento."
+    },
+    "status": {
+      "online": "En línea",
+      "offline": "Sin señal",
+      "noMeter": "Sin medidor"
+    }
+  }
+}
