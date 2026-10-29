@@ -9,3 +9,27 @@ playwright-report/
 .vercel
 *.log
 .DS_Store
+
+# .NET build and test output
+**/bin/
+**/obj/
+.vs/
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# Local tooling & secrets
+.idea/
+.vscode/
+*.user
+*.suo
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class

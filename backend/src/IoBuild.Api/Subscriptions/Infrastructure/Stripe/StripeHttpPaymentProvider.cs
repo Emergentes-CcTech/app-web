@@ -1,0 +1,280 @@
+using System.Text.Json;
+using IoBuild.Api.Subscriptions.Application.Internal.CommandServices;
+
+namespace IoBuild.Api.Subscriptions.Infrastructure.Stripe;
+
+public sealed record PaymentCheckoutRequest(int BuilderId, int PlanId, string SuccessUrl, string CancelUrl);
+public sealed record PaymentCheckoutSession(string Id, string Url, long AmountInCents);
+public sealed record PaymentSessionConfirmation(string SessionId, string Status, int BuilderId, int PlanId);
+public sealed record PaymentInvoice(string Id, string Status, long AmountInCents, string? ReceiptUrl = null);
+
+public interface IPaymentProvider
+{
+    Task<PaymentCheckoutSession?> CreateCheckoutSessionAsync(PaymentCheckoutRequest request, StripeIntegrationOptions options, CancellationToken cancellationToken = default);
+    Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PaymentInvoice>?> GetInvoicesAsync(int builderId, CancellationToken cancellationToken = default);
+}
+
+public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration configuration, IServiceProvider? serviceProvider = null) : IPaymentProvider
+{
+    public async Task<PaymentCheckoutSession?> CreateCheckoutSessionAsync(PaymentCheckoutRequest request, StripeIntegrationOptions options, CancellationToken cancellationToken = default)
+    {
+        if (!StripeRestrictedKeyResolver.IsRestrictedKey(options.RestrictedApiKey)) return null;
+
+        var useSimulated = configuration.GetValue<bool>("Stripe:UseSimulatedPayments") || string.Equals(configuration["Stripe:RestrictedApiKey"], "rk_test_local", StringComparison.Ordinal);
+        if (useSimulated)
+        {
+            var sessionId = $"cs_sim_{request.BuilderId}_{request.PlanId}_{Guid.NewGuid():N}";
+            var separator = request.SuccessUrl.Contains('?') ? "&" : "?";
+            var url = $"{request.SuccessUrl}{separator}session_id={sessionId}";
+            return new PaymentCheckoutSession(sessionId, url, 1200);
+        }
+
+        var price = configuration[$"Stripe:PlanPrices:{request.PlanId}"];
+        var endpoint = Endpoint("/v1/checkout/sessions");
+        if (endpoint is null) return null;
+
+        Dictionary<string, string> formFields;
+        if (!string.IsNullOrWhiteSpace(price))
+        {
+            formFields = new Dictionary<string, string>
+            {
+                ["mode"] = "subscription",
+                ["success_url"] = request.SuccessUrl,
+                ["cancel_url"] = request.CancelUrl,
+                ["line_items[0][price]"] = price,
+                ["line_items[0][quantity]"] = "1",
+                ["metadata[builder_id]"] = request.BuilderId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["metadata[plan_id]"] = request.PlanId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+        }
+        else
+        {
+            string name;
+            long amountInCents;
+            string description;
+
+            if (serviceProvider != null)
+            {
+                using var scope = serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetService<IoBuild.Api.Persistence.IoBuildDbContext>();
+                var plan = db != null ? await db.Plans.FindAsync([request.PlanId], cancellationToken) : null;
+                if (plan != null)
+                {
+                    name = plan.Name;
+                    amountInCents = (long)(plan.Price * 100);
+                    description = plan.Description;
+                }
+                else
+                {
+                    (name, amountInCents) = GetPlanInfo(request.PlanId);
+                    description = $"Suscripción IoBuild Plan {name}";
+                }
+            }
+            else
+            {
+                (name, amountInCents) = GetPlanInfo(request.PlanId);
+                description = $"Suscripción IoBuild Plan {name}";
+            }
+
+            var currency = configuration["Stripe:Currency"] ?? "usd";
+            var successUrl = request.SuccessUrl.Contains("{CHECKOUT_SESSION_ID}")
+                ? request.SuccessUrl
+                : $"{request.SuccessUrl.Split('?')[0]}?success=true&session_id={{CHECKOUT_SESSION_ID}}";
+
+            formFields = new Dictionary<string, string>
+            {
+                ["mode"] = "payment",
+                ["success_url"] = successUrl,
+                ["cancel_url"] = request.CancelUrl,
+                ["line_items[0][quantity]"] = "1",
+                ["line_items[0][price_data][currency]"] = currency,
+                ["line_items[0][price_data][unit_amount]"] = amountInCents.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["line_items[0][price_data][product_data][name]"] = $"Plan {name}",
+                ["line_items[0][price_data][product_data][description]"] = description,
+                ["metadata[builder_id]"] = request.BuilderId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["metadata[plan_id]"] = request.PlanId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+        }
+
+        using var body = new FormUrlEncodedContent(formFields);
+        using var message = AuthorizedRequest(HttpMethod.Post, endpoint, options.RestrictedApiKey);
+        message.Content = body;
+        return await SendCheckoutAsync(message, cancellationToken);
+    }
+
+    public async Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        if (sessionId.StartsWith("cs_sim_", StringComparison.Ordinal))
+        {
+            var parts = sessionId.Split('_');
+            int builderId = parts.Length > 2 && int.TryParse(parts[2], out var b) ? b : 1;
+            int planId = parts.Length > 3 && int.TryParse(parts[3], out var p) ? p : 1;
+            return new PaymentSessionConfirmation(sessionId, "paid", builderId, planId);
+        }
+
+        var endpoint = Endpoint($"/v1/checkout/sessions/{Uri.EscapeDataString(sessionId)}");
+        var key = StripeRestrictedKeyResolver.Resolve(configuration);
+        if (endpoint is null || key is null) return null;
+        using var message = AuthorizedRequest(HttpMethod.Get, endpoint, key);
+        try
+        {
+            using var response = await client.SendAsync(message, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = document.RootElement;
+            if (!root.TryGetProperty("id", out var id) || !root.TryGetProperty("metadata", out var metadata)
+                || !metadata.TryGetProperty("builder_id", out var builder) || !metadata.TryGetProperty("plan_id", out var plan)
+                || !int.TryParse(builder.GetString(), out var builderId) || !int.TryParse(plan.GetString(), out var planId)) return null;
+            var status = root.TryGetProperty("payment_status", out var paymentStatus) ? paymentStatus.GetString() : root.GetProperty("status").GetString();
+            return string.IsNullOrWhiteSpace(status) ? null : new PaymentSessionConfirmation(id.GetString()!, status, builderId, planId);
+        }
+        catch (HttpRequestException) { return null; }
+        catch (JsonException) { return null; }
+    }
+
+    public async Task<IReadOnlyList<PaymentInvoice>?> GetInvoicesAsync(int builderId, CancellationToken cancellationToken = default)
+    {
+        var key = StripeRestrictedKeyResolver.Resolve(configuration);
+        if (key is null) return null;
+
+        if (configuration.GetValue<bool>("Stripe:UseSimulatedPayments"))
+        {
+            return [new PaymentInvoice($"in_sim_{builderId}", "paid", 1200)];
+        }
+
+        // Primary source: paid checkout sessions for this builder, with the
+        // charge expanded so every one-off payment carries its receipt URL.
+        // Needs no customer mapping: sessions are filtered by metadata.
+        var receipts = await GetSessionReceiptsAsync(builderId, key, cancellationToken);
+
+        // Secondary source: invoices (subscription mode renewals), which need
+        // a mapped customer. Either source alone is a complete answer.
+        var customer = configuration[$"Stripe:BuilderCustomers:{builderId}"];
+        List<PaymentInvoice>? invoices = null;
+        if (!string.IsNullOrWhiteSpace(customer))
+        {
+            invoices = await GetCustomerInvoicesAsync(customer, key, cancellationToken);
+        }
+
+        // Null means Stripe could not be reached at all (local fallback applies);
+        // an empty list means Stripe answered with no history (honest empty).
+        if (receipts is null && invoices is null) return null;
+        return (receipts ?? Enumerable.Empty<PaymentInvoice>()).Concat(invoices ?? Enumerable.Empty<PaymentInvoice>()).ToList();
+    }
+
+    private async Task<List<PaymentInvoice>?> GetSessionReceiptsAsync(int builderId, string key, CancellationToken cancellationToken)
+    {
+        var endpoint = Endpoint("/v1/checkout/sessions?limit=100&expand[]=data.payment_intent.latest_charge");
+        if (endpoint is null) return null;
+        using var message = AuthorizedRequest(HttpMethod.Get, endpoint, key);
+        try
+        {
+            using var response = await client.SendAsync(message, cancellationToken);
+            if (!response.IsSuccessStatusCode) return [];
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return [];
+            var wanted = builderId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return data.EnumerateArray()
+                .Where(session => string.Equals(session.TryGetProperty("payment_status", out var status) ? status.GetString() : null, "paid", StringComparison.OrdinalIgnoreCase)
+                    && session.TryGetProperty("metadata", out var metadata)
+                    && metadata.TryGetProperty("builder_id", out var owner)
+                    && owner.GetString() == wanted)
+                .Select(session =>
+                {
+                    string? receipt = null;
+                    decimal amount = 0;
+                    if (session.TryGetProperty("payment_intent", out var intent) && intent.ValueKind == JsonValueKind.Object)
+                    {
+                        if (intent.TryGetProperty("amount_received", out var received)) amount = received.GetInt64() / 100m;
+                        if (intent.TryGetProperty("latest_charge", out var charge) && charge.ValueKind == JsonValueKind.Object
+                            && charge.TryGetProperty("receipt_url", out var url)) receipt = url.GetString();
+                    }
+                    if (amount == 0 && session.TryGetProperty("amount_total", out var total)) amount = total.GetInt64() / 100m;
+                    return new PaymentInvoice(
+                        session.GetProperty("id").GetString()!,
+                        "paid",
+                        (long)(amount * 100),
+                        receipt);
+                }).ToList();
+        }
+        catch (HttpRequestException) { return null; }
+        catch (JsonException) { return null; }
+    }
+
+    private async Task<List<PaymentInvoice>?> GetCustomerInvoicesAsync(string customer, string key, CancellationToken cancellationToken)
+    {
+        var endpoint = Endpoint($"/v1/invoices?customer={Uri.EscapeDataString(customer)}&limit=100");
+        if (endpoint is null) return null;
+        using var message = AuthorizedRequest(HttpMethod.Get, endpoint, key);
+        try
+        {
+            using var response = await client.SendAsync(message, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return null;
+            return data.EnumerateArray().Select(invoice => new PaymentInvoice(
+                invoice.GetProperty("id").GetString()!,
+                invoice.GetProperty("status").GetString()!,
+                invoice.TryGetProperty("amount_paid", out var amount) ? amount.GetInt64() : 0,
+                invoice.TryGetProperty("hosted_invoice_url", out var hosted) && !string.IsNullOrWhiteSpace(hosted.GetString()) ? hosted.GetString()
+                    : invoice.TryGetProperty("receipt_url", out var receipt) ? receipt.GetString() : null)).ToList();
+        }
+        catch (HttpRequestException) { return null; }
+        catch (JsonException) { return null; }
+    }
+
+    private Uri? Endpoint(string path)
+    {
+        var baseUrl = configuration["Stripe:ProviderBaseUrl"];
+        return Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri) ? new Uri(baseUri, path) : null;
+    }
+
+    private HttpRequestMessage AuthorizedRequest(HttpMethod method, Uri endpoint, string key)
+    {
+        // Restricted keys only: the resolver guarantees `key` starts with rk_.
+        // A configured secret key must never silently replace it on the wire,
+        // or the least-privilege discipline is defeated without a trace.
+        var request = new HttpRequestMessage(method, endpoint);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+        request.Headers.Add("Stripe-Version", "2026-05-27.dahlia");
+        return request;
+    }
+
+    private static (string Name, long AmountInCents) GetPlanInfo(int planId) => planId switch
+    {
+        1 => ("Starter", 29900),
+        2 => ("Professional", 79900),
+        3 => ("Enterprise", 129900),
+        _ => ($"Plan {planId}", 29900)
+    };
+
+    private async Task<PaymentCheckoutSession?> SendCheckoutAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                Console.WriteLine($"[Stripe Payment Error] Status: {response.StatusCode}, Body: {errorBody}");
+                return null;
+            }
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = document.RootElement;
+            if (!root.TryGetProperty("id", out var id) || !root.TryGetProperty("url", out var url)) return null;
+            var amount = root.TryGetProperty("amount_total", out var total) ? total.GetInt64() : 0;
+            return new PaymentCheckoutSession(id.GetString()!, url.GetString()!, amount);
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.WriteLine($"[Stripe HttpRequestException] {ex.Message}");
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"[Stripe JsonException] {ex.Message}");
+            return null;
+        }
+    }
+}
