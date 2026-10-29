@@ -18,7 +18,7 @@ public sealed class ClientCommandQueryTests
 {
     [Fact]
     [Trait("Category", "DDD")]
-    public async Task ClientCommandService_supports_full_crud_lifecycle()
+    public async Task ClientCommandService_supports_full_lifecycle_lifecycle()
     {
         await using var db = CreateDb();
         var repo = new ClientRepository(db);

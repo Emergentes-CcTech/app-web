@@ -4,11 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace IoBuild.Api.Persistence;
 
 /// <summary>
-/// Shared kernel DbContext — single DB, single migration history (5 migrations).
-/// Per-BC EF configurations live under each BC's
-/// Infrastructure/Persistence/EFC/Configuration/* and are applied here
-/// to keep the DDD layering explicit while preserving the monolith's
-/// transactional consistency. No split DB, no new migrations.
+/// DbContext del núcleo compartido para el monolito modular IoBuild.
+/// Unifica la persistencia de los 6 Bounded Contexts preservando fronteras transaccionales.
 /// </summary>
 public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options) : DbContext(options)
 {
@@ -31,15 +28,16 @@ public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options)
     public DbSet<ProjectProjection> ProjectProjections => Set<ProjectProjection>();
     public DbSet<UnitProjection> UnitProjections => Set<UnitProjection>();
     public DbSet<Unit> Units => Set<Unit>();
+    public DbSet<CommonArea> CommonAreas => Set<CommonArea>();
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Plan> Plans => Set<Plan>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Shared kernel
+        // Núcleo compartido
         global::IoBuild.Api.Shared.Infrastructure.Persistence.EFC.Configuration.SharedConfiguration.ConfigureFoundation(modelBuilder);
 
-        // Per-BC configurations (delegated for readability, behavior identical)
+        // Configuraciones delegadas por Bounded Context
         global::IoBuild.Api.IAM.Infrastructure.Persistence.EFC.Configuration.IamConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Publishing.Infrastructure.Persistence.EFC.Configuration.ProjectConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Publishing.Infrastructure.Persistence.EFC.Configuration.UnitConfiguration.Configure(modelBuilder);
@@ -49,10 +47,20 @@ public sealed class IoBuildDbContext(DbContextOptions<IoBuildDbContext> options)
         global::IoBuild.Api.Subscriptions.Infrastructure.Persistence.EFC.Configuration.PlanConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Devices.Infrastructure.Persistence.EFC.Configuration.DeviceConfiguration.Configure(modelBuilder);
         global::IoBuild.Api.Analytics.Infrastructure.Persistence.EFC.Configuration.AnalyticsConfiguration.Configure(modelBuilder);
+
+        // Mapeo de la entidad de áreas comunes de condominios
+        modelBuilder.Entity<CommonArea>(entity =>
+        {
+            entity.ToTable("common_areas");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Name).HasMaxLength(150).IsRequired();
+            entity.Property(c => c.Location).HasMaxLength(255);
+            entity.Property(c => c.Description).HasMaxLength(500);
+        });
     }
 }
 
-// Shared kernel entities (remain here; detailed per-BC aggregates live under their BC/Domain folders)
+// Entidades del núcleo compartido
 public sealed class FoundationRecord { public int Id { get; set; } public string Name { get; set; } = string.Empty; }
 public enum DispatchStatus { Pending, InProgress, DeadLetter, Completed }
 public sealed class IntegrationDispatch

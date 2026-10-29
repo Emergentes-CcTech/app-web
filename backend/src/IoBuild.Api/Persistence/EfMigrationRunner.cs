@@ -56,9 +56,6 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
 
             if (needsBuilderYearsBackfill)
             {
-                // Builder registration historically sent this value through Age.
-                // Copy it into the dedicated column without deleting the legacy
-                // value, so the upgrade remains non-destructive and recoverable.
                 await dbContext.Database.ExecuteSqlRawAsync(
                     "UPDATE profiles p INNER JOIN iam_users u ON u.Id = p.UserId SET p.YearsInBusiness = p.Age WHERE LOWER(u.`Role`) = 'builder' AND p.YearsInBusiness IS NULL AND p.Age BETWEEN 0 AND 120;",
                     cancellationToken);
@@ -107,8 +104,7 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 }
             }
 
-            // Single-active-subscription arbiter (migration 202609170006): existing
-            // databases created before it need the generated column plus index.
+            // Single-active-subscription arbiter (migration 202609170006)
             if (shouldClose) await connection.OpenAsync(cancellationToken);
             try
             {
@@ -119,6 +115,46 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 {
                     await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE subscriptions ADD COLUMN ActiveBuilderId INT GENERATED ALWAYS AS (CASE WHEN Status = 'active' THEN BuilderId ELSE NULL END) STORED;", cancellationToken);
                     await dbContext.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IX_subscriptions_ActiveBuilderId ON subscriptions (ActiveBuilderId);", cancellationToken);
+                }
+            }
+            finally
+            {
+                if (shouldClose) await connection.CloseAsync();
+            }
+
+            // Asegura la existencia de la tabla de áreas comunes para el contexto Cadastre
+            if (shouldClose) await connection.OpenAsync(cancellationToken);
+            try
+            {
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "CREATE TABLE IF NOT EXISTS common_areas (Id INT AUTO_INCREMENT PRIMARY KEY, ProjectId INT NOT NULL, Name VARCHAR(150) NOT NULL, Subsystem VARCHAR(50) NOT NULL, Location VARCHAR(255) NULL, Description VARCHAR(500) NULL);",
+                    cancellationToken);
+
+                // Asegura las columnas para alícuotas y catastro en la tabla units
+                var existingUnitCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using var unitCmd = connection.CreateCommand();
+                unitCmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'units';";
+                using var unitReader = await unitCmd.ExecuteReaderAsync(cancellationToken);
+                while (await unitReader.ReadAsync(cancellationToken))
+                {
+                    existingUnitCols.Add(unitReader.GetString(0));
+                }
+
+                if (!existingUnitCols.Contains("AliquotPercentage"))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN AliquotPercentage DECIMAL(7,4) NOT NULL DEFAULT 0.0000;", cancellationToken);
+                }
+                if (!existingUnitCols.Contains("AreaM2"))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN AreaM2 DECIMAL(10,2) NOT NULL DEFAULT 75.00;", cancellationToken);
+                }
+                if (!existingUnitCols.Contains("ResidentFullName"))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN ResidentFullName VARCHAR(255) NULL;", cancellationToken);
+                }
+                if (!existingUnitCols.Contains("AccountStatus"))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN AccountStatus VARCHAR(50) NOT NULL DEFAULT 'Al día';", cancellationToken);
                 }
             }
             finally

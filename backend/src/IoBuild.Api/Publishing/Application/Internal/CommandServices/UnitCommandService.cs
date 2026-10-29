@@ -1,4 +1,5 @@
 using IoBuild.Api.Persistence;
+using IoBuild.Api.Publishing.Domain.Model.Aggregates;
 using IoBuild.Api.Publishing.Domain.Repositories;
 using IoBuild.Api.Publishing.Domain.Services;
 using IoBuild.Api.Publishing.Domain.Services.Commands;
@@ -6,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Publishing.Application.Internal.CommandServices;
 
+/// <summary>
+/// Servicio de aplicación para la gestión y asignación de departamentos (Unit).
+/// Gestiona el registro de unidades, la asignación de residentes y la auto-vinculación con IAM.
+/// </summary>
 public class UnitCommandService : IUnitCommandService
 {
     private readonly IUnitRepository _unitRepository;
@@ -17,30 +22,37 @@ public class UnitCommandService : IUnitCommandService
         _dbContext = dbContext;
     }
 
+    // Registra una nueva unidad privativa en el condominio
     public async Task<int> Handle(CreateUnitCommand command, CancellationToken ct = default)
     {
-        var unit = new Unit(command.ProjectId, command.UnitNumber, command.OwnerId, command.Floor, command.RoomNumber);
+        var unit = new Unit(command.ProjectId, command.UnitNumber, command.Floor, areaM2: 75.0m, aliquotPercentage: 0.0m)
+        {
+            RoomNumber = command.RoomNumber,
+            OwnerId = command.OwnerId
+        };
         await _unitRepository.AddAsync(unit, ct);
         await _dbContext.SaveChangesAsync(ct);
         return unit.Id;
     }
 
+    // Asigna el correo de residente a una unidad privativa y dispara la sincronización con IAM
     public async Task Handle(AssignUnitOwnerEmailCommand command, CancellationToken ct = default)
     {
         var unit = await _unitRepository.FindByIdAsync(command.UnitId, ct);
         if (unit is null)
         {
-            throw new KeyNotFoundException($"Unit with ID {command.UnitId} not found.");
+            throw new KeyNotFoundException($"Departamento con ID {command.UnitId} no encontrado.");
         }
 
-        // Try to match owner email with an existing IamUser
+        // Intenta vincular con una cuenta IAM de residente si ya existe registrada
         var user = await _dbContext.IamUsers.FirstOrDefaultAsync(u => u.Email == command.OwnerEmail, ct);
         var resolvedOwnerId = command.OwnerId ?? user?.Id;
 
-        unit.AssignOwner(command.OwnerEmail, resolvedOwnerId);
+        // Asigna el residente en la unidad privativa
+        unit.AssignResident(command.OwnerEmail, fullName: null, iamUserId: resolvedOwnerId);
         await _unitRepository.UpdateAsync(unit, ct);
 
-        // Synchronize with UnitOwnerProjections for instant device actuation authorization
+        // Sincroniza la proyección de vinculación de residente
         var existingProjection = await _dbContext.UnitOwnerProjections
             .FirstOrDefaultAsync(p => p.UnitId == unit.Id, ct);
 
@@ -60,26 +72,13 @@ public class UnitCommandService : IUnitCommandService
                 existingProjection.OwnerUserId = resolvedOwnerId.Value;
                 existingProjection.UpdatedAt = DateTimeOffset.UtcNow;
             }
-
-            // Also synchronize devices in this unit to the assigned owner
-            var unitDevices = await _dbContext.Devices.Where(d => d.UnitId == unit.Id).ToListAsync(ct);
-            foreach (var d in unitDevices)
-            {
-                d.OwnerId = resolvedOwnerId.Value;
-                var dp = await _dbContext.DeviceProjections.FirstOrDefaultAsync(p => p.DeviceId == d.Id, ct);
-                if (dp is not null)
-                {
-                    dp.OwnerUserId = resolvedOwnerId.Value;
-                    dp.LastEventAt = DateTime.UtcNow;
-                }
-            }
         }
         else if (existingProjection is not null)
         {
             _dbContext.UnitOwnerProjections.Remove(existingProjection);
         }
 
-        // Synchronize with UnitProjections
+        // Sincroniza la proyección analítica de la unidad
         var existingUnitProj = await _dbContext.UnitProjections
             .FirstOrDefaultAsync(p => p.UnitId == unit.Id, ct);
         if (existingUnitProj is not null)
@@ -96,7 +95,7 @@ public class UnitCommandService : IUnitCommandService
             {
                 UnitId = unit.Id,
                 ProjectId = unit.ProjectId,
-                BuilderUserId = p?.BuilderId ?? 0,
+                BuilderUserId = p?.AdministratorId ?? 0,
                 OwnerUserId = resolvedOwnerId,
                 OwnerEmail = string.IsNullOrWhiteSpace(command.OwnerEmail) ? null : command.OwnerEmail.Trim(),
                 Status = unit.Status,
@@ -104,29 +103,6 @@ public class UnitCommandService : IUnitCommandService
                 RoomNumber = unit.RoomNumber,
                 LastEventAt = DateTime.UtcNow
             });
-        }
-
-        // Synchronize with Clients in this project
-        if (!string.IsNullOrWhiteSpace(command.OwnerEmail))
-        {
-            var normalized = command.OwnerEmail.Trim().ToLowerInvariant();
-            var matchingClient = await _dbContext.Clients
-                .FirstOrDefaultAsync(c => c.ProjectId == unit.ProjectId && c.Email.ToLower() == normalized, ct);
-            if (matchingClient is not null)
-            {
-                matchingClient.UnitId = unit.Id;
-                matchingClient.UnitNumber = unit.UnitNumber;
-            }
-        }
-        else
-        {
-            var prevClient = await _dbContext.Clients
-                .FirstOrDefaultAsync(c => c.ProjectId == unit.ProjectId && c.UnitId == unit.Id, ct);
-            if (prevClient is not null)
-            {
-                prevClient.UnitId = null;
-                prevClient.UnitNumber = null;
-            }
         }
 
         await _dbContext.SaveChangesAsync(ct);

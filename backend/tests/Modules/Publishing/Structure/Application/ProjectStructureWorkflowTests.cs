@@ -13,10 +13,10 @@ public sealed class ProjectStructureWorkflowTests
 {
     [Fact]
     [Trait("Category", "DDD")]
-    public async Task DefineProjectStructureAsync_provisions_units_and_devices_atomically()
+    public async Task DefineProjectStructureAsync_provisions_units_and_validates_100_percent_aliquot_invariant()
     {
         await using var db = CreateDb();
-        var project = new Project { Id = 1, Name = "Grand Horizon", Description = "Residential Tower", Location = "Downtown", TotalUnits = 10, BuilderId = 5 };
+        var project = new Project { Id = 1, Name = "Residencial Los Robles", Description = "Edificio de Departamentos", Location = "Jesús María", TotalUnits = 10, BuilderId = 5 };
         db.Projects.Add(project);
         await db.SaveChangesAsync();
 
@@ -27,16 +27,16 @@ public sealed class ProjectStructureWorkflowTests
         Assert.NotNull(updatedProject);
         Assert.True(updatedProject!.StructureDefined);
 
-        // 2 floors * 3 units = 6 units
+        // 2 pisos * 3 departamentos = 6 unidades creadas
         var units = await db.Units.Where(u => u.ProjectId == 1).OrderBy(u => u.UnitNumber).ToListAsync();
         Assert.Equal(6, units.Count);
 
-        // 2 floors * 3 floor devices (SmartMeter, WaterSensor, SmokeDetector) = 6 floor devices
-        var floorDevices = await db.Devices.Where(d => d.ProjectId == 1 && d.Source == "FloorProvisioned").ToListAsync();
-        Assert.Equal(6, floorDevices.Count);
+        // Invariante Sagrado (Ley N.° 27157): La suma de alícuotas debe ser exactamente 100.0000%
+        decimal totalAliquot = units.Sum(u => u.AliquotPercentage);
+        Assert.Equal(100.0000m, totalAliquot);
 
-        // 6 units * 2 unit devices (AirConditioner, SmartLight) = 12 unit devices
-        var unitDevices = await db.Devices.Where(d => d.ProjectId == 1 && d.Source == "UnitProvisioned").ToListAsync();
-        Assert.Equal(12, unitDevices.Count);
+        // Regla de Oro: Se eliminó cualquier dispositivo domótico privado (UnitId en Device = 0)
+        var privateUnitDevices = await db.Devices.Where(d => d.ProjectId == 1 && d.UnitId != null).ToListAsync();
+        Assert.Empty(privateUnitDevices);
     }
 }

@@ -49,19 +49,6 @@ public class ClientCommandService : IClientCommandService
                             ownerProj.OwnerUserId = user.Id;
                             ownerProj.UpdatedAt = DateTimeOffset.UtcNow;
                         }
-
-                        // Also synchronize devices in this unit
-                        var unitDevices = await _dbContext.Devices.Where(d => d.UnitId == unit.Id).ToListAsync(ct);
-                        foreach (var d in unitDevices)
-                        {
-                            d.OwnerId = user.Id;
-                            var dp = await _dbContext.DeviceProjections.FirstOrDefaultAsync(p => p.DeviceId == d.Id, ct);
-                            if (dp is not null)
-                            {
-                                dp.OwnerUserId = user.Id;
-                                dp.LastEventAt = DateTime.UtcNow;
-                            }
-                        }
                     }
 
                     var unitProj = await _dbContext.UnitProjections.FirstOrDefaultAsync(p => p.UnitId == unit.Id, ct);
@@ -152,19 +139,6 @@ public class ClientCommandService : IClientCommandService
                         {
                             ownerProj.OwnerUserId = user.Id;
                             ownerProj.UpdatedAt = DateTimeOffset.UtcNow;
-                        }
-
-                        // Also synchronize devices in this unit
-                        var unitDevices = await _dbContext.Devices.Where(d => d.UnitId == unit.Id).ToListAsync(ct);
-                        foreach (var d in unitDevices)
-                        {
-                            d.OwnerId = user.Id;
-                            var dp = await _dbContext.DeviceProjections.FirstOrDefaultAsync(p => p.DeviceId == d.Id, ct);
-                            if (dp is not null)
-                            {
-                                dp.OwnerUserId = user.Id;
-                                dp.LastEventAt = DateTime.UtcNow;
-                            }
                         }
                     }
 
