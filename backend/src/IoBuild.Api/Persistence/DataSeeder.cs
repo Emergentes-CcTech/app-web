@@ -25,54 +25,56 @@ public static class DataSeeder
 
         var plans = new[]
         {
+            // Plan Boutique: para condominios pequeños de hasta 20 unidades con 4 equipos IoT
             new Plan(
-                name: "Starter",
-                description: "Perfect for small projects",
-                price: 299m,
+                name: "Boutique",
+                description: "Plan HaaS para condominios boutique de hasta 20 departamentos. Dotación en comodato: 4 equipos IoT.",
+                price: 500.00m,
                 interval: "monthly",
                 featuresJson: JsonSerializer.Serialize(new[]
                 {
-                    "Up to 50 IoT devices",
-                    "Basic dashboard",
-                    "Email support",
-                    "Updates included",
-                    "1 administrator",
-                    "Monthly reports"
+                    "Hasta 20 departamentos",
+                    "4 equipos IoT en comodato (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
+                    "Detección continua de fugas nocturnas (01:00 a 04:00 AM)",
+                    "Monitoreo de Cisterna Principal y Tableros Eléctricos",
+                    "Prorrateo mensual automatizado según Alícuota Legal (Ley 27157)",
+                    "Contrato de 12 meses + 2 meses de garantía de servicio",
+                    "Soporte técnico prioritario y reemplazo de hardware por falla"
                 })
             ),
+            // Plan Urbano: para edificios medianos de 21 a 80 unidades con 6 equipos IoT
             new Plan(
-                name: "Professional",
-                description: "Ideal for medium-sized projects",
-                price: 799m,
+                name: "Urbano",
+                description: "Plan HaaS para condominios urbanos de 21 a 80 departamentos. Dotación en comodato: 6 equipos IoT.",
+                price: 700.00m,
                 interval: "monthly",
                 featuresJson: JsonSerializer.Serialize(new[]
                 {
-                    "Up to 200 IoT devices",
-                    "Advanced dashboard",
-                    "24/7 priority support",
-                    "Updates and new features",
-                    "3 administrators",
-                    "Real-time reports",
-                    "Custom API",
-                    "Training included"
+                    "De 21 a 80 departamentos",
+                    "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
+                    "Monitoreo integral: Cisterna, Bombas, Ascensores e Iluminación Común",
+                    "Detección de sobrecargas eléctricas y fugas nocturnas en cisterna",
+                    "Conciliación mensual contra recibos matriz oficiales (Sedapal y Luz del Sur)",
+                    "Prorrateo legal al céntimo y liquidación digital por departamento",
+                    "Contrato de 12 meses + 2 meses de garantía de servicio",
+                    "Acceso BFF para Administrador y App Web para Residentes"
                 })
             ),
+            // Plan GranTorre: para macro-condominios de más de 80 unidades con 10 equipos IoT
             new Plan(
-                name: "Enterprise",
-                description: "For big developments",
-                price: 1299m,
+                name: "GranTorre",
+                description: "Plan HaaS para macro-condominios de más de 80 departamentos. Dotación en comodato: 10 equipos IoT.",
+                price: 1000.00m,
                 interval: "monthly",
                 featuresJson: JsonSerializer.Serialize(new[]
                 {
-                    "Unlimited IoT devices",
-                    "Enterprise dashboard",
-                    "Dedicated 24/7 support",
-                    "Development of custom features",
-                    "Unlimited administrators",
-                    "Advanced analytics",
-                    "Complete API",
-                    "Specialized consulting",
-                    "Guaranteed SLA"
+                    "Más de 80 departamentos",
+                    "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
+                    "Monitoreo extendido de múltiples tableros, ascensores y cuartos hidroneumáticos",
+                    "Detección avanzada de anomalías y conciliación de macro-medición",
+                    "Prorrateo por alícuotas con cuadre estricto al 100.0000%",
+                    "Contrato de 12 meses + 2 meses de garantía de servicio",
+                    "Mantenimiento preventivo presencial y calibración periódica de sensores"
                 })
             )
         };
