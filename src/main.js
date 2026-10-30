@@ -15,7 +15,9 @@ import {
     ConfirmDialog, DataTable, Dialog,
     DialogService, Divider, Drawer, Fieldset, FileUpload, FloatLabel, IconField, InputIcon, InputNumber, InputText, Menu,
     Message, MultiSelect, Password, ProgressSpinner,
-    Rating, Row, Select, SelectButton, Stepper, Step, StepList, StepPanel, StepPanels, Tag, Textarea, Toast,
+    Rating, Row, Select, SelectButton, Stepper, Step, StepList, StepPanel, StepPanels,
+    Tabs, TabList, Tab, TabPanels, TabPanel,
+    Tag, Textarea, Toast,
     ToastService, Toolbar, Tooltip
 } from "primevue";
 import router from "./router.js";
@@ -52,6 +54,11 @@ createApp(App)
     .component('pv-step-list', StepList)
     .component('pv-step-panel', StepPanel)
     .component('pv-step-panels', StepPanels)
+    .component('pv-tabs', Tabs)
+    .component('pv-tab-list', TabList)
+    .component('pv-tab', Tab)
+    .component('pv-tab-panels', TabPanels)
+    .component('pv-tab-panel', TabPanel)
     .component('pv-file-upload', FileUpload)
     .component('pv-float-label', FloatLabel)
     .component('pv-icon-field', IconField)

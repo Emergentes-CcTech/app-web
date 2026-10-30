@@ -326,9 +326,11 @@
   },
   "option": {
     "dashboard": "Dashboard",
+    "monitoring": "Telemetry & monitoring",
     "condominiums": "Condominiums",
     "residents": "Residents",
     "devices": "Devices",
+    "billing": "Billing & collections",
     "alerts": "Alerts",
     "bills": "Utility bills",
     "settlements": "Proration & settlements",
@@ -483,7 +485,15 @@
       "personal": "Personal data",
       "unit": "Assigned unit",
       "account": "Account statement",
-      "noSettlements": "No settlements yet."
+      "noSettlements": "No settlements yet.",
+      "contact": "Contact",
+      "floor": "Floor",
+      "area": "Area",
+      "aliquot": "Aliquot",
+      "pendingBalance": "Outstanding balance",
+      "paidPeriods": "Paid periods",
+      "notRegistered": "Not registered",
+      "loadError": "The resident record could not be loaded."
     },
     "validation": {
       "unitRequired": "Select a free unit.",
@@ -595,9 +605,13 @@
       "measuredConsumption": "Measured consumption",
       "amount": "Amount (S/)",
       "dueDate": "Due date",
-      "attachment": "Attachment (URL)",
+      "attachment": "Scanned bill",
       "empty": "No bills registered.",
-      "saved": "Bill registered."
+      "saved": "Bill registered.",
+      "uploadReceipt": "Upload bill",
+      "replaceReceipt": "Replace bill",
+      "viewReceipt": "View bill",
+      "uploadError": "The bill could not be uploaded. Try again."
     },
     "reconciliation": {
       "title": "Reconciliation: billed vs measured",
@@ -658,7 +672,16 @@
       "empty": "You have no settlements yet.",
       "paidToast": "Payment recorded.",
       "checkoutError": "Could not start the payment.",
-      "receipt": "Payment receipt"
+      "receipt": "Payment receipt",
+      "subtitle": "Maintenance fees for your unit and their breakdown under Law No. 27157.",
+      "unit": "Unit",
+      "condominium": "Condominium",
+      "aliquot": "Aliquot",
+      "holder": "Holder",
+      "paymentProcessing": "Stripe has not confirmed the charge yet. Refresh in a few minutes.",
+      "confirmError": "The payment could not be confirmed with Stripe.",
+      "canceledTitle": "Payment canceled",
+      "canceledToast": "Your card was not charged."
     },
     "status": {
       "pending": "Pending",

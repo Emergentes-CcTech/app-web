@@ -5,7 +5,10 @@ const BASE_URL = 'http://localhost';
 async function main() {
   console.log('=== ADVERSARIAL RESIDENT ISOLATION & BOUNDARY TEST ===\n');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    executablePath: 'C:/Users/axelm/AppData/Local/Google/Chrome/Application/chrome.exe',
+    headless: true
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -125,7 +128,7 @@ async function main() {
   // 3.5 Profile
   await page.goto(`${BASE_URL}/profiles/profile`);
   await page.waitForLoadState('networkidle');
-  const profText = await page.locator('main').innerText();
+  const profText = await page.locator('main').first().innerText();
   if (profText.includes('cflores@gmail.com')) {
     console.log('  ✅ Profile displays resident email: cflores@gmail.com');
   } else {

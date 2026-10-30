@@ -76,6 +76,8 @@ export const useResidentStore = defineStore('resident', () => {
     async function unassign(unitId) { await api.unassign(unitId); residents.value = residents.value.filter(r => r.unitId !== unitId); }
 
     async function updateContact(resident, { phoneNumber }) {
+        // Sin userId, /profiles devolvería el perfil de quien consulta y se editaría el contacto equivocado
+        if (!resident.userId) throw new Error('user_not_found');
         const profile = await api.getProfileByUserId(resident.userId);
         if (profile) await api.updateProfile(profile.id, { phoneNumber });
     }

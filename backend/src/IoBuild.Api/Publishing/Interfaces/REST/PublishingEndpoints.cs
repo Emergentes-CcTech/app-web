@@ -58,6 +58,35 @@ public static class PublishingEndpoints
         return false;
     }
 
+    private static bool IsAdministrator(ClaimsPrincipal user)
+    {
+        var roles = user.FindAll(ClaimTypes.Role)
+            .Concat(user.FindAll("role"))
+            .Select(c => c.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return roles.Contains("Builder") || roles.Contains("PropertyManager") || roles.Contains("Admin");
+    }
+
+    private static async Task<List<int>> GetResidentUnitIdsAsync(ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct)
+    {
+        var self = SelfId(user);
+        var email = user.FindFirst(ClaimTypes.Email)?.Value?.ToLowerInvariant()
+            ?? user.FindFirst("email")?.Value?.ToLowerInvariant();
+
+        var unitIds = await db.Units
+            .Where(u => u.OwnerId == self || (email != null && u.OwnerEmail != null && u.OwnerEmail.ToLower() == email))
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        var projectedIds = await db.UnitOwnerProjections
+            .Where(p => p.OwnerUserId == self)
+            .Select(p => p.UnitId)
+            .ToListAsync(ct);
+
+        return unitIds.Union(projectedIds).Distinct().ToList();
+    }
+
     private static bool OwnsProject(ClaimsPrincipal user, IoBuild.Api.Publishing.Domain.Model.Aggregates.Project project)
     {
         var self = SelfId(user);
@@ -675,19 +704,52 @@ public static class PublishingEndpoints
             });
         }).RequireAuthorization();
 
-        // ── GET /projects/{projectId}/units (filtrado por residentUserId u ownerId) ──
-        projects.MapGet("/{projectId:int}/units", async (int projectId, [FromQuery] int? residentUserId, [FromQuery] int? ownerId, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
+        // ── GET /projects/{projectId}/units (filtrado por residentUserId u ownerId con aislamiento de privacidad) ──
+        projects.MapGet("/{projectId:int}/units", async (
+            int projectId,
+            [FromQuery] int? residentUserId,
+            [FromQuery] int? ownerId,
+            ClaimsPrincipal user,
+            IUnitQueryService queryService,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
+            var project = await db.Projects.FindAsync([projectId], ct);
+            if (project is null) return Results.NotFound();
+
             var targetOwnerId = ownerId ?? residentUserId;
             IEnumerable<Unit> unitList;
-            if (targetOwnerId.HasValue)
+
+            if (!IsAdministrator(user))
             {
-                unitList = await db.Units.Where(u => u.ProjectId == projectId && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
+                if (!await CanReadProjectAsync(user, db, project, ct))
+                {
+                    return Results.NotFound();
+                }
+
+                var self = SelfId(user);
+                if (targetOwnerId.HasValue && targetOwnerId.Value != self)
+                {
+                    return Results.Forbid();
+                }
+
+                var myUnitIds = await GetResidentUnitIdsAsync(user, db, ct);
+                unitList = await db.Units
+                    .Where(u => u.ProjectId == projectId && myUnitIds.Contains(u.Id))
+                    .ToListAsync(ct);
             }
             else
             {
-                unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(projectId), ct);
+                if (targetOwnerId.HasValue)
+                {
+                    unitList = await db.Units.Where(u => u.ProjectId == projectId && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
+                }
+                else
+                {
+                    unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(projectId), ct);
+                }
             }
+
             return Results.Ok(unitList.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
         }).RequireAuthorization();
 
@@ -1005,32 +1067,75 @@ public static class PublishingEndpoints
 
 
 
-        units.MapGet("", async ([FromQuery] int? projectId, [FromQuery] int? condominiumId, [FromQuery] int? ownerId, [FromQuery] int? residentUserId, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
+        units.MapGet("", async (
+            [FromQuery] int? projectId,
+            [FromQuery] int? condominiumId,
+            [FromQuery] int? ownerId,
+            [FromQuery] int? residentUserId,
+            ClaimsPrincipal user,
+            IUnitQueryService queryService,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
             var targetProjectId = projectId ?? condominiumId;
             var targetOwnerId = ownerId ?? residentUserId;
             IEnumerable<Unit> unitList;
-            if (targetProjectId.HasValue && targetOwnerId.HasValue)
+
+            if (!IsAdministrator(user))
             {
-                unitList = await db.Units.Where(u => u.ProjectId == targetProjectId.Value && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
-            }
-            else if (targetOwnerId.HasValue)
-            {
-                unitList = await queryService.Handle(new GetUnitsByOwnerIdQuery(targetOwnerId.Value), ct);
-            }
-            else if (targetProjectId.HasValue)
-            {
-                unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(targetProjectId.Value), ct);
+                var self = SelfId(user);
+                if (targetOwnerId.HasValue && targetOwnerId.Value != self)
+                {
+                    return Results.Forbid();
+                }
+
+                var myUnitIds = await GetResidentUnitIdsAsync(user, db, ct);
+                var query = db.Units.Where(u => myUnitIds.Contains(u.Id));
+                if (targetProjectId.HasValue)
+                {
+                    query = query.Where(u => u.ProjectId == targetProjectId.Value);
+                }
+                unitList = await query.ToListAsync(ct);
             }
             else
             {
-                unitList = await queryService.Handle(new GetAllUnitsQuery(), ct);
+                if (targetProjectId.HasValue && targetOwnerId.HasValue)
+                {
+                    unitList = await db.Units.Where(u => u.ProjectId == targetProjectId.Value && u.OwnerId == targetOwnerId.Value).ToListAsync(ct);
+                }
+                else if (targetOwnerId.HasValue)
+                {
+                    unitList = await queryService.Handle(new GetUnitsByOwnerIdQuery(targetOwnerId.Value), ct);
+                }
+                else if (targetProjectId.HasValue)
+                {
+                    unitList = await queryService.Handle(new GetUnitsByProjectIdQuery(targetProjectId.Value), ct);
+                }
+                else
+                {
+                    unitList = await queryService.Handle(new GetAllUnitsQuery(), ct);
+                }
             }
+
             return Results.Ok(unitList.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
         }).RequireAuthorization();
 
-        units.MapGet("/{id:int}", async (int id, IUnitQueryService queryService, CancellationToken ct) =>
+        units.MapGet("/{id:int}", async (
+            int id,
+            ClaimsPrincipal user,
+            IUnitQueryService queryService,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
+            if (!IsAdministrator(user))
+            {
+                var myUnitIds = await GetResidentUnitIdsAsync(user, db, ct);
+                if (!myUnitIds.Contains(id))
+                {
+                    return Results.Forbid();
+                }
+            }
+
             var unit = await queryService.Handle(new GetUnitByIdQuery(id), ct);
             return unit is null ? Results.NotFound() : Results.Ok(UnitResourceFromEntityAssembler.ToResourceFromEntity(unit));
         }).RequireAuthorization();
@@ -1454,29 +1559,47 @@ public static class PublishingEndpoints
         }).RequireAuthorization();
 
         // ── Residents Directory Endpoint ──
-        app.MapGet("/api/v1/residents", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/residents", async (
+            [FromQuery] int? condominiumId,
+            [FromQuery] int? projectId,
+            ClaimsPrincipal user,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
+            if (!IsAdministrator(user))
+            {
+                return Results.Forbid();
+            }
+
             var targetProjectId = condominiumId ?? projectId ?? 1;
             var project = await db.Projects.FindAsync([targetProjectId], ct);
-            var units = await db.Units.Where(u => u.ProjectId == targetProjectId && (!string.IsNullOrEmpty(u.ResidentFullName) || u.OwnerId.HasValue)).ToListAsync(ct);
-            var profiles = await db.Profiles.ToListAsync(ct);
-            var profilesByUserId = profiles.ToDictionary(p => p.UserId);
+            // La administradora solo consulta el padrón de los condominios que gestiona
+            if (project is null || project.BuilderId != SelfId(user)) return Results.Forbid();
 
+            var units = await db.Units.Where(u => u.ProjectId == targetProjectId && (!string.IsNullOrEmpty(u.ResidentFullName) || u.OwnerId.HasValue)).ToListAsync(ct);
+            var ownerIds = units.Where(u => u.OwnerId.HasValue).Select(u => u.OwnerId!.Value).ToList();
+            var profilesByUserId = await db.Profiles.Where(p => ownerIds.Contains(p.UserId)).ToDictionaryAsync(p => p.UserId, ct);
+
+            // Sin datos de relleno: un campo ausente viaja como null y la interfaz lo muestra como no registrado
             var residents = units.Select(u =>
             {
                 var profile = u.OwnerId.HasValue && profilesByUserId.TryGetValue(u.OwnerId.Value, out var prof) ? prof : null;
                 return new
                 {
                     id = u.Id,
-                    userId = u.OwnerId ?? u.Id,
+                    userId = u.OwnerId,
                     fullName = u.ResidentFullName ?? profile?.Name ?? $"Residente Dpto. {u.UnitNumber}",
-                    dni = "45892147",
-                    email = u.ResidentEmail ?? u.OwnerEmail ?? "residente@iobuild.pe",
-                    phoneNumber = profile?.PhoneNumber ?? "+51 912345678",
+                    dni = (string?)null,
+                    email = u.ResidentEmail ?? u.OwnerEmail,
+                    phoneNumber = profile?.PhoneNumber,
+                    photoUrl = profile?.PhotoUrl,
                     condominiumId = u.ProjectId,
-                    condominiumName = project?.Name ?? "Residencial Los Robles",
+                    condominiumName = project.Name,
                     unitId = u.Id,
                     unitNumber = u.UnitNumber,
+                    floor = u.FloorNumber,
+                    areaM2 = u.AreaM2,
+                    aliquotPercentage = u.AliquotPercentage,
                     relation = "owner",
                     collectionStatus = "current"
                 };
