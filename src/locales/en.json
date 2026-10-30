@@ -195,7 +195,7 @@
         ]
       },
       "urbano": {
-        "description": "For buildings with 21 to 50 apartments.",
+        "description": "For buildings with 21 to 80 apartments.",
         "features": [
           "21 to 80 units",
           "6 loaned IoT devices (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
@@ -208,7 +208,7 @@
         ]
       },
       "gran-torre": {
-        "description": "For towers with 51 to 80 apartments.",
+        "description": "For towers with more than 80 apartments.",
         "features": [
           "More than 80 units",
           "10 loaned IoT devices (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
@@ -234,7 +234,8 @@
       "flowMeters": "{n} Flow meter | {n} Flow meters",
       "ctClamps": "{n} CT clamp | {n} CT clamps"
     },
-    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments."
+    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments.",
+    "unitsFrom": "More than {min} units"
   },
   "iam": {
     "logout": "Log Out",
@@ -487,7 +488,7 @@
       "namePlaceholder": "e.g. Los Robles Residences",
       "addressPlaceholder": "e.g. 1234 Arnaldo Márquez Ave.",
       "districtPlaceholder": "Select or type the district",
-      "unitsHint": "Sets the HaaS plan. Up to {max} units.",
+      "unitsHint": "Sets the HaaS plan. Up to 20: Boutique · 21 to 80: Urbano · over 80: Gran Torre.",
       "photo": "Building photo",
       "uploadPhoto": "Upload photo",
       "changePhoto": "Change photo",
@@ -507,7 +508,6 @@
       "summary": "Summary",
       "plan": "Matching plan",
       "perMonth": "per month, VAT incl.",
-      "planRange": "{min} to {max} units",
       "planPending": "Enter the number of units to see the plan and equipment kit.",
       "kit": {
         "gateways": "Gateways",

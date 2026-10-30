@@ -5,8 +5,9 @@
  */
 export const PLAN_TIERS = Object.freeze([
   { code: 'boutique',   name: 'Boutique',   minUnits: 1,  maxUnits: 20, monthlyPen: 500,  kit: { gateways: 1, flowMeters: 1, ctClamps: 2 } },
-  { code: 'urbano',     name: 'Urbano',     minUnits: 21, maxUnits: 50, monthlyPen: 700,  kit: { gateways: 1, flowMeters: 2, ctClamps: 3 } },
-  { code: 'gran-torre', name: 'Gran Torre', minUnits: 51, maxUnits: 80, monthlyPen: 1000, kit: { gateways: 2, flowMeters: 3, ctClamps: 5 } },
+  { code: 'urbano',     name: 'Urbano',     minUnits: 21, maxUnits: 80, monthlyPen: 700,  kit: { gateways: 1, flowMeters: 2, ctClamps: 3 } },
+  // Gran Torre no tiene tope comercial ("más de 80"); 500 es el límite técnico que valida el backend al registrar un condominio
+  { code: 'gran-torre', name: 'Gran Torre', minUnits: 81, maxUnits: 500, monthlyPen: 1000, kit: { gateways: 2, flowMeters: 3, ctClamps: 5 }, openEnded: true },
 ]);
 
 /** Máximo de departamentos que cubre el catálogo (Gran Torre) */
@@ -14,7 +15,8 @@ export const MAX_PLAN_UNITS = PLAN_TIERS[PLAN_TIERS.length - 1].maxUnits;
 
 export const kitTotal = (kit) => (Number(kit?.gateways) || 0) + (Number(kit?.flowMeters) || 0) + (Number(kit?.ctClamps) || 0);
 
-const slugOf = (plan) => String(plan?.code ?? plan?.name ?? plan ?? '').trim().toLowerCase().replace(/\s+/g, '-');
+// "Gran Torre", "gran-torre" y "GranTorre" (nombre del catálogo del backend) resuelven al mismo plan
+const slugOf = (plan) => String(plan?.code ?? plan?.name ?? plan ?? '').trim().replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
 
 export const findTier = (plan) => PLAN_TIERS.find(t => t.code === slugOf(plan)) ?? null;
 

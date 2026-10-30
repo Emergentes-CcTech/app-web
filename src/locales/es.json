@@ -195,7 +195,7 @@
         ]
       },
       "urbano": {
-        "description": "Para edificios de 21 a 50 departamentos.",
+        "description": "Para edificios de 21 a 80 departamentos.",
         "features": [
           "De 21 a 80 departamentos",
           "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
@@ -208,7 +208,7 @@
         ]
       },
       "gran-torre": {
-        "description": "Para torres de 51 a 80 departamentos.",
+        "description": "Para torres de más de 80 departamentos.",
         "features": [
           "Más de 80 departamentos",
           "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
@@ -234,7 +234,8 @@
       "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
       "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
     },
-    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos."
+    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos.",
+    "unitsFrom": "Más de {min} departamentos"
   },
   "iam": {
     "logout": "Cerrar Sesión",
@@ -487,7 +488,7 @@
       "namePlaceholder": "Ej. Residencial Los Robles",
       "addressPlaceholder": "Ej. Av. Arnaldo Márquez 1234",
       "districtPlaceholder": "Selecciona o escribe el distrito",
-      "unitsHint": "Define el plan HaaS. Hasta {max} departamentos.",
+      "unitsHint": "Define el plan HaaS. Hasta 20: Boutique · 21 a 80: Urbano · más de 80: Gran Torre.",
       "photo": "Foto del edificio",
       "uploadPhoto": "Subir foto",
       "changePhoto": "Cambiar foto",
@@ -507,7 +508,6 @@
       "summary": "Resumen",
       "plan": "Plan que corresponde",
       "perMonth": "al mes, IGV incluido",
-      "planRange": "De {min} a {max} departamentos",
       "planPending": "Ingresa el número de departamentos para ver el plan y el kit de equipos.",
       "kit": {
         "gateways": "Gateways",

@@ -6,6 +6,7 @@ import { useTelemetryStore } from '../../application/telemetry.store.js';
 import { usePaymentStore } from '../../../payments/application/payment.store.js';
 import { getSessionUserId, formatPeriod, formatPen } from '../../../shared/infrastructure/session.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
+import { sumTotals } from '../../application/common-area-report.js';
 import StatCard from './stat-card.component.vue';
 
 // RNF-006: desglose de la liquidación en ≤ 3 interacciones desde el inicio de sesión
@@ -17,15 +18,21 @@ const loading = ref(true);
 
 const latest = computed(() => [...payments.payments].sort((a, b) => String(b.period).localeCompare(String(a.period)))[0] || null);
 const lastThree = computed(() => [...payments.payments].sort((a, b) => String(b.period).localeCompare(String(a.period))).slice(0, 3));
-const water = computed(() => telemetry.consumptionOf(telemetry.monthReadings, 'L/min'));
-const energy = computed(() => telemetry.consumptionOf(telemetry.monthReadings, 'A'));
+// Consumo de áreas comunes del mes, calculado en el backend a partir de las lecturas acumuladas
+const monthTotals = ref({ waterM3: 0, energyKwh: 0 });
+const water = computed(() => monthTotals.value.waterM3);
+const energy = computed(() => monthTotals.value.energyKwh);
 const sev = (s) => ({ paid: 'success', overdue: 'danger', pending: 'warn' }[s]);
 
 onMounted(async () => {
   try {
     await payments.fetchForResident(getSessionUserId());
     const condoId = payments.myUnits[0]?.condominiumId;
-    if (condoId) await telemetry.fetchMonth(condoId).catch(() => {});
+    if (condoId) {
+      const now = new Date();
+      const perDevice = await telemetry.fetchDeviceConsumption(condoId, new Date(now.getFullYear(), now.getMonth(), 1), now).catch(() => []);
+      monthTotals.value = sumTotals(perDevice);
+    }
   } finally { loading.value = false; }
 });
 const openBreakdown = () => router.push({ path: ROUTES.AUDIT, query: { line: latest.value.settlementLineId } });

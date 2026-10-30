@@ -1,13 +1,14 @@
-import { litersPerMinToM3, ampsToKwh } from './projection.js';
-
 const round2 = (n) => Math.round(n * 100) / 100;
 
-/** Consumo de un conjunto de lecturas: m³ para caudalímetros (L/min) y kWh para pinzas CT (A) */
-export function consumption(readings) {
+/**
+ * Totales de un conjunto de consumos por medidor (respuesta de /analytics/projects/{id}/device-consumption).
+ * La impulsión de la cisterna (countsTowardTotal = false) no suma: ese agua ya pasó por el medidor de ingreso.
+ */
+export function sumTotals(deviceTotals) {
     let waterM3 = 0, energyKwh = 0;
-    for (const r of readings) {
-        if (r.unit === 'L/min') waterM3 += litersPerMinToM3(r.value);
-        else if (r.unit === 'A') energyKwh += ampsToKwh(r.value);
+    for (const d of deviceTotals) {
+        if (d.countsTowardTotal !== false) waterM3 += Number(d.waterM3) || 0;
+        energyKwh += Number(d.energyKwh) || 0;
     }
     return { waterM3: round2(waterM3), energyKwh: round2(energyKwh) };
 }
@@ -16,21 +17,21 @@ export function consumption(readings) {
  * Reporte por área común. Un dispositivo mide un área cuando su punto de medición
  * es igual al tipo del área. Las áreas sin medidor se listan como no monitoreadas.
  */
-export function buildCommonAreaReport(commonAreas, devices, readings) {
-    const readingsByDevice = {};
-    for (const r of readings) (readingsByDevice[r.deviceId] ||= []).push(r);
+export function buildCommonAreaReport(commonAreas, devices, deviceTotals) {
+    const totalsByDevice = {};
+    for (const d of deviceTotals) (totalsByDevice[d.deviceId] ||= []).push(d);
 
     const rows = commonAreas.map(area => {
         const meters = devices.filter(d => d.type !== 'gateway' && d.measurementPoint === area.type);
-        const areaReadings = meters.flatMap(d => readingsByDevice[d.id] || []);
-        const lastReading = areaReadings.reduce((last, r) => (!last || r.timestamp > last.timestamp ? r : last), null);
+        const areaTotals = meters.flatMap(d => totalsByDevice[d.id] || []);
+        const lastReadingAt = areaTotals.reduce((last, d) => (!last || d.lastReadingAt > last ? d.lastReadingAt : last), null);
         return {
             id: area.id, name: area.name, type: area.type,
             monitored: meters.length > 0,
             metersOnline: meters.filter(d => d.isOnline).length,
             metersTotal: meters.length,
-            lastReadingAt: lastReading?.timestamp ?? null,
-            ...consumption(areaReadings),
+            lastReadingAt,
+            ...sumTotals(areaTotals),
         };
     });
 
@@ -46,14 +47,11 @@ export function buildCommonAreaReport(commonAreas, devices, readings) {
     return { rows, totals, monitoredCount: rows.filter(r => r.monitored).length };
 }
 
-/** Serie diaria del mes (día "01".."31") para agua o energía, solo de los medidores de áreas comunes */
-export function dailySeries(readings, metric = 'water') {
-    const unit = metric === 'water' ? 'L/min' : 'A';
-    const byDay = {};
-    for (const r of readings) if (r.unit === unit) (byDay[r.timestamp.slice(8, 10)] ||= []).push(r);
-    const labels = Object.keys(byDay).sort();
+/** Serie diaria del mes (día "01".."31") para agua o energía, a partir de /daily-consumption */
+export function dailySeries(days, monthKey, metric = 'water') {
+    const list = days.filter(d => d.date.startsWith(monthKey));
     const key = metric === 'water' ? 'waterM3' : 'energyKwh';
-    return { labels, values: labels.map(d => consumption(byDay[d])[key]) };
+    return { labels: list.map(d => d.date.slice(8, 10)), values: list.map(d => round2(Number(d[key]) || 0)) };
 }
 
 /** Variación porcentual respecto al mes anterior; null si no hay base de comparación */

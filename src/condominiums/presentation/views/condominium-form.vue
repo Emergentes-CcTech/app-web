@@ -11,6 +11,7 @@ import { isValidName, isValidSupplyCode, isValidPositiveInteger } from '../../..
 import { loadCloudinaryWidget } from '../../../shared/infrastructure/cloudinary-loader.js';
 import { getProjectImageUploadConfig } from '../../../shared/infrastructure/cloudinary-config.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
+import { unitsRangeText } from '../../../subscriptions/presentation/plan-copy.js';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -217,7 +218,7 @@ async function save() {
             <span class="plan-label">{{ t('condominiums.form.plan') }}</span>
             <strong class="plan-name">{{ plan.name }}</strong>
             <span class="plan-price">S/ {{ plan.monthlyPen.toFixed(2) }} <small>{{ t('condominiums.form.perMonth') }}</small></span>
-            <small class="muted">{{ t('condominiums.form.planRange', { min: plan.minUnits, max: plan.maxUnits }) }}</small>
+            <small class="muted">{{ unitsRangeText(plan, t) }}</small>
           </div>
           <dl class="kit">
             <div><dt>{{ t('condominiums.form.kit.gateways') }}</dt><dd>{{ plan.kit.gateways }}</dd></div>

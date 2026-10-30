@@ -25,5 +25,9 @@ export class TelemetryApi extends BaseApi {
     getDailyConsumption(condominiumId, from, to) {
         return this.http.get(`/analytics/projects/${condominiumId}/daily-consumption`, { params: { from, to } });
     }
+    // Consumo del periodo por medidor (lecturas acumuladas: máximo - mínimo)
+    getDeviceConsumption(condominiumId, from, to) {
+        return this.http.get(`/analytics/projects/${condominiumId}/device-consumption`, { params: { from, to } });
+    }
     acknowledgeAlert(id) { return this.http.patch(`${alertsPath}/${id}`, { status: 'acknowledged' }); }
 }

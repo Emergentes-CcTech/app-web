@@ -79,6 +79,11 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         return dailyConsumption.value;
     }
 
+    /** Consumo por medidor en un rango de fechas, sin guardarlo en el estado (mes actual o tramo del mes anterior) */
+    async function fetchDeviceConsumption(condominiumId, from, to) {
+        return (await api.getDeviceConsumption(condominiumId, from.toISOString(), to.toISOString())).data || [];
+    }
+
     /** Lecturas de un rango de fechas, sin guardarlas en el estado (p. ej. el mes anterior para comparar) */
     async function fetchPeriod(condominiumId, from, to) {
         return toReadings((await api.getReadings(condominiumId, null, from.toISOString(), to.toISOString())).data);
@@ -137,7 +142,7 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         alerts.value = []; errors.value = []; _alertsSeeded = false;
     }
 
-    return { liveReadings, readingsByDevice, history, monthReadings, dailyConsumption, fetchDailyConsumption, alerts, openAlerts, openAlertsCount, latestByDevice,
+    return { liveReadings, readingsByDevice, history, monthReadings, dailyConsumption, fetchDailyConsumption, fetchDeviceConsumption, alerts, openAlerts, openAlertsCount, latestByDevice,
         lastCriticalNotice, isLoading, errors, fetchLive, fetchHistory, fetchMonth, fetchPeriod, consumptionOf, fetchAlerts, fetchOpenAlerts,
         acknowledge, startPolling, startAlertPolling, stopPolling, clearUserSession };
 });
