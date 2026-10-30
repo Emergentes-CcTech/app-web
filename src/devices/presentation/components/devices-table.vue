@@ -4,14 +4,14 @@ import DeviceActionsMenu from './device-actions-menu.vue';
 
 defineProps({ devices: Array, loading: Boolean });
 defineEmits(['edit', 'unlink']);
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const TYPE_ICONS = { water_pulse_meter: 'pi pi-filter', current_sensor: 'pi pi-bolt', gateway: 'pi pi-wifi' };
 function since(iso) {
   if (!iso) return t('devices.neverSeen');
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
   if (minutes < 1) return t('dashboard.admin.justNow');
   if (minutes < 120) return t('dashboard.admin.minutesAgo', { n: minutes });
-  return new Date(iso).toLocaleString();
+  return new Date(iso).toLocaleString(locale.value);
 }
 </script>
 

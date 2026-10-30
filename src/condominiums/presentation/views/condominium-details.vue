@@ -94,7 +94,7 @@ async function savePadron() {
     rows.value = store.units.map(u => ({ ...u }));
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('condominiums.messages.padronSaved'), life: 2500 });
   } catch (e) {
-    toast.add({ severity: 'error', summary: 'Error', detail: t('condominiums.messages.saveError'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('condominiums.messages.saveError'), life: 3000 });
   } finally { saving.value = false; }
 }
 

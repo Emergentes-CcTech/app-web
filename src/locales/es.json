@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "openNav": "Abrir navegación",
+    "closeNav": "Cerrar navegación",
+    "alerts": "Ver alertas",
+    "notifications": "Notificaciones",
+    "user": "Usuario",
+    "language": "Idioma",
+    "criticalAlert": "Alerta crítica"
   },
   "profile": {
     "title": "Perfil",
@@ -176,13 +183,41 @@
     },
     "planCatalog": {
       "boutique": {
-        "description": "Para condominios pequeños de hasta 20 departamentos."
+        "description": "Para condominios pequeños de hasta 20 departamentos.",
+        "features": [
+          "Hasta 20 departamentos",
+          "4 equipos IoT en comodato (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
+          "Detección continua de fugas nocturnas (01:00 a 04:00 AM)",
+          "Monitoreo de Cisterna Principal y Tableros Eléctricos",
+          "Prorrateo mensual automatizado según Alícuota Legal (Ley 27157)",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Soporte técnico prioritario y reemplazo de hardware por falla"
+        ]
       },
       "urbano": {
-        "description": "Para edificios de 21 a 50 departamentos."
+        "description": "Para edificios de 21 a 50 departamentos.",
+        "features": [
+          "De 21 a 80 departamentos",
+          "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
+          "Monitoreo integral: Cisterna, Bombas, Ascensores e Iluminación Común",
+          "Detección de sobrecargas eléctricas y fugas nocturnas en cisterna",
+          "Conciliación mensual contra recibos matriz oficiales (Sedapal y Luz del Sur)",
+          "Prorrateo legal al céntimo y liquidación digital por departamento",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Acceso BFF para Administrador y App Web para Residentes"
+        ]
       },
       "gran-torre": {
-        "description": "Para torres de 51 a 80 departamentos."
+        "description": "Para torres de 51 a 80 departamentos.",
+        "features": [
+          "Más de 80 departamentos",
+          "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
+          "Monitoreo extendido de múltiples tableros, ascensores y cuartos hidroneumáticos",
+          "Detección avanzada de anomalías y conciliación de macro-medición",
+          "Prorrateo por alícuotas con cuadre estricto al 100.0000%",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Mantenimiento preventivo presencial y calibración periódica de sensores"
+        ]
       }
     },
     "usage-units": "Departamentos registrados",
@@ -322,7 +357,9 @@
     "confirm": "Confirmar",
     "back": "Volver",
     "view": "Ver",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "error": "Error",
+    "loadError": "No se pudo cargar la información. Intenta de nuevo."
   },
   "option": {
     "dashboard": "Panel",
@@ -903,5 +940,34 @@
       "offline": "Sin señal",
       "noMeter": "Sin medidor"
     }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "text": "La dirección que buscas no existe o fue movida.",
+    "home": "Ir al inicio"
+  },
+  "pageTitles": {
+    "login": "Iniciar sesión",
+    "register-administrator": "Registro de administrador",
+    "register-resident": "Registro de residente",
+    "dashboard": "Panel",
+    "analytics": "Áreas comunes",
+    "account-statement": "Estado de cuenta",
+    "audit": "Auditoría",
+    "billing": "Facturación y cobranzas",
+    "bills": "Recibos matriz",
+    "settlements": "Prorrateo y liquidación",
+    "settlement-detail": "Liquidación",
+    "delinquency": "Morosidad",
+    "condominiums": "Condominios",
+    "condominium-new": "Nuevo condominio",
+    "condominium-edit": "Editar condominio",
+    "condominium-details": "Condominio",
+    "residents": "Residentes",
+    "resident-profile": "Residente",
+    "device-management": "Dispositivos",
+    "profile": "Perfil",
+    "my-subscription": "Suscripción",
+    "NotFound": "Página no encontrada"
   }
 }

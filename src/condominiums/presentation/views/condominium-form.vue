@@ -54,7 +54,7 @@ async function uploadImage() {
     });
   } catch (_) {
     uploading.value = false;
-    toast.add({ severity: 'error', summary: 'Error', detail: t('condominiums.form.uploadError'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('condominiums.form.uploadError'), life: 3000 });
   }
 }
 
@@ -93,8 +93,8 @@ async function save() {
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('condominiums.messages.saved'), life: 2500 });
     router.push({ name: 'condominium-details', params: { id: saved.id } });
   } catch (e) {
-    const detail = e?.response?.data?.message || t('condominiums.messages.saveError');
-    toast.add({ severity: 'error', summary: 'Error', detail, life: 4000 });
+    // Las reglas del backend son las mismas que valida el formulario; el mensaje se muestra en el idioma activo
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('condominiums.messages.saveError'), life: 4000 });
   } finally { saving.value = false; }
 }
 </script>

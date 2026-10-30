@@ -12,7 +12,7 @@ import { isActiveStatus } from "../../../subscriptions/domain/model/subscription
 import { useTelemetryStore } from "../../../telemetry/application/telemetry.store.js";
 import { ROLES, normalizeRole, isAdmin } from "../../infrastructure/roles.js";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const drawer = ref(false);
 const profileStore = useProfileStore();
@@ -22,7 +22,7 @@ const telemetryStore = useTelemetryStore();
 const toast = useToast();
 // RF-011: toast rojo cuando llega una alerta crítica nueva
 watch(() => telemetryStore.lastCriticalNotice, (a) => {
-  if (a) toast.add({ severity: 'error', summary: a.message || 'Alerta crítica', detail: new Date(a.createdAt).toLocaleString(), life: 8000 });
+  if (a) toast.add({ severity: 'error', summary: t(`telemetry.alertTypes.${a.type}`, a.title || t('header.criticalAlert')), detail: new Date(a.createdAt).toLocaleString(locale.value), life: 8000 });
 });
 
 const toggleDrawer = () => {
@@ -69,7 +69,7 @@ watch(
 const userName = computed(() => {
   return profileStore.profile?.displayName ||
          currentUser.value?.name ||
-         'Usuario';
+         t('header.user');
 });
 
 const userPhoto = computed(() => {
@@ -77,7 +77,7 @@ const userPhoto = computed(() => {
   if (photo && photo !== 'undefined' && typeof photo === 'string' && photo.trim() !== '') {
     return photo;
   }
-  const name = userName.value && userName.value !== 'Usuario' ? userName.value.trim() : 'U';
+  const name = userName.value && userName.value !== t('header.user') ? userName.value.trim() : 'U';
   const initial = name.charAt(0).toUpperCase();
   return `data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 rx=%2220%22 fill=%22%2310B981%22/%3E%3Ctext x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22 font-family=%22sans-serif%22%3E${initial}%3C/text%3E%3C/svg%3E`;
 });
@@ -125,7 +125,7 @@ const filteredItems = computed(() => {
           <div class="header-start">
             <pv-button
                 class="menu-button"
-                :aria-label="drawer ? 'Close navigation' : 'Open navigation'"
+                :aria-label="drawer ? t('header.closeNav') : t('header.openNav')"
                 :aria-expanded="drawer"
                 icon="pi pi-bars"
                 text
@@ -150,8 +150,8 @@ const filteredItems = computed(() => {
         <template #end>
           <div class="header-end">
 
-            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" aria-label="Alerts" style="position: relative; display: inline-flex;">
-              <pv-button class="notification-button" aria-label="Notifications" icon="pi pi-bell" text rounded severity="secondary" />
+            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" :aria-label="t('header.alerts')" style="position: relative; display: inline-flex;">
+              <pv-button class="notification-button" :aria-label="t('header.notifications')" icon="pi pi-bell" text rounded severity="secondary" />
               <span v-if="telemetryStore.openAlertsCount > 0" class="alert-badge" style="position:absolute;top:2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;">{{ telemetryStore.openAlertsCount }}</span>
             </router-link>
 

@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "openNav": "Open navigation",
+    "closeNav": "Close navigation",
+    "alerts": "View alerts",
+    "notifications": "Notifications",
+    "user": "User",
+    "language": "Language",
+    "criticalAlert": "Critical alert"
   },
   "profile": {
     "title": "Profile",
@@ -176,13 +183,41 @@
     },
     "planCatalog": {
       "boutique": {
-        "description": "For small condominiums with up to 20 apartments."
+        "description": "For small condominiums with up to 20 apartments.",
+        "features": [
+          "Up to 20 units",
+          "4 loaned IoT devices (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
+          "Continuous night-leak detection (1:00 to 4:00 AM)",
+          "Main cistern and electrical panel monitoring",
+          "Automated monthly proration by legal aliquot (Law 27157)",
+          "12-month contract + 2-month service warranty",
+          "Priority technical support and hardware replacement on failure"
+        ]
       },
       "urbano": {
-        "description": "For buildings with 21 to 50 apartments."
+        "description": "For buildings with 21 to 50 apartments.",
+        "features": [
+          "21 to 80 units",
+          "6 loaned IoT devices (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
+          "Full monitoring: cistern, pumps, elevators and common lighting",
+          "Electrical overload and cistern night-leak detection",
+          "Monthly reconciliation against official master bills (Sedapal and Luz del Sur)",
+          "Cent-exact legal proration and digital settlement per unit",
+          "12-month contract + 2-month service warranty",
+          "BFF access for the administrator and web app for residents"
+        ]
       },
       "gran-torre": {
-        "description": "For towers with 51 to 80 apartments."
+        "description": "For towers with 51 to 80 apartments.",
+        "features": [
+          "More than 80 units",
+          "10 loaned IoT devices (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
+          "Extended monitoring of multiple panels, elevators and pump rooms",
+          "Advanced anomaly detection and macro-metering reconciliation",
+          "Aliquot proration with a strict 100.0000% balance",
+          "12-month contract + 2-month service warranty",
+          "On-site preventive maintenance and periodic sensor calibration"
+        ]
       }
     },
     "usage-units": "Registered apartments",
@@ -322,7 +357,9 @@
     "confirm": "Confirm",
     "back": "Back",
     "view": "View",
-    "actions": "Actions"
+    "actions": "Actions",
+    "error": "Error",
+    "loadError": "The information could not be loaded. Try again."
   },
   "option": {
     "dashboard": "Dashboard",
@@ -903,5 +940,34 @@
       "offline": "No signal",
       "noMeter": "No meter"
     }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "The address you are looking for does not exist or was moved.",
+    "home": "Go to home"
+  },
+  "pageTitles": {
+    "login": "Sign in",
+    "register-administrator": "Administrator sign-up",
+    "register-resident": "Resident sign-up",
+    "dashboard": "Dashboard",
+    "analytics": "Common areas",
+    "account-statement": "Account statement",
+    "audit": "Audit trail",
+    "billing": "Billing and collections",
+    "bills": "Utility bills",
+    "settlements": "Proration and settlement",
+    "settlement-detail": "Settlement",
+    "delinquency": "Delinquency",
+    "condominiums": "Condominiums",
+    "condominium-new": "New condominium",
+    "condominium-edit": "Edit condominium",
+    "condominium-details": "Condominium",
+    "residents": "Residents",
+    "resident-profile": "Resident",
+    "device-management": "Devices",
+    "profile": "Profile",
+    "my-subscription": "Subscription",
+    "NotFound": "Page not found"
   }
 }

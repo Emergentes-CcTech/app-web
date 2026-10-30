@@ -115,7 +115,7 @@ async function submitBill(bill) {
     await store.addBill({ ...bill, condominiumId: condominiumId.value });
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('billing.bills.saved'), life: 2500 });
   } catch (_) {
-    toast.add({ severity: 'error', summary: 'Error', detail: t('billing.messages.error'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('billing.messages.error'), life: 3000 });
   } finally {
     saving.value = false;
   }

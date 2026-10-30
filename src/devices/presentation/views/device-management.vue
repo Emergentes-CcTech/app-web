@@ -40,7 +40,7 @@ async function save(entity) {
     showDialog.value = false;
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('devices.messages.saved'), life: 2500 });
   } catch (e) {
-    toast.add({ severity: 'error', summary: 'Error', detail: e.message === 'idTaken' ? t('devices.validation.idTaken') : t('devices.messages.error'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: e.message === 'idTaken' ? t('devices.validation.idTaken') : t('devices.messages.error'), life: 3000 });
   }
 }
 function unlink(d) {

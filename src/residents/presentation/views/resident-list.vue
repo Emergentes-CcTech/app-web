@@ -61,7 +61,7 @@ async function saveEdit(partial) {
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('residents.messages.updated'), life: 2500 });
     reload();
   } catch (_) {
-    toast.add({ severity: 'error', summary: 'Error', detail: t('residents.messages.error'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('residents.messages.error'), life: 3000 });
   }
 }
 </script>
