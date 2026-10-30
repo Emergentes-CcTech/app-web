@@ -21,5 +21,9 @@ export class TelemetryApi extends BaseApi {
         return this.http.get(alertsPath, { params: { condominiumId, status, _sort: 'createdAt', _order: 'desc' } });
     }
     getOpenAlerts() { return this.http.get(alertsPath, { params: { status: 'open', _sort: 'createdAt', _order: 'desc' } }); }
+    // Consumo diario de áreas comunes calculado en el backend a partir de las lecturas acumuladas
+    getDailyConsumption(condominiumId, from, to) {
+        return this.http.get(`/analytics/projects/${condominiumId}/daily-consumption`, { params: { from, to } });
+    }
     acknowledgeAlert(id) { return this.http.patch(`${alertsPath}/${id}`, { status: 'acknowledged' }); }
 }

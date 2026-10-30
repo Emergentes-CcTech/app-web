@@ -5,7 +5,7 @@
  */
 export const PLAN_TIERS = Object.freeze([
   { code: 'boutique',   name: 'Boutique',   minUnits: 1,  maxUnits: 20, monthlyPen: 500,  kit: { gateways: 1, flowMeters: 1, ctClamps: 2 } },
-  { code: 'urbano',     name: 'Urbano',     minUnits: 21, maxUnits: 50, monthlyPen: 750,  kit: { gateways: 1, flowMeters: 2, ctClamps: 3 } },
+  { code: 'urbano',     name: 'Urbano',     minUnits: 21, maxUnits: 50, monthlyPen: 700,  kit: { gateways: 1, flowMeters: 2, ctClamps: 3 } },
   { code: 'gran-torre', name: 'Gran Torre', minUnits: 51, maxUnits: 80, monthlyPen: 1000, kit: { gateways: 2, flowMeters: 3, ctClamps: 5 } },
 ]);
 

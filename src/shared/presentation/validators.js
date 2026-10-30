@@ -61,8 +61,9 @@ export function isValidPositiveInteger(val, min = 1, max = 100000) {
 export function isValidPercentage(val) {
     if (val === null || val === undefined || val === '') return false;
     const num = Number(val);
-    if (isNaN(num) || num < 0.01 || num > 100) return false;
-    return Math.round(num * 100) / 100 === num;
+    // Ley N.° 27157: la alícuota se expresa con hasta 4 decimales
+    if (isNaN(num) || num < 0.0001 || num > 100) return false;
+    return Math.round(num * 10000) / 10000 === num;
 }
 
 export function isValidUrl(url) {
@@ -90,6 +91,7 @@ export function isNewPasswordDifferent(currentPassword, newPassword) {
 }
 
 // RF-006: la suma de participaciones debe ser exactamente 100 (comparar en centésimas)
+// Suma en diezmilésimas para evitar errores de coma flotante; el backend acepta ±0.0001 sobre 100.0000 %
 export const sumParticipation = (units) =>
-    Math.round(units.reduce((acc, u) => acc + Number(u.participationPct || 0) * 100, 0)) / 100;
-export const isParticipationBalanced = (units) => sumParticipation(units) === 100;
+    Math.round(units.reduce((acc, u) => acc + Number(u.participationPct || 0) * 10000, 0)) / 10000;
+export const isParticipationBalanced = (units) => Math.abs(sumParticipation(units) - 100) <= 0.0001;

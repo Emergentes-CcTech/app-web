@@ -48,17 +48,18 @@ export const useCondominiumStore = defineStore('condominium', () => {
     }
 
     async function create(entity) {
-        const payload = CondominiumAssembler.toResource({ ...entity, administratorId: getCurrentAdministratorId(), status: 'active' });
+        const payload = CondominiumAssembler.toResource(entity);
         delete payload.id;
         const { data } = await api.create(payload);
-        const created = CondominiumAssembler.toEntity(data);
+        // El alta devuelve solo el id; se relee el condominio completo con sus áreas comunes
+        const created = CondominiumAssembler.toEntity((await api.getById(data.id)).data);
         condominiums.value.push(created);
         return created;
     }
 
     async function update(entity) {
-        const { data } = await api.update(CondominiumAssembler.toResource(entity));
-        const updated = CondominiumAssembler.toEntity(data);
+        await api.update(CondominiumAssembler.toResource(entity));
+        const updated = CondominiumAssembler.toEntity((await api.getById(entity.id)).data);
         const i = condominiums.value.findIndex(c => c.id === updated.id);
         if (i >= 0) condominiums.value[i] = updated;
         current.value = updated;

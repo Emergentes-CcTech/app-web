@@ -18,6 +18,7 @@ export const useTelemetryStore = defineStore('telemetry', () => {
     const readingsByDevice = ref({});
     const history = ref([]);
     const monthReadings = ref([]);
+    const dailyConsumption = ref([]);
     const alerts = ref([]);
     const lastCriticalNotice = ref(null);
     const isLoading = ref(false);
@@ -68,6 +69,14 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         monthReadings.value = toReadings((await api.getReadings(condominiumId, null, from, now.toISOString())).data);
         return monthReadings.value;
+    }
+
+    /** Consumo por día (m³ de agua de ingreso y kWh de áreas comunes) desde el inicio del mes anterior */
+    async function fetchDailyConsumption(condominiumId) {
+        const now = new Date();
+        const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        dailyConsumption.value = (await api.getDailyConsumption(condominiumId, from.toISOString(), now.toISOString())).data || [];
+        return dailyConsumption.value;
     }
 
     /** Lecturas de un rango de fechas, sin guardarlas en el estado (p. ej. el mes anterior para comparar) */
@@ -124,11 +133,11 @@ export const useTelemetryStore = defineStore('telemetry', () => {
 
     function clearUserSession() {
         stopPolling();
-        liveReadings.value = []; readingsByDevice.value = {}; history.value = []; monthReadings.value = [];
+        liveReadings.value = []; readingsByDevice.value = {}; history.value = []; monthReadings.value = []; dailyConsumption.value = [];
         alerts.value = []; errors.value = []; _alertsSeeded = false;
     }
 
-    return { liveReadings, readingsByDevice, history, monthReadings, alerts, openAlerts, openAlertsCount, latestByDevice,
+    return { liveReadings, readingsByDevice, history, monthReadings, dailyConsumption, fetchDailyConsumption, alerts, openAlerts, openAlertsCount, latestByDevice,
         lastCriticalNotice, isLoading, errors, fetchLive, fetchHistory, fetchMonth, fetchPeriod, consumptionOf, fetchAlerts, fetchOpenAlerts,
         acknowledge, startPolling, startAlertPolling, stopPolling, clearUserSession };
 });

@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useToast } from 'primevue/usetoast';
 import { Line, Bar } from 'vue-chartjs';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { useTelemetryStore } from '../../application/telemetry.store.js';
@@ -9,63 +10,108 @@ import { usePaymentStore } from '../../../payments/application/payment.store.js'
 import { useDeviceStore } from '../../../devices/application/device.store.js';
 import { useCondominiumStore } from '../../../condominiums/application/condominium.store.js';
 import { useSubscriptionStore } from '../../../subscriptions/application/subscription.store.js';
+import { DeviceType } from '../../../devices/domain/model/device.entity.js';
 import { projectToMonthEnd } from '../../application/projection.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import StatCard from './stat-card.component.vue';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
-// RF-010: panel del condominio para el administrador
-const { t } = useI18n();
+// RF-010 + RF-011: panel único del administrador. Reúne KPIs del mes, equipos en vivo y alertas,
+// que antes vivían en pantallas separadas (Monitoreo y Alertas).
+const { t, locale } = useI18n();
+const route = useRoute();
 const router = useRouter();
+const toast = useToast();
 const telemetry = useTelemetryStore();
 const payments = usePaymentStore();
 const devices = useDeviceStore();
 const condoStore = useCondominiumStore();
 const subscriptions = useSubscriptionStore();
 
-// Resumen de condominios: departamentos, áreas comunes y estado de la suscripción de cada uno
-const portfolio = computed(() => condoStore.activeCondominiums.map(c => {
-  const sub = subscriptions.subscriptionFor(c.id);
-  return { id: c.id, name: c.name, district: c.district, totalUnits: c.totalUnits, commonAreas: c.commonAreasCount,
-    plan: subscriptions.planFor(sub)?.name || '—', active: !!sub?.isActive(), hasSub: !!sub, nextBilling: sub?.nextBillingDate || '—' };
-}));
-const totalApartments = computed(() => portfolio.value.reduce((a, c) => a + c.totalUnits, 0));
-const totalCommonAreas = computed(() => portfolio.value.reduce((a, c) => a + c.commonAreas, 0));
-const activeSubs = computed(() => portfolio.value.filter(c => c.active).length);
-
 const condominiumId = ref(null);
+const condominium = computed(() => condoStore.activeCondominiums.find(c => c.id === condominiumId.value) || null);
+const subscription = computed(() => condominiumId.value ? subscriptions.subscriptionFor(condominiumId.value) : null);
+const planName = computed(() => subscriptions.planFor(subscription.value)?.name || null);
+const hasActiveSubscription = computed(() => !!subscription.value?.isActive());
+const lastUpdated = ref(null);
+
+// ── KPIs del mes a partir del consumo diario (lecturas acumuladas → consumo real) ──
+const monthKey = computed(() => new Date().toISOString().slice(0, 7));
+const currentMonthDays = computed(() => telemetry.dailyConsumption.filter(d => d.date.startsWith(monthKey.value)));
+const round2 = (n) => Math.round(n * 100) / 100;
+const waterMonth = computed(() => round2(currentMonthDays.value.reduce((a, d) => a + d.waterM3, 0)));
+const energyMonth = computed(() => round2(currentMonthDays.value.reduce((a, d) => a + d.energyKwh, 0)));
+const criticalCount = computed(() => telemetry.openAlerts.filter(a => a.isCritical).length);
+const formatNumber = (n, digits = 1) => Number(n).toLocaleString(locale.value === 'es' ? 'es-PE' : 'en-US', { maximumFractionDigits: digits });
+
+// ── Equipos del kit HaaS ──
+const gateway = computed(() => devices.devices.find(d => d.type === DeviceType.GATEWAY) || null);
+const meters = computed(() => devices.devices.filter(d => d.type !== DeviceType.GATEWAY));
+const selectedId = ref(null);
+const selected = computed(() => meters.value.find(d => d.id === selectedId.value) || null);
+const latest = (d) => telemetry.latestByDevice[d.id] || null;
+const isWater = (d) => d.type === DeviceType.WATER_PULSE_METER;
+function sinceLabel(iso) {
+  if (!iso) return '—';
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return minutes < 1 ? t('dashboard.admin.justNow') : t('dashboard.admin.minutesAgo', { n: minutes });
+}
+
+// ── Gráficos ──
 const metric = ref('water');
 const metricOptions = computed(() => [{ value: 'water', label: t('dashboard.admin.water') }, { value: 'energy', label: t('dashboard.admin.energy') }]);
-
-const water = computed(() => telemetry.consumptionOf(telemetry.monthReadings, 'L/min'));
-const energy = computed(() => telemetry.consumptionOf(telemetry.monthReadings, 'A'));
-const projection = computed(() => projectToMonthEnd(water.value));
-const criticalCount = computed(() => telemetry.openAlerts.filter(a => a.isCritical).length);
-const recentAlerts = computed(() => telemetry.openAlerts.slice(0, 5));
-
-// Consumo diario del mes (agua o energía)
-const daily = computed(() => {
-  const unit = metric.value === 'water' ? 'L/min' : 'A';
-  const byDay = {};
-  telemetry.monthReadings.filter(r => r.unit === unit).forEach(r => { (byDay[r.timestamp.slice(8, 10)] ||= []).push(r); });
-  const labels = Object.keys(byDay).sort();
-  return { labels, values: labels.map(d => telemetry.consumptionOf(byDay[d], unit)) };
+const dailyChart = computed(() => {
+  const days = currentMonthDays.value;
+  const water = metric.value === 'water';
+  return {
+    labels: days.map(d => d.date.slice(8, 10)),
+    datasets: [{
+      label: water ? 'm³' : 'kWh',
+      data: days.map(d => water ? d.waterM3 : d.energyKwh),
+      backgroundColor: water ? '#10B981' : '#f59e0b',
+      borderRadius: 4,
+      maxBarThickness: 32,
+    }],
+  };
 });
-const lineData = computed(() => ({ labels: daily.value.labels, datasets: [{ label: metric.value === 'water' ? 'm³' : 'kWh', data: daily.value.values, borderColor: '#059669', backgroundColor: 'rgba(16,185,129,.15)', fill: true, tension: .3 }] }));
-const barData = computed(() => ({ labels: [t('dashboard.admin.currentMonth')], datasets: [{ label: 'm³', data: [water.value], backgroundColor: '#10B981' }, { label: 'kWh', data: [energy.value], backgroundColor: '#f59e0b' }] }));
-const chartOpts = { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } };
+const liveChart = computed(() => {
+  const list = selected.value ? (telemetry.readingsByDevice[selected.value.id] || []) : [];
+  return {
+    labels: list.map(r => new Date(r.timestamp).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })),
+    datasets: [{ label: list[0]?.rateUnit || '', data: list.map(r => r.rate), borderColor: '#059669', backgroundColor: 'rgba(16,185,129,.12)', fill: true, tension: .3, pointRadius: 0 }],
+  };
+});
+const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } };
+const liveOpts = { ...chartOpts, scales: { ...chartOpts.scales, x: { ticks: { maxTicksLimit: 8, maxRotation: 0 }, grid: { display: false } } } };
 
-const summaries = computed(() => condoStore.activeCondominiums.map(c => ({
-  ...c, online: c.id === condominiumId.value ? devices.online : null, total: c.id === condominiumId.value ? devices.total : null,
-  alerts: c.id === condominiumId.value ? telemetry.openAlertsCount : null,
-})));
+// ── Alertas (antes en su propia vista) ──
+const alertFilter = ref('open');
+const alertFilterOptions = computed(() => [{ value: 'open', label: t('dashboard.admin.openAlerts') }, { value: 'all', label: t('dashboard.admin.allAlerts') }]);
+const alertRows = computed(() => (alertFilter.value === 'open' ? telemetry.alerts.filter(a => a.isOpen) : telemetry.alerts));
+const deviceName = (id) => devices.devices.find(d => d.id === id)?.deviceId ?? `#${id}`;
+const alertStatusLabel = (s) => t(`telemetry.alertStatus.${s}`, s);
+async function ack(a) {
+  await telemetry.acknowledge(a.id);
+  toast.add({ severity: 'success', summary: t('common.success'), detail: t('telemetry.acknowledged'), life: 2000 });
+}
 
 async function load() {
   const id = condominiumId.value;
   if (!id) return;
-  await Promise.all([telemetry.fetchMonth(id), telemetry.fetchAlerts(id), devices.fetchByCondominium(id), payments.fetchByCondominium(id)]);
+  telemetry.stopPolling();
+  await Promise.all([
+    devices.fetchByCondominium(id),
+    telemetry.fetchLive(id),
+    telemetry.fetchAlerts(id),
+    telemetry.fetchDailyConsumption(id).catch(() => []),
+    payments.fetchByCondominium(id),
+  ]);
+  if (!selected.value) selectedId.value = meters.value[0]?.id ?? null;
+  lastUpdated.value = new Date();
+  telemetry.startPolling(id);
 }
+
 onMounted(async () => {
   subscriptions.fetchAvailablePlans();
   subscriptions.fetchSubscriptions();
@@ -73,90 +119,156 @@ onMounted(async () => {
   condominiumId.value = condoStore.activeCondominiums[0]?.id ?? null;
 });
 watch(condominiumId, load, { immediate: true });
+watch(() => telemetry.liveReadings, () => { lastUpdated.value = new Date(); });
+// Las rutas antiguas /telemetry/alerts y la campana del encabezado llegan con ?focus=alerts
+watch(() => route.query.focus, (focus) => {
+  if (focus === 'alerts') requestAnimationFrame(() => document.getElementById('alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}, { immediate: true });
 onUnmounted(() => telemetry.stopPolling());
 </script>
 
 <template>
   <div class="page">
-    <div class="page-head">
-      <h1>{{ t('dashboard.admin.title') }}</h1>
-      <div class="flex gap-2">
-        <pv-select v-if="condoStore.activeCondominiums.length > 1" v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
-        <pv-button :label="t('dashboard.admin.refresh')" icon="pi pi-refresh" severity="secondary" @click="load" />
+    <header class="page-head">
+      <div>
+        <h1>{{ t('dashboard.admin.title') }}</h1>
+        <p v-if="condominium" class="subtitle">
+          {{ condominium.name }}
+          <template v-if="planName"> · {{ t('dashboard.admin.plan', { plan: planName }) }}</template>
+          · {{ t('dashboard.admin.devicesOnline', { online: devices.online, total: devices.total }) }}
+          <template v-if="lastUpdated"> · {{ t('dashboard.admin.updatedAt', { time: lastUpdated.toLocaleTimeString(locale) }) }}</template>
+        </p>
       </div>
-    </div>
+      <div class="head-actions">
+        <pv-select v-if="condoStore.activeCondominiums.length > 1" v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
+        <pv-button :label="t('dashboard.admin.refresh')" icon="pi pi-refresh" severity="secondary" outlined @click="load" />
+      </div>
+    </header>
+
     <p v-if="!condoStore.activeCondominiums.length" class="muted">{{ t('condominiums.empty') }}</p>
+    <pv-message v-else-if="subscription && !hasActiveSubscription" severity="warn" :closable="false">
+      {{ t('dashboard.admin.subscriptionInactive') }}
+      <router-link :to="ROUTES.SUBSCRIPTION_DETAIL">{{ t('option.subscription') }}</router-link>
+    </pv-message>
 
     <div class="stats">
-      <stat-card :title="t('dashboard.admin.portfolio.condominiums')" :value="portfolio.length" icon="pi-building" iconBgColor="bg-teal-100" iconTextColor="text-teal-600" />
-      <stat-card :title="t('dashboard.admin.portfolio.apartments')" :value="totalApartments" icon="pi-home" iconBgColor="bg-blue-100" iconTextColor="text-blue-600" />
-      <stat-card :title="t('dashboard.admin.portfolio.commonAreas')" :value="totalCommonAreas" icon="pi-th-large" iconBgColor="bg-purple-100" iconTextColor="text-purple-600" />
-      <stat-card :title="t('dashboard.admin.portfolio.subscriptions')" :value="`${activeSubs} / ${portfolio.length}`" icon="pi-credit-card"
-                 :iconBgColor="activeSubs === portfolio.length ? 'bg-green-100' : 'bg-orange-100'" :iconTextColor="activeSubs === portfolio.length ? 'text-green-600' : 'text-orange-600'" />
-    </div>
-
-    <section class="card">
-      <div class="head"><h3>{{ t('dashboard.admin.portfolio.title') }}</h3>
-        <pv-button :label="t('option.subscription')" text size="small" icon="pi pi-credit-card" @click="router.push(ROUTES.SUBSCRIPTION_DETAIL)" /></div>
-      <pv-data-table :value="portfolio" dataKey="id" size="small" stripedRows>
-        <pv-column field="name" :header="t('condominiums.fields.name')">
-          <template #body="{ data }"><router-link :to="{ name: 'condominium-details', params: { id: data.id } }">{{ data.name }}</router-link><br><small class="muted">{{ data.district }}</small></template>
-        </pv-column>
-        <pv-column field="totalUnits" :header="t('dashboard.admin.portfolio.apartments')" />
-        <pv-column field="commonAreas" :header="t('dashboard.admin.portfolio.commonAreas')" />
-        <pv-column field="plan" :header="t('dashboard.admin.portfolio.plan')" />
-        <pv-column :header="t('dashboard.admin.portfolio.status')">
-          <template #body="{ data }">
-            <pv-tag v-if="data.hasSub" :severity="data.active ? 'success' : 'warn'" :value="data.active ? t('subscriptions.status-active') : t('subscriptions.status-cancelled')" />
-            <pv-tag v-else severity="secondary" :value="t('condominiums.noSubscription')" />
-          </template>
-        </pv-column>
-        <pv-column field="nextBilling" :header="t('subscriptions.nextBilling')" />
-      </pv-data-table>
-    </section>
-
-    <h2 class="section-title">{{ t('dashboard.admin.consumptionTitle') }}</h2>
-    <div class="stats">
-      <stat-card :title="t('dashboard.admin.stats.waterMonth')" :value="`${water} m³`" icon="pi-wallet" iconBgColor="bg-green-100" iconTextColor="text-green-600" />
-      <stat-card :title="t('dashboard.admin.stats.pumpEnergy')" :value="`${energy} kWh`" icon="pi-bolt" iconBgColor="bg-yellow-100" iconTextColor="text-yellow-600" />
-      <stat-card :title="t('dashboard.admin.stats.projection')" :value="`${projection} m³`" icon="pi-chart-line" />
+      <stat-card :title="t('dashboard.admin.stats.waterMonth')" :value="`${formatNumber(waterMonth)} m³`" icon="pi-filter" iconBgColor="bg-green-100" iconTextColor="text-green-600"
+                 :subtitle="t('dashboard.admin.projectionTo', { value: `${formatNumber(projectToMonthEnd(waterMonth))} m³` })" />
+      <stat-card :title="t('dashboard.admin.stats.pumpEnergy')" :value="`${formatNumber(energyMonth)} kWh`" icon="pi-bolt" iconBgColor="bg-yellow-100" iconTextColor="text-yellow-600"
+                 :subtitle="t('dashboard.admin.projectionTo', { value: `${formatNumber(projectToMonthEnd(energyMonth))} kWh` })" />
       <stat-card :title="t('dashboard.admin.stats.alerts')" :value="telemetry.openAlertsCount" icon="pi-bell"
-                 :iconBgColor="criticalCount ? 'bg-red-100' : 'bg-green-100'" :iconTextColor="criticalCount ? 'text-red-600' : 'text-green-600'" />
-      <stat-card :title="t('dashboard.admin.stats.delinquency')" :value="`${payments.delinquencyRate} %`" icon="pi-exclamation-circle"
-                 :iconBgColor="payments.delinquencyRate > 20 ? 'bg-red-100' : 'bg-green-100'" :iconTextColor="payments.delinquencyRate > 20 ? 'text-red-600' : 'text-green-600'" />
-    </div>
-
-    <div class="charts">
-      <section class="card"><div class="head"><h3>{{ t('dashboard.admin.charts.daily') }}</h3>
-        <pv-select-button v-model="metric" :options="metricOptions" optionLabel="label" optionValue="value" :allowEmpty="false" /></div>
-        <div class="chart"><Line :data="lineData" :options="chartOpts" /></div></section>
-      <section class="card"><h3>{{ t('dashboard.admin.charts.comparison') }}</h3><div class="chart"><Bar :data="barData" :options="chartOpts" /></div></section>
+                 :iconBgColor="criticalCount ? 'bg-red-100' : 'bg-green-100'" :iconTextColor="criticalCount ? 'text-red-600' : 'text-green-600'"
+                 :subtitle="t('dashboard.admin.criticalCount', { n: criticalCount })" />
+      <stat-card :title="t('dashboard.admin.stats.delinquency')" :value="`${payments.delinquencyRate} %`" icon="pi-wallet"
+                 :iconBgColor="payments.delinquencyRate > 20 ? 'bg-red-100' : 'bg-green-100'" :iconTextColor="payments.delinquencyRate > 20 ? 'text-red-600' : 'text-green-600'"
+                 :subtitle="t('dashboard.admin.overdueUnits', { n: payments.overdueUnitIds.length })" />
     </div>
 
     <section class="card">
-      <div class="head"><h3>{{ t('dashboard.admin.recentAlerts') }}</h3><pv-button :label="t('common.view')" text size="small" @click="router.push(ROUTES.ALERTS)" /></div>
-      <p v-if="!recentAlerts.length" class="muted">{{ t('telemetry.noAlerts') }}</p>
-      <ul v-else class="alerts"><li v-for="a in recentAlerts" :key="a.id"><pv-tag :severity="a.isCritical ? 'danger' : 'warn'" :value="t(`telemetry.severities.${a.severity}`)" /> {{ t(`telemetry.alertTypes.${a.type}`) }} <small>{{ new Date(a.createdAt).toLocaleString() }}</small></li></ul>
+      <div class="head">
+        <h2>{{ t('dashboard.admin.equipmentTitle') }}</h2>
+        <span v-if="gateway" class="gateway" :class="{ off: !gateway.isOnline }">
+          <i class="pi pi-wifi" aria-hidden="true"></i>
+          {{ gateway.deviceId }} · {{ gateway.isOnline ? t('devices.status.online') : t('devices.status.offline') }} · {{ sinceLabel(gateway.lastSeenAt) }}
+        </span>
+      </div>
+      <p v-if="!meters.length" class="muted">{{ t('devices.empty') }}</p>
+      <div class="meters">
+        <button v-for="d in meters" :key="d.id" type="button" class="meter" :class="{ active: selectedId === d.id, off: !d.isOnline }" @click="selectedId = d.id">
+          <span class="meter-head">
+            <span class="meter-point">{{ t(`devices.points.${d.measurementPoint}`) }}</span>
+            <span class="dot" :class="d.isOnline ? 'on' : 'down'" :title="d.isOnline ? t('devices.status.online') : t('devices.status.offline')"></span>
+          </span>
+          <span class="meter-location">{{ d.location || d.deviceId }}</span>
+          <span class="meter-value">
+            {{ latest(d)?.rate != null ? formatNumber(latest(d).rate, 2) : '—' }}
+            <small>{{ isWater(d) ? 'm³/h' : 'kW' }}</small>
+          </span>
+          <span class="meter-meta">{{ d.deviceId }} · {{ t('dashboard.admin.cumulative') }} {{ latest(d) ? formatNumber(latest(d).value, 1) : '—' }} {{ isWater(d) ? 'm³' : 'kWh' }}</span>
+        </button>
+      </div>
+      <div v-if="selected" class="live">
+        <div class="head">
+          <h3>{{ t('dashboard.admin.liveTitle', { name: selected.deviceId }) }}</h3>
+          <small class="muted">{{ selected.location }}</small>
+        </div>
+        <div class="chart"><Line v-if="liveChart.labels.length" :data="liveChart" :options="liveOpts" /><p v-else class="muted empty">{{ t('dashboard.admin.noLiveData') }}</p></div>
+      </div>
     </section>
 
-    <div v-if="condoStore.activeCondominiums.length > 1" class="condos">
-      <article v-for="c in summaries" :key="c.id" class="card"><strong>{{ c.name }}</strong><small>{{ c.district }}</small>
-        <small v-if="c.total !== null">{{ t('dashboard.admin.devicesOnline', { online: c.online, total: c.total }) }} · {{ t('dashboard.admin.stats.alerts') }}: {{ c.alerts }}</small></article>
+    <div class="split">
+      <section class="card">
+        <div class="head">
+          <h2>{{ t('dashboard.admin.charts.daily') }}</h2>
+          <pv-select-button v-model="metric" :options="metricOptions" optionLabel="label" optionValue="value" :allowEmpty="false" />
+        </div>
+        <div class="chart"><Bar v-if="dailyChart.labels.length" :data="dailyChart" :options="chartOpts" /><p v-else class="muted empty">{{ t('dashboard.admin.noDailyData') }}</p></div>
+      </section>
+
+      <section id="alerts" class="card">
+        <div class="head">
+          <h2>{{ t('telemetry.alertsTitle') }}</h2>
+          <pv-select-button v-model="alertFilter" :options="alertFilterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" />
+        </div>
+        <p v-if="!alertRows.length" class="muted">{{ t('telemetry.noAlerts') }}</p>
+        <ul v-else class="alerts">
+          <li v-for="a in alertRows" :key="a.id" :class="{ critical: a.isCritical && a.isOpen }">
+            <div class="alert-main">
+              <strong>{{ t(`telemetry.alertTypes.${a.type}`, a.title || a.type) }}</strong>
+              <small class="muted">{{ deviceName(a.deviceId) }} · {{ new Date(a.createdAt).toLocaleString(locale) }}</small>
+              <small v-if="a.estimatedOvercostSoles" class="overcost">{{ t('dashboard.admin.overcost', { amount: `S/ ${a.estimatedOvercostSoles.toFixed(2)}` }) }}</small>
+            </div>
+            <pv-button v-if="a.isOpen" :label="t('telemetry.acknowledge')" size="small" text @click="ack(a)" />
+            <pv-tag v-else severity="secondary" :value="alertStatusLabel(a.status)" />
+          </li>
+        </ul>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
-.page-head, .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.page { padding: 1.5rem; max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; }
+.page-head, .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem 1rem; }
+.page-head h1 { margin: 0; }
+.subtitle { margin: .25rem 0 0; color: #6B7280; }
+.head-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .filter { min-width: 14rem; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
-.charts { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
-@media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
-.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .5rem; }
-.chart { height: 260px; }
-.alerts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
-.condos { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+.card h2 { font-size: 1.1rem; margin: 0; }
+.card h3 { font-size: 1rem; margin: 0; }
 .muted { color: #6B7280; }
-.section-title { font-size: 1.15rem; margin: .5rem 0 0; }
+.empty { text-align: center; padding-top: 5rem; margin: 0; }
+
+.gateway { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; color: #047857; }
+.gateway.off { color: #b91c1c; }
+
+.meters { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
+.meter { display: flex; flex-direction: column; gap: .35rem; text-align: left; font: inherit; color: inherit; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .9rem 1rem; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.meter:hover { border-color: #a7f3d0; }
+.meter:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; }
+.meter.active { border-color: #10B981; box-shadow: 0 0 0 3px #ECFDF5; }
+.meter.off { background: #FEF2F2; }
+.meter-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.meter-point { font-weight: 600; }
+.meter-location { font-size: .8rem; color: #6B7280; margin-top: -.25rem; }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot.on { background: #10B981; }
+.dot.down { background: #ef4444; }
+.meter-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.meter-value small { font-size: .85rem; font-weight: 500; color: #6B7280; }
+.meter-meta { font-size: .8rem; color: #6B7280; font-variant-numeric: tabular-nums; }
+
+.live { border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.chart { height: 240px; position: relative; }
+
+.split { display: grid; grid-template-columns: 3fr 2fr; gap: 1rem; align-items: start; }
+@media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
+
+.alerts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+.alerts li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .7rem .25rem; border-bottom: 1px solid #f1f5f9; }
+.alerts li.critical { border-left: 3px solid #ef4444; padding-left: .6rem; }
+.alert-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.overcost { color: #b91c1c; font-size: .8rem; }
 </style>

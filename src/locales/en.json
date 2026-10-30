@@ -361,7 +361,8 @@
       "district": "District",
       "totalUnits": "Number of apartments",
       "waterSupplyCode": "Water supply code",
-      "electricitySupplyCode": "Electricity supply code"
+      "electricitySupplyCode": "Electricity supply code",
+      "totalFloors": "Number of floors"
     },
     "unitTypes": {
       "apartment": "Apartment",
@@ -380,7 +381,8 @@
       "assigned": "Assigned",
       "unassigned": "Unassigned",
       "activationCode": "Activation code",
-      "registry": "Unit registry and shares"
+      "registry": "Unit registry and shares",
+      "empty": "No units in the registry yet. Add the {n} units with their aliquot; they must add up to 100.0000% (Law No. 27157)."
     },
     "stats": {
       "totalUnits": "Total units",
@@ -403,7 +405,8 @@
       "area": "Enter a valid area.",
       "percentage": "Enter a value between 0.01 and 100 with up to 2 decimals.",
       "commonAreasRequired": "Register at least one common area.",
-      "commonAreaName": "Each common area needs a name of 2 to 60 characters."
+      "commonAreaName": "Each common area needs a name of 2 to 60 characters.",
+      "floors": "Floors must be between 1 and 80."
     },
     "messages": {
       "saved": "Condominium saved.",
@@ -432,12 +435,64 @@
         "event_room": "Event room",
         "garden": "Garden",
         "parking": "Parking",
-        "elevator": "Elevator",
+        "elevator": "Elevator bank",
         "pump_room": "Pump room",
         "cistern": "Cistern",
         "laundry": "Laundry",
-        "other": "Other"
+        "other": "Other",
+        "panel": "Main electrical panel"
       }
+    },
+    "form": {
+      "breadcrumb": "Breadcrumb",
+      "subtitle": "Register the building, the supply codes on its master bills and the common areas IoBuild will monitor.",
+      "building": "Building details",
+      "namePlaceholder": "e.g. Los Robles Residences",
+      "addressPlaceholder": "e.g. 1234 Arnaldo Márquez Ave.",
+      "districtPlaceholder": "Select or type the district",
+      "unitsHint": "Sets the HaaS plan. Up to {max} units.",
+      "photo": "Building photo",
+      "uploadPhoto": "Upload photo",
+      "changePhoto": "Change photo",
+      "removePhoto": "Remove photo",
+      "uploadError": "The image uploader could not be opened.",
+      "supplies": "Master bill supply codes",
+      "suppliesHint": "Printed on the Sedapal and Luz del Sur bills; used to reconcile billed vs. metered consumption.",
+      "areas": "Monitored common areas",
+      "areasHint": "These are the subsystems the IoBuild kit measures. You can rename them and set where they are.",
+      "areaLocation": "Location",
+      "areaLocationPlaceholder": "Location, e.g. Basement 1",
+      "meter": {
+        "water": "Flow meter",
+        "energy": "CT clamp"
+      },
+      "create": "Create condominium",
+      "summary": "Summary",
+      "plan": "Matching plan",
+      "perMonth": "per month, VAT incl.",
+      "planRange": "{min} to {max} units",
+      "planPending": "Enter the number of units to see the plan and equipment kit.",
+      "kit": {
+        "gateways": "Gateways",
+        "flowMeters": "Flow meters",
+        "ctClamps": "CT clamps",
+        "total": "Loaned devices"
+      },
+      "areasCount": "{n} monitored common areas",
+      "reviewTitle": "Check the form",
+      "reviewDetail": "Some required fields are missing or invalid."
+    },
+    "card": {
+      "units": "Units",
+      "areas": "Monitored areas",
+      "registered": "Residents registered",
+      "plan": "{plan} plan",
+      "view": "View details"
+    },
+    "details": {
+      "unitsAndFloors": "{units} units",
+      "floors": "{n} floors",
+      "notRegistered": "Not registered: add it to reconcile bills"
     }
   },
   "residents": {
@@ -591,7 +646,8 @@
     },
     "alertStatus": {
       "open": "Open",
-      "acknowledged": "Acknowledged"
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
     }
   },
   "billing": {
@@ -761,7 +817,23 @@
         "subscriptions": "Active subscriptions",
         "plan": "Plan",
         "status": "Status"
-      }
+      },
+      "justNow": "just now",
+      "minutesAgo": "{n} min ago",
+      "plan": "{plan} plan",
+      "updatedAt": "updated {time}",
+      "subscriptionInactive": "This condominium subscription is not active; monitoring and billing are limited.",
+      "projectionTo": "Month-end projection: {value}",
+      "criticalCount": "{n} critical",
+      "overdueUnits": "{n} units with overdue debt",
+      "equipmentTitle": "Common-area equipment",
+      "cumulative": "total",
+      "liveTitle": "Live · {name}",
+      "noLiveData": "No readings in the last 10 minutes.",
+      "noDailyData": "No consumption recorded this month yet.",
+      "openAlerts": "Open",
+      "allAlerts": "All",
+      "overcost": "Estimated overcost: {amount}"
     },
     "resident": {
       "myStatement": "My {month} settlement",

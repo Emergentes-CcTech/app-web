@@ -13,9 +13,9 @@ export const MeasurementPoint = Object.freeze({
 export class Device {
     constructor({ id = null, condominiumId = null, deviceId = '', type = '', measurementPoint = '',
                   macAddress = '', installedAt = '', status = 'offline', lastSeenAt = null,
-                  nightFlowThresholdLpm = null, baselineAmps = null } = {}) {
+                  nightFlowThresholdLpm = null, baselineAmps = null, location = '' } = {}) {
         Object.assign(this, { id, condominiumId, deviceId, type, measurementPoint, macAddress,
-            installedAt, status, lastSeenAt, nightFlowThresholdLpm, baselineAmps });
+            installedAt, status, lastSeenAt, nightFlowThresholdLpm, baselineAmps, location });
     }
 
     get isOnline() { return String(this.status).toLowerCase() === 'online'; }

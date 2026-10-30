@@ -1,26 +1,25 @@
 /**
- * Tipos de área común. Coinciden con los puntos de medición de los dispositivos
- * (devices/domain/model/device.entity.js): un medidor instalado en "pool" mide el área común "pool".
- * Textos en condominiums.commonAreas.types.<type>.
+ * Subsistemas de áreas comunes que IoBuild monitorea con el kit HaaS. Son los únicos que el backend
+ * registra (CommonAreaSubsystem) y coinciden con los puntos de medición de los dispositivos
+ * (devices/domain/model/device.entity.js). Textos en condominiums.commonAreas.types.<type>.
  */
 export const COMMON_AREA_TYPES = Object.freeze([
-    { type: 'lobby', icon: 'pi pi-building' },
-    { type: 'pool', icon: 'pi pi-sun' },
-    { type: 'gym', icon: 'pi pi-heart' },
-    { type: 'event_room', icon: 'pi pi-users' },
-    { type: 'garden', icon: 'pi pi-globe' },
-    { type: 'parking', icon: 'pi pi-car' },
-    { type: 'elevator', icon: 'pi pi-sort-alt' },
-    { type: 'pump_room', icon: 'pi pi-cog' },
-    { type: 'cistern', icon: 'pi pi-database' },
-    { type: 'laundry', icon: 'pi pi-refresh' },
-    { type: 'other', icon: 'pi pi-map-marker' },
+    { type: 'cistern', subsystem: 'MainCistern', icon: 'pi pi-database', meter: 'water' },
+    { type: 'pump_room', subsystem: 'PressurePumpsRoom', icon: 'pi pi-cog', meter: 'energy' },
+    { type: 'elevator', subsystem: 'ElevatorsBank', icon: 'pi pi-sort-alt', meter: 'energy' },
+    { type: 'panel', subsystem: 'GeneralElectricalPanel', icon: 'pi pi-bolt', meter: 'energy' },
 ]);
 
-export const commonAreaIcon = (type) => COMMON_AREA_TYPES.find(a => a.type === type)?.icon ?? 'pi pi-map-marker';
+// Íconos de tipos antiguos (registros previos al catálogo de subsistemas)
+const LEGACY_ICONS = { lobby: 'pi pi-building', pool: 'pi pi-sun', gym: 'pi pi-heart', event_room: 'pi pi-users',
+    garden: 'pi pi-globe', parking: 'pi pi-car', laundry: 'pi pi-refresh' };
+
+export const commonAreaIcon = (type) => COMMON_AREA_TYPES.find(a => a.type === type)?.icon ?? LEGACY_ICONS[type] ?? 'pi pi-map-marker';
+export const typeFromSubsystem = (subsystem) => COMMON_AREA_TYPES.find(a => a.subsystem === subsystem)?.type ?? subsystem;
+export const subsystemFromType = (type) => COMMON_AREA_TYPES.find(a => a.type === type)?.subsystem ?? type;
 
 export class CommonArea {
-    constructor({ id = null, name = '', type = 'other' } = {}) {
-        Object.assign(this, { id, name, type });
+    constructor({ id = null, name = '', type = 'cistern', location = '' } = {}) {
+        Object.assign(this, { id, name, type: typeFromSubsystem(type), location });
     }
 }

@@ -89,9 +89,8 @@ const handleLogout = async () => {
 };
 
 const items = [
-  // Administrador (Simplificado: 8 ítems claros y sin redundancias)
+  // Administrador: el panel ya reúne monitoreo en vivo y alertas
   { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home' },
-  { label: 'option.monitoring', to: ROUTES.MONITORING, use_role: ROLES.ADMIN, icon: 'pi pi-chart-line', requiresSubscription: true },
   { label: 'option.condominiums', to: ROUTES.CONDOMINIUMS, use_role: ROLES.ADMIN, icon: 'pi pi-building' },
   { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users' },
   { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
@@ -461,17 +460,15 @@ const filteredItems = computed(() => {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  color: #475569;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  color: black;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  margin: 0.2rem 0.75rem;
+  margin: 0.25rem 1rem;
   border-radius: 8px;
-  font-size: 0.925rem;
-  font-weight: 500;
 }
 
 .menu-item::before {
@@ -480,16 +477,16 @@ const filteredItems = computed(() => {
   left: 0;
   top: 0;
   height: 100%;
-  width: 3px;
-  background: #059669;
+  width: 4px;
+  background: black;
   transform: scaleY(0);
-  transition: transform 0.2s ease;
-  border-radius: 0 3px 3px 0;
+  transition: transform 0.3s ease;
+  border-radius: 0 4px 4px 0;
 }
 
 .menu-item:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: rgba(0, 0, 0, 0.1);
+  color: black;
 }
 
 .menu-item:hover::before {
@@ -497,47 +494,40 @@ const filteredItems = computed(() => {
 }
 
 .menu-item.router-link-active {
-  background: #ecfdf5;
-  color: #047857;
+  background: black;
+  color: white;
   font-weight: 600;
   border-radius: 8px;
 }
 
-.menu-item.router-link-active .menu-icon {
-  color: #059669;
-}
-
 .menu-item.router-link-active::before {
   transform: scaleY(1);
-  background: #059669;
+  background: white;
 }
 
 .menu-icon {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   width: 1.5rem;
-  color: #64748b;
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .menu-item:hover .menu-icon {
-  transform: scale(1.1);
-  color: #0f172a;
+  transform: scale(1.15);
 }
 
 .menu-label {
   flex: 1;
+  font-size: 0.95rem;
 }
 
 .menu-arrow {
-  font-size: 0.75rem;
-  color: #94a3b8;
+  font-size: 0.875rem;
   opacity: 0;
-  transform: translateX(-6px);
-  transition: all 0.2s ease;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
 }
 
-.menu-item:hover .menu-arrow,
-.menu-item.router-link-active .menu-arrow {
+.menu-item:hover .menu-arrow {
   opacity: 1;
   transform: translateX(0);
 }
@@ -546,34 +536,29 @@ const filteredItems = computed(() => {
 .logout-item {
   cursor: pointer;
   margin-top: auto;
-  margin-bottom: 1rem;
-  width: calc(100% - 1.5rem);
+  width: calc(100% - 2rem);
   box-sizing: border-box;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
   background: transparent;
-  color: #64748b;
+  color: #111827;
   font: inherit;
   text-align: left;
 }
 
 .logout-item:hover {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.logout-item:hover .menu-icon {
-  color: #dc2626;
+  background: rgba(0, 0, 0, 0.1);
+  color: #111827;
 }
 
 .logout-item::before {
-  background: #dc2626;
+  background: #111827;
 }
 
 .logout-item:focus-visible {
-  outline: 3px solid #ef4444;
+  outline: 3px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -597,15 +582,12 @@ const filteredItems = computed(() => {
 }
 
 .sidebar-content {
-  width: 300px;
+  width: 320px;
   height: 100%;
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #10B981;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.06);
+  animation: slideIn 0.3s ease;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .sidebar-header {

@@ -19,14 +19,16 @@ public static class ProjectConfiguration
             entity.Property(project => project.Location).HasMaxLength(500).IsRequired();
             entity.Property(project => project.ImageUrl).HasMaxLength(2000);
 
-            // Ignora propiedades de dominio extendidas no presentes como columnas físicas obligatorias
-            entity.Ignore(p => p.Address);
-            entity.Ignore(p => p.District);
-            entity.Ignore(p => p.TotalFloors);
-            entity.Ignore(p => p.SedapalSupplyCode);
-            entity.Ignore(p => p.LuzDelSurSupplyCode);
+            // Datos de catastro persistidos (columnas agregadas por EfMigrationRunner en bases existentes)
+            entity.Property(p => p.Address).HasMaxLength(255).IsRequired();
+            entity.Property(p => p.District).HasMaxLength(100).IsRequired();
+            entity.Property(p => p.TotalFloors).IsRequired();
+            entity.Property(p => p.SedapalSupplyCode).HasMaxLength(32).IsRequired();
+            entity.Property(p => p.LuzDelSurSupplyCode).HasMaxLength(32).IsRequired();
+            entity.Property(p => p.Status).HasMaxLength(32).IsRequired();
+
+            // AdministratorId se persiste a través de BuilderId (mismo valor); la capacidad de cisterna aún no se registra
             entity.Ignore(p => p.CisternCapacityM3);
-            entity.Ignore(p => p.Status);
             entity.Ignore(p => p.AdministratorId);
         });
     }

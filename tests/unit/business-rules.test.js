@@ -39,12 +39,17 @@ describe('RF-006 participación', () => {
     expect(isParticipationBalanced([{ participationPct: 99.99 }])).toBe(false);
     expect(isParticipationBalanced([{ participationPct: 100.01 }])).toBe(false);
   });
-  it('suma exacta en centésimas', () => { expect(sumParticipation(units)).toBe(100); });
-  it('porcentaje válido: 0.01–100 con hasta 2 decimales', () => {
+  it('suma exacta en diezmilésimas', () => { expect(sumParticipation(units)).toBe(100); });
+  it('alícuotas de 4 decimales que suman 100.0000 % están balanceadas (Ley N.° 27157)', () => {
+    expect(isParticipationBalanced([{ participationPct: 3.85 }, { participationPct: 4.0062 }, { participationPct: 92.1438 }])).toBe(true);
+    expect(isParticipationBalanced([{ participationPct: 3.85 }, { participationPct: 96.1499 }])).toBe(false);
+  });
+  it('porcentaje válido: 0.0001–100 con hasta 4 decimales', () => {
     expect(isValidPercentage(0.01)).toBe(true);
+    expect(isValidPercentage(4.0062)).toBe(true);
     expect(isValidPercentage(0)).toBe(false);
     expect(isValidPercentage(100.5)).toBe(false);
-    expect(isValidPercentage(10.123)).toBe(false);
+    expect(isValidPercentage(10.12345)).toBe(false);
   });
 });
 
@@ -83,7 +88,7 @@ describe('RF-014 planes', () => {
 
   it('precios y kits de equipos', () => {
     const [boutique, urbano, granTorre] = PLAN_TIERS.map(t => new Plan({ code: t.code }));
-    expect([boutique.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([500, 750, 1000]);
+    expect([boutique.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([500, 700, 1000]);
     expect([boutique.hardwareIncluded, urbano.hardwareIncluded, granTorre.hardwareIncluded]).toEqual([4, 6, 10]);
     expect(granTorre.kit).toEqual({ gateways: 2, flowMeters: 3, ctClamps: 5 });
     expect(boutique.getFormattedPrice()).toBe('S/ 500');
