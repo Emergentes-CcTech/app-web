@@ -30,7 +30,6 @@
     "administratorRole": "Administrador",
     "residentRole": "Dueño de departamento",
     "companyName": "Razón social",
-    "ruc": "RUC",
     "legalRepresentative": "Representante legal",
     "dni": "DNI",
     "notifications": {
@@ -282,14 +281,13 @@
       "credentialsInvalid": "Correo o contraseña incorrectos.",
       "registrationDataInvalid": "Los datos de registro no son válidos. Revise el formulario e inténtelo de nuevo.",
       "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
-      "rucRequired": "El RUC es obligatorio.",
-      "rucInvalid": "El RUC debe tener 11 dígitos válidos.",
       "legalRepresentativeRequired": "El representante legal es obligatorio.",
       "nameInvalid": "Ingrese un nombre válido.",
       "activationCodeRequired": "El código de activación es obligatorio.",
       "dniRequired": "El DNI es obligatorio.",
       "dniInvalid": "El DNI debe tener 8 dígitos.",
-      "privacyRequired": "Debes aceptar las políticas de privacidad."
+      "privacyRequired": "Debes aceptar las políticas de privacidad.",
+      "addressRequired": "Ingresa la dirección de la administradora (5 a 200 caracteres)."
     },
     "registerAdministrator": {
       "title": "Registro de administrador",
@@ -311,11 +309,9 @@
       "cancelButton": "Cancelar",
       "companyName": "Razón social",
       "companyNamePlaceholder": "Administradora Vista Verde S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Representante legal",
       "legalRepresentativePlaceholder": "Nombre y apellidos",
-      "address": "Dirección fiscal (opcional)",
+      "address": "Dirección",
       "addressPlaceholder": "Av. Javier Prado 1234"
     },
     "registerResident": {

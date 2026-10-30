@@ -15,7 +15,8 @@ public sealed class ProfileCommandService(IoBuildDbContext dbContext)
         int? age = null,
         string? photoUrl = null,
         CancellationToken cancellationToken = default,
-        int? yearsInBusiness = null)
+        int? yearsInBusiness = null,
+        string? legalRepresentative = null)
     {
         if (yearsInBusiness is < 0 or > 120)
             throw new ArgumentOutOfRangeException(nameof(yearsInBusiness), "Years in business must be between 0 and 120.");
@@ -31,7 +32,8 @@ public sealed class ProfileCommandService(IoBuildDbContext dbContext)
             Age = age,
             YearsInBusiness = yearsInBusiness,
             PhotoUrl = photoUrl,
-            CloudinaryReference = photoUrl
+            CloudinaryReference = photoUrl,
+            LegalRepresentative = legalRepresentative
         };
         dbContext.Profiles.Add(profile);
         await dbContext.SaveChangesAsync(cancellationToken);

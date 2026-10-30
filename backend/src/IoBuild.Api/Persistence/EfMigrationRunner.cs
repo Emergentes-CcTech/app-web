@@ -43,7 +43,8 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 ("Address", "VARCHAR(255) NULL"),
                 ("SecondEmail", "VARCHAR(150) NULL"),
                 ("PhotoUrl", "LONGTEXT NULL"),
-                ("YearsInBusiness", "INT NULL")
+                ("YearsInBusiness", "INT NULL"),
+                ("LegalRepresentative", "VARCHAR(150) NULL")
             };
 
             foreach (var (colName, colType) in columnsToAdd)

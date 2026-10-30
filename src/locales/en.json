@@ -30,7 +30,6 @@
     "administratorRole": "Administrator",
     "residentRole": "Apartment owner",
     "companyName": "Company name",
-    "ruc": "RUC",
     "legalRepresentative": "Legal representative",
     "dni": "DNI",
     "notifications": {
@@ -282,14 +281,13 @@
       "credentialsInvalid": "Invalid email or password.",
       "registrationDataInvalid": "Registration details are invalid. Please review the form and try again.",
       "registrationFailed": "Registration failed. Please try again.",
-      "rucRequired": "RUC is required.",
-      "rucInvalid": "RUC must be a valid 11-digit number.",
       "legalRepresentativeRequired": "Legal representative is required.",
       "nameInvalid": "Enter a valid name.",
       "activationCodeRequired": "Activation code is required.",
       "dniRequired": "DNI is required.",
       "dniInvalid": "DNI must have 8 digits.",
-      "privacyRequired": "You must accept the privacy policies."
+      "privacyRequired": "You must accept the privacy policies.",
+      "addressRequired": "Enter the management company address (5 to 200 characters)."
     },
     "registerAdministrator": {
       "title": "Administrator sign-up",
@@ -311,11 +309,9 @@
       "cancelButton": "Cancel",
       "companyName": "Company name",
       "companyNamePlaceholder": "Vista Verde Administration S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Legal representative",
       "legalRepresentativePlaceholder": "Full name",
-      "address": "Tax address (optional)",
+      "address": "Address",
       "addressPlaceholder": "123 Main Ave"
     },
     "registerResident": {

@@ -27,7 +27,7 @@ const initial = computed(() => (title.value || '?').charAt(0).toUpperCase());
 const editableFields = computed(() => isAdmin.value
   ? ['companyName', 'legalRepresentative', 'phoneNumber', 'address', 'secondEmail']
   : ['fullName', 'phoneNumber', 'secondEmail']);
-const readOnlyFields = computed(() => isAdmin.value ? ['ruc', 'email'] : ['dni', 'email']);
+const readOnlyFields = computed(() => isAdmin.value ? ['email'] : ['dni', 'email']);
 
 function startEdit() { Object.assign(draft, profile.value); isEditing.value = true; }
 function cancelEdit() { isEditing.value = false; Object.keys(errors).forEach(k => delete errors[k]); }

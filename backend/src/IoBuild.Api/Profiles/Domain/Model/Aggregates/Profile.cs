@@ -19,4 +19,7 @@ public sealed class Profile
     public string? PhotoReference { get; set; }
     public string? CloudinaryReference { get; set; }
     public string? PhotoUrl { get; set; }
+
+    // Representante legal de la administradora (solo perfiles de administración)
+    public string? LegalRepresentative { get; set; }
 }

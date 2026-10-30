@@ -39,7 +39,9 @@ public static class ProfilesEndpoints
             if (request.YearsInBusiness is < 0 or > 120)
                 return Results.BadRequest(new { code = "invalid_years_in_business", message = "Years in business must be between 0 and 120." });
 
-            if (!string.IsNullOrWhiteSpace(request.Name)) item.Name = request.Name;
+            if (!string.IsNullOrWhiteSpace(request.CompanyName)) item.Name = request.CompanyName.Trim();
+            else if (!string.IsNullOrWhiteSpace(request.Name)) item.Name = request.Name;
+            if (!string.IsNullOrWhiteSpace(request.LegalRepresentative)) item.LegalRepresentative = request.LegalRepresentative.Trim();
             if (!string.IsNullOrWhiteSpace(request.Username)) item.Username = request.Username;
             item.PhoneNumber = request.PhoneNumber;
             item.Address = request.Address;
@@ -64,25 +66,35 @@ public static class ProfilesEndpoints
             if (!OwnsUser(user, request.UserId)) return Results.Forbid();
             if (request.YearsInBusiness is < 0 or > 120)
                 return Results.BadRequest(new { code = "invalid_years_in_business", message = "Years in business must be between 0 and 120." });
+            // Administración envía razón social (CompanyName); residentes envían su nombre (Name)
+            var name = (string.IsNullOrWhiteSpace(request.CompanyName) ? request.Name : request.CompanyName)?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.BadRequest(new { code = "name_required", message = "Profile name or company name is required." });
+            var username = string.IsNullOrWhiteSpace(request.Username)
+                ? (user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? user.FindFirst("email")?.Value ?? name).Split('@')[0]
+                : request.Username.Trim();
+            var legalRepresentative = string.IsNullOrWhiteSpace(request.LegalRepresentative) ? null : request.LegalRepresentative.Trim();
+
             try
             {
                 var profile = await service.CreateProfileAsync(
                     request.UserId,
-                    request.Name,
-                    request.Username,
+                    name,
+                    username,
                     request.PhoneNumber,
                     request.Address,
                     request.SecondEmail,
                     request.Age,
                     request.PhotoUrl,
                     ct,
-                    request.YearsInBusiness);
+                    request.YearsInBusiness,
+                    legalRepresentative);
                 return Results.Created($"/api/v1/profiles/{profile.Id}", profile);
             }
             catch (DbUpdateException ex) when (ex.InnerException is MySqlConnector.MySqlException mysql && mysql.Number == 1062)
             {
-                // A profile already exists for this user (unique UserId index):
-                // update it instead of duplicating.
+                // A profile already exists for this user (unique UserId index): the client
+                // completes it with PUT /profiles/{id} instead of duplicating it.
                 return Results.Conflict(new { error = "Profile already exists for this user." });
             }
         }).RequireAuthorization();
