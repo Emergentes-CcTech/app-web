@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "openNav": "Open navigation",
+    "closeNav": "Close navigation",
+    "alerts": "View alerts",
+    "notifications": "Notifications",
+    "user": "User",
+    "language": "Language",
+    "criticalAlert": "Critical alert"
   },
   "profile": {
     "title": "Profile",
@@ -176,13 +183,41 @@
     },
     "planCatalog": {
       "boutique": {
-        "description": "For small condominiums with up to 20 apartments."
+        "description": "For small condominiums with up to 20 apartments.",
+        "features": [
+          "Up to 20 units",
+          "4 loaned IoT devices (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
+          "Continuous night-leak detection (1:00 to 4:00 AM)",
+          "Main cistern and electrical panel monitoring",
+          "Automated monthly proration by legal aliquot (Law 27157)",
+          "12-month contract + 2-month service warranty",
+          "Priority technical support and hardware replacement on failure"
+        ]
       },
       "urbano": {
-        "description": "For buildings with 21 to 50 apartments."
+        "description": "For buildings with 21 to 80 apartments.",
+        "features": [
+          "21 to 80 units",
+          "6 loaned IoT devices (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
+          "Full monitoring: cistern, pumps, elevators and common lighting",
+          "Electrical overload and cistern night-leak detection",
+          "Monthly reconciliation against official master bills (Sedapal and Luz del Sur)",
+          "Cent-exact legal proration and digital settlement per unit",
+          "12-month contract + 2-month service warranty",
+          "BFF access for the administrator and web app for residents"
+        ]
       },
       "gran-torre": {
-        "description": "For towers with 51 to 80 apartments."
+        "description": "For towers with more than 80 apartments.",
+        "features": [
+          "More than 80 units",
+          "10 loaned IoT devices (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
+          "Extended monitoring of multiple panels, elevators and pump rooms",
+          "Advanced anomaly detection and macro-metering reconciliation",
+          "Aliquot proration with a strict 100.0000% balance",
+          "12-month contract + 2-month service warranty",
+          "On-site preventive maintenance and periodic sensor calibration"
+        ]
       }
     },
     "usage-units": "Registered apartments",
@@ -199,7 +234,8 @@
       "flowMeters": "{n} Flow meter | {n} Flow meters",
       "ctClamps": "{n} CT clamp | {n} CT clamps"
     },
-    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments."
+    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments.",
+    "unitsFrom": "More than {min} units"
   },
   "iam": {
     "logout": "Log Out",
@@ -322,7 +358,9 @@
     "confirm": "Confirm",
     "back": "Back",
     "view": "View",
-    "actions": "Actions"
+    "actions": "Actions",
+    "error": "Error",
+    "loadError": "The information could not be loaded. Try again."
   },
   "option": {
     "dashboard": "Dashboard",
@@ -361,7 +399,8 @@
       "district": "District",
       "totalUnits": "Number of apartments",
       "waterSupplyCode": "Water supply code",
-      "electricitySupplyCode": "Electricity supply code"
+      "electricitySupplyCode": "Electricity supply code",
+      "totalFloors": "Number of floors"
     },
     "unitTypes": {
       "apartment": "Apartment",
@@ -380,7 +419,8 @@
       "assigned": "Assigned",
       "unassigned": "Unassigned",
       "activationCode": "Activation code",
-      "registry": "Unit registry and shares"
+      "registry": "Unit registry and shares",
+      "empty": "No units in the registry yet. Add the {n} units with their aliquot; they must add up to 100.0000% (Law No. 27157)."
     },
     "stats": {
       "totalUnits": "Total units",
@@ -403,7 +443,8 @@
       "area": "Enter a valid area.",
       "percentage": "Enter a value between 0.01 and 100 with up to 2 decimals.",
       "commonAreasRequired": "Register at least one common area.",
-      "commonAreaName": "Each common area needs a name of 2 to 60 characters."
+      "commonAreaName": "Each common area needs a name of 2 to 60 characters.",
+      "floors": "Floors must be between 1 and 80."
     },
     "messages": {
       "saved": "Condominium saved.",
@@ -432,12 +473,63 @@
         "event_room": "Event room",
         "garden": "Garden",
         "parking": "Parking",
-        "elevator": "Elevator",
+        "elevator": "Elevator bank",
         "pump_room": "Pump room",
         "cistern": "Cistern",
         "laundry": "Laundry",
-        "other": "Other"
+        "other": "Other",
+        "panel": "Main electrical panel"
       }
+    },
+    "form": {
+      "breadcrumb": "Breadcrumb",
+      "subtitle": "Register the building, the supply codes on its master bills and the common areas IoBuild will monitor.",
+      "building": "Building details",
+      "namePlaceholder": "e.g. Los Robles Residences",
+      "addressPlaceholder": "e.g. 1234 Arnaldo Márquez Ave.",
+      "districtPlaceholder": "Select or type the district",
+      "unitsHint": "Sets the HaaS plan. Up to 20: Boutique · 21 to 80: Urbano · over 80: Gran Torre.",
+      "photo": "Building photo",
+      "uploadPhoto": "Upload photo",
+      "changePhoto": "Change photo",
+      "removePhoto": "Remove photo",
+      "uploadError": "The image uploader could not be opened.",
+      "supplies": "Master bill supply codes",
+      "suppliesHint": "Printed on the Sedapal and Luz del Sur bills; used to reconcile billed vs. metered consumption.",
+      "areas": "Monitored common areas",
+      "areasHint": "These are the subsystems the IoBuild kit measures. You can rename them and set where they are.",
+      "areaLocation": "Location",
+      "areaLocationPlaceholder": "Location, e.g. Basement 1",
+      "meter": {
+        "water": "Flow meter",
+        "energy": "CT clamp"
+      },
+      "create": "Create condominium",
+      "summary": "Summary",
+      "plan": "Matching plan",
+      "perMonth": "per month, VAT incl.",
+      "planPending": "Enter the number of units to see the plan and equipment kit.",
+      "kit": {
+        "gateways": "Gateways",
+        "flowMeters": "Flow meters",
+        "ctClamps": "CT clamps",
+        "total": "Loaned devices"
+      },
+      "areasCount": "{n} monitored common areas",
+      "reviewTitle": "Check the form",
+      "reviewDetail": "Some required fields are missing or invalid."
+    },
+    "card": {
+      "units": "Units",
+      "areas": "Monitored areas",
+      "registered": "Residents registered",
+      "plan": "{plan} plan",
+      "view": "View details"
+    },
+    "details": {
+      "unitsAndFloors": "{units} units",
+      "floors": "{n} floors",
+      "notRegistered": "Not registered: add it to reconcile bills"
     }
   },
   "residents": {
@@ -504,7 +596,12 @@
       "unassigned": "Resident unlinked.",
       "updated": "Resident updated.",
       "alreadyLinked": "Unit {unit} already has a linked resident; no code needed."
-    }
+    },
+    "filters": {
+      "all": "All"
+    },
+    "subtitle": "{n} residents registered in {condominium}",
+    "searchPlaceholder": "Search by name, email or unit"
   },
   "devices": {
     "title": "IoT devices",
@@ -522,11 +619,13 @@
       "lastSeenAt": "Last signal",
       "status": "Status",
       "nightFlowThresholdLpm": "Night flow threshold",
-      "baselineAmps": "Current baseline"
+      "baselineAmps": "Current baseline",
+      "location": "Physical location",
+      "nightFlowThreshold": "Night flow threshold"
     },
     "types": {
-      "water_pulse_meter": "Water pulse meter",
-      "current_sensor": "Current sensor",
+      "water_pulse_meter": "Flow meter",
+      "current_sensor": "CT clamp",
       "gateway": "Gateway"
     },
     "points": {
@@ -560,12 +659,20 @@
       "required": "Required field.",
       "deviceId": "The ID must be 3 to 40 characters.",
       "idTaken": "A device with that ID already exists in the condominium.",
-      "mac": "Enter a valid MAC address."
+      "mac": "Enter a valid MAC address.",
+      "location": "Enter where it is installed (3 to 120 characters)."
     },
     "messages": {
       "saved": "Device saved.",
       "error": "Could not save the device.",
       "unlinked": "Device unlinked."
+    },
+    "subtitle": "Loaned IoT kit that meters the condominium common areas.",
+    "neverSeen": "No heartbeat yet",
+    "dialog": {
+      "intro": "Register an HaaS kit device installed in a common area. It shows as offline until its first heartbeat.",
+      "locationPlaceholder": "e.g. Basement 1 - Pump panel",
+      "thresholdHint": "Continuous flow between 01:00 and 04:00 above this value triggers a night-leak alert."
     }
   },
   "telemetry": {
@@ -591,7 +698,8 @@
     },
     "alertStatus": {
       "open": "Open",
-      "acknowledged": "Acknowledged"
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
     }
   },
   "billing": {
@@ -652,6 +760,14 @@
       "error": "The operation could not be completed.",
       "notBalanced": "The condominium participation does not add up to 100 %. Fix the roll before calculating.",
       "noBill": "No utility bill registered for that period."
+    },
+    "summary": {
+      "title": "Collection summary",
+      "period": "Latest settled period",
+      "commonExpense": "Common expense",
+      "collected": "Collected",
+      "receivable": "Receivable",
+      "progress": "{paid} of {total} fees paid"
     }
   },
   "payments": {
@@ -761,7 +877,23 @@
         "subscriptions": "Active subscriptions",
         "plan": "Plan",
         "status": "Status"
-      }
+      },
+      "justNow": "just now",
+      "minutesAgo": "{n} min ago",
+      "plan": "{plan} plan",
+      "updatedAt": "updated {time}",
+      "subscriptionInactive": "This condominium subscription is not active; monitoring and billing are limited.",
+      "projectionTo": "Month-end projection: {value}",
+      "criticalCount": "{n} critical",
+      "overdueUnits": "{n} units with overdue debt",
+      "equipmentTitle": "Common-area equipment",
+      "cumulative": "total",
+      "liveTitle": "Live · {name}",
+      "noLiveData": "No readings in the last 10 minutes.",
+      "noDailyData": "No consumption recorded this month yet.",
+      "openAlerts": "Open",
+      "allAlerts": "All",
+      "overcost": "Estimated overcost: {amount}"
     },
     "resident": {
       "myStatement": "My {month} settlement",
@@ -808,5 +940,34 @@
       "offline": "No signal",
       "noMeter": "No meter"
     }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "The address you are looking for does not exist or was moved.",
+    "home": "Go to home"
+  },
+  "pageTitles": {
+    "login": "Sign in",
+    "register-administrator": "Administrator sign-up",
+    "register-resident": "Resident sign-up",
+    "dashboard": "Dashboard",
+    "analytics": "Common areas",
+    "account-statement": "Account statement",
+    "audit": "Audit trail",
+    "billing": "Billing and collections",
+    "bills": "Utility bills",
+    "settlements": "Proration and settlement",
+    "settlement-detail": "Settlement",
+    "delinquency": "Delinquency",
+    "condominiums": "Condominiums",
+    "condominium-new": "New condominium",
+    "condominium-edit": "Edit condominium",
+    "condominium-details": "Condominium",
+    "residents": "Residents",
+    "resident-profile": "Resident",
+    "device-management": "Devices",
+    "profile": "Profile",
+    "my-subscription": "Subscription",
+    "NotFound": "Page not found"
   }
 }

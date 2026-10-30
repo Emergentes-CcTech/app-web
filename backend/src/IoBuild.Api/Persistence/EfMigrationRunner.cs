@@ -104,6 +104,48 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 }
             }
 
+            // Datos de catastro del condominio (dirección, distrito, suministros de recibos matriz, estado):
+            // antes solo vivían en memoria y el alta de condominio los perdía.
+            var existingProjectColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (shouldClose) await connection.OpenAsync(cancellationToken);
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'projects';";
+                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    existingProjectColumns.Add(reader.GetString(0));
+                }
+            }
+            finally
+            {
+                if (shouldClose) await connection.CloseAsync();
+            }
+
+            var projectColumnsToAdd = new (string Name, string Type)[]
+            {
+                ("Address", "VARCHAR(255) NOT NULL DEFAULT ''"),
+                ("District", "VARCHAR(100) NOT NULL DEFAULT ''"),
+                ("TotalFloors", "INT NOT NULL DEFAULT 1"),
+                ("SedapalSupplyCode", "VARCHAR(32) NOT NULL DEFAULT ''"),
+                ("LuzDelSurSupplyCode", "VARCHAR(32) NOT NULL DEFAULT ''"),
+                ("Status", "VARCHAR(32) NOT NULL DEFAULT 'Activo'")
+            };
+
+            foreach (var (colName, colType) in projectColumnsToAdd)
+            {
+                if (!existingProjectColumns.Contains(colName))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync($"ALTER TABLE projects ADD COLUMN {colName} {colType};", cancellationToken);
+                    // Los condominios existentes conservan el distrito que la API ya mostraba por defecto
+                    if (colName == "District")
+                    {
+                        await dbContext.Database.ExecuteSqlRawAsync("UPDATE projects SET District = 'Jesús María' WHERE District = '';", cancellationToken);
+                    }
+                }
+            }
+
             // Single-active-subscription arbiter (migration 202609170006)
             if (shouldClose) await connection.OpenAsync(cancellationToken);
             try

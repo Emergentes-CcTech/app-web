@@ -22,6 +22,18 @@ public static class AnalyticsEndpoints
     private static int SelfId(System.Security.Claims.ClaimsPrincipal user) =>
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
 
+    // La cisterna tiene medidor de ingreso (Sedapal) y de impulsión; sumar ambos duplicaría el agua.
+    // Cuenta el de ingreso (sufijo -IN del kit HaaS), que es el que se concilia con el recibo matriz.
+    private static async Task<List<int>> NonIntakeWaterSensorIdsAsync(IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct)
+    {
+        var waterSensors = await db.Devices
+            .Where(d => d.ProjectId == projectId && d.Type == "WaterFlowSensor")
+            .Select(d => new { d.Id, d.Name })
+            .ToListAsync(ct);
+        var intakeIds = waterSensors.Where(d => d.Name.EndsWith("-IN", StringComparison.OrdinalIgnoreCase)).Select(d => d.Id).ToList();
+        return intakeIds.Count > 0 ? waterSensors.Select(d => d.Id).Except(intakeIds).ToList() : new List<int>();
+    }
+
     // Valida que el usuario tenga acceso al condominio (Administrador o Residente)
     private static async Task<bool> MaySeeProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct)
     {
@@ -72,6 +84,65 @@ public static class AnalyticsEndpoints
             if (to.HasValue) query = query.Where(c => c.TimestampUtc <= to.Value);
             var records = await query.OrderBy(c => c.TimestampUtc).Take(1000).ToListAsync(ct);
             return Results.Ok(records);
+        }).RequireAuthorization();
+
+        // Consumo diario de áreas comunes: las lecturas son acumuladas, así que el consumo del día es (máximo - mínimo) por medidor
+        group.MapGet("/projects/{projectId:int}/daily-consumption", async (int projectId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            var end = to ?? DateTime.UtcNow;
+            var start = from ?? end.AddDays(-30);
+
+            var excludedWaterIds = await NonIntakeWaterSensorIdsAsync(db, projectId, ct);
+
+            var perDevice = await db.ConsumptionRecords
+                .Where(c => c.ProjectId == projectId && c.TimestampUtc >= start && c.TimestampUtc <= end)
+                .Where(c => !(c.MetricType == "WaterM3" && excludedWaterIds.Contains(c.DeviceId)))
+                .GroupBy(c => new { c.DeviceId, c.MetricType, Day = c.TimestampUtc.Date })
+                .Select(g => new { g.Key.MetricType, g.Key.Day, Delta = g.Max(c => c.Value) - g.Min(c => c.Value) })
+                .ToListAsync(ct);
+
+            var days = perDevice
+                .GroupBy(r => r.Day)
+                .OrderBy(g => g.Key)
+                .Select(g => new
+                {
+                    date = g.Key.ToString("yyyy-MM-dd"),
+                    waterM3 = Math.Round(g.Where(r => r.MetricType == "WaterM3").Sum(r => r.Delta), 3),
+                    energyKwh = Math.Round(g.Where(r => r.MetricType == "EnergyKwh").Sum(r => r.Delta), 3)
+                });
+            return Results.Ok(days);
+        }).RequireAuthorization();
+
+        // Consumo del periodo por medidor (máximo - mínimo de la lectura acumulada); el frontend lo agrupa por área común
+        group.MapGet("/projects/{projectId:int}/device-consumption", async (int projectId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            var end = to ?? DateTime.UtcNow;
+            var start = from ?? new DateTime(end.Year, end.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var excludedWaterIds = await NonIntakeWaterSensorIdsAsync(db, projectId, ct);
+
+            var perDevice = await db.ConsumptionRecords
+                .Where(c => c.ProjectId == projectId && c.TimestampUtc >= start && c.TimestampUtc <= end)
+                .GroupBy(c => new { c.DeviceId, c.MetricType })
+                .Select(g => new
+                {
+                    g.Key.DeviceId,
+                    g.Key.MetricType,
+                    Delta = g.Max(c => c.Value) - g.Min(c => c.Value),
+                    LastReadingAt = g.Max(c => c.TimestampUtc)
+                })
+                .ToListAsync(ct);
+
+            return Results.Ok(perDevice.Select(r => new
+            {
+                deviceId = r.DeviceId,
+                waterM3 = r.MetricType == "WaterM3" ? Math.Round(r.Delta, 3) : 0,
+                energyKwh = r.MetricType == "EnergyKwh" ? Math.Round(r.Delta, 3) : 0,
+                // La impulsión de la cisterna se informa pero no suma al total (ya está en el medidor de ingreso)
+                countsTowardTotal = !(r.MetricType == "WaterM3" && excludedWaterIds.Contains(r.DeviceId)),
+                lastReadingAt = DateTime.SpecifyKind(r.LastReadingAt, DateTimeKind.Utc).ToString("o")
+            }));
         }).RequireAuthorization();
 
         // Asistente cognitivo determinístico / IA para explicación de variaciones de consumo
@@ -201,26 +272,69 @@ public static class AnalyticsEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/readings ──
-        app.MapGet("/api/v1/readings", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] int? deviceId, [FromQuery] string? _sort, [FromQuery] string? _order, [FromQuery] int? _limit, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/readings", async (
+            [FromQuery] int? condominiumId,
+            [FromQuery] int? projectId,
+            [FromQuery] int? deviceId,
+            [FromQuery(Name = "timestamp_gte")] DateTimeOffset? from,
+            [FromQuery(Name = "timestamp_lte")] DateTimeOffset? to,
+            [FromQuery] string? _order,
+            [FromQuery] int? _limit,
+            System.Security.Claims.ClaimsPrincipal user,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
             var targetProjectId = condominiumId ?? projectId ?? 1;
-            var deviceIds = await db.Devices.Where(d => d.ProjectId == targetProjectId).Select(d => d.Id).ToListAsync(ct);
+            if (!await MaySeeProjectAsync(user, db, targetProjectId, ct)) return Results.Forbid();
+
+            var devices = await db.Devices.Where(d => d.ProjectId == targetProjectId).ToDictionaryAsync(d => d.Id, ct);
+            var deviceIds = devices.Keys.ToList();
             var query = db.DeviceTelemetry.Where(t => deviceIds.Contains(t.DeviceId));
-            if (deviceId.HasValue)
-            {
-                query = query.Where(t => t.DeviceId == deviceId.Value);
-            }
-            var limit = Math.Clamp(_limit ?? 100, 1, 1000);
+            if (deviceId.HasValue) query = query.Where(t => t.DeviceId == deviceId.Value);
+            if (from.HasValue) query = query.Where(t => t.OccurredAt >= from.Value);
+            if (to.HasValue) query = query.Where(t => t.OccurredAt <= to.Value);
+
+            // Se toman las más recientes y luego se ordena según lo pedido, para que el límite no corte el tramo actual
+            var limit = Math.Clamp(_limit ?? 500, 1, 2000);
             var readings = await query.OrderByDescending(t => t.OccurredAt).Take(limit).ToListAsync(ct);
-            var result = readings.Select(t => new
+            if (!string.Equals(_order, "desc", StringComparison.OrdinalIgnoreCase)) readings.Reverse();
+
+            // El simulador reporta lectura acumulada (m³ o kWh) y una magnitud instantánea (caudal m³/h o potencia kW) en ReportedJson
+            static double? Read(System.Text.Json.JsonElement root, params string[] keys)
             {
-                t.Id,
-                t.DeviceId,
-                CondominiumId = targetProjectId,
-                Timestamp = t.OccurredAt.ToString("o"),
-                Value = t.EnergyKwh > 0 ? t.EnergyKwh : (t.TemperatureC > 0 ? t.TemperatureC : 420.5),
-                Unit = t.EnergyKwh > 0 ? "kWh" : "m³"
-            });
+                foreach (var key in keys)
+                {
+                    if (root.TryGetProperty(key, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.Number) return prop.GetDouble();
+                }
+                return null;
+            }
+
+            var result = readings
+                .Where(t => devices.TryGetValue(t.DeviceId, out var d) && d.Type != "GatewayHub")
+                .Select(t =>
+                {
+                    var isWater = devices[t.DeviceId].Type == "WaterFlowSensor";
+                    double? cumulative = null, rate = null;
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(string.IsNullOrWhiteSpace(t.ReportedJson) ? "{}" : t.ReportedJson);
+                        cumulative = Read(doc.RootElement, "cumulative_value", isWater ? "cumulative_m3" : "cumulative_kwh");
+                        rate = Read(doc.RootElement, isWater ? "flow_m3h" : "power_kw", isWater ? "flow_rate_m3h" : "power");
+                    }
+                    catch (System.Text.Json.JsonException) { /* lectura sin carga útil válida: se omite su valor */ }
+
+                    return new
+                    {
+                        t.Id,
+                        t.DeviceId,
+                        CondominiumId = targetProjectId,
+                        Timestamp = t.OccurredAt.ToString("o"),
+                        Value = cumulative ?? (isWater ? 0 : t.EnergyKwh),
+                        Unit = isWater ? "m³" : "kWh",
+                        Rate = rate,
+                        RateUnit = isWater ? "m³/h" : "kW"
+                    };
+                });
             return Results.Ok(result);
         }).RequireAuthorization();
     }

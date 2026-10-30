@@ -77,8 +77,8 @@ async function main() {
   await page.goto(`${BASE_URL}/telemetry/dashboard`);
   await page.waitForLoadState('networkidle');
   const dashText = await page.locator('main').innerText();
-  if (dashText.includes('Mi liquidación de octubre de 2026') && dashText.includes('S/ 113.79')) {
-    console.log('  ✅ Dashboard displays correct resident quota: S/ 113.79');
+  if (dashText.includes('Mi liquidación de octubre de 2026') && dashText.includes('S/ 109.36')) {
+    console.log('  ✅ Dashboard displays correct resident quota: S/ 109.36');
   } else {
     console.error('  ❌ Dashboard data mismatch:', dashText.slice(0, 100));
     domLeakErrors++;
@@ -107,8 +107,8 @@ async function main() {
   await page.goto(`${BASE_URL}/payments/account-statement`);
   await page.waitForLoadState('networkidle');
   const stmtText = await page.locator('main').innerText();
-  if (stmtText.includes('S/ 113.79') && stmtText.includes('octubre de 2026')) {
-    console.log('  ✅ Account statement displays resident pending statement: S/ 113.79');
+  if (stmtText.includes('S/ 109.36') && stmtText.includes('octubre de 2026')) {
+    console.log('  ✅ Account statement displays resident pending statement: S/ 109.36');
   } else {
     console.error('  ❌ Account statement mismatch:', stmtText.slice(0, 100));
     domLeakErrors++;

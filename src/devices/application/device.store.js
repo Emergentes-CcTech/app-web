@@ -32,15 +32,14 @@ export const useDeviceStore = defineStore('device', () => {
     async function save(entity) {
         const resource = DeviceAssembler.toResource(entity);
         try {
-            if (entity.id) {
-                const { data } = await api.update(entity.id, resource);
-                const i = devices.value.findIndex(d => d.id === entity.id);
-                if (i >= 0) devices.value[i] = DeviceAssembler.toEntity(data);
-            } else {
+            if (entity.id) await api.update(entity.id, resource);
+            else {
                 delete resource.id;
-                const { data } = await api.create({ ...resource, status: resource.status || 'offline' });
-                devices.value.push(DeviceAssembler.toEntity(data));
+                // Un equipo recién registrado figura fuera de línea hasta su primer latido
+                await api.create({ ...resource, status: 'Offline' });
             }
+            // PUT no devuelve cuerpo: se relee la lista para reflejar lo que quedó en el backend
+            await fetchByCondominium(entity.condominiumId);
         } catch (e) {
             if (e.response?.status === 409) throw new Error('idTaken');
             throw e;

@@ -40,7 +40,7 @@ async function save(entity) {
     showDialog.value = false;
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('devices.messages.saved'), life: 2500 });
   } catch (e) {
-    toast.add({ severity: 'error', summary: 'Error', detail: e.message === 'idTaken' ? t('devices.validation.idTaken') : t('devices.messages.error'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: e.message === 'idTaken' ? t('devices.validation.idTaken') : t('devices.messages.error'), life: 3000 });
   }
 }
 function unlink(d) {
@@ -54,17 +54,15 @@ function unlink(d) {
 
 <template>
   <div class="page">
-    <div class="page-head">
-      <h1>{{ t('devices.title') }}</h1>
-      <pv-select v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" :placeholder="t('residents.fields.condominium')" class="filter" />
-    </div>
-    <div class="stats">
-      <div class="stat"><span>{{ t('devices.stats.total') }}</span><strong>{{ store.total }}</strong></div>
-      <div class="stat ok"><span>{{ t('devices.stats.online') }}</span><strong>{{ store.online }}</strong></div>
-      <div class="stat bad"><span>{{ t('devices.stats.offline') }}</span><strong>{{ store.offline }}</strong></div>
-      <div class="stat"><span>{{ t('devices.stats.sampling') }}</span><strong>1 min</strong></div>
-    </div>
-    <device-list-header v-model:search="search" v-model:type="type" @add="add" />
+    <device-list-header v-model:search="search" v-model:type="type" v-model:condominium="condominiumId"
+                        :devices="store.devices" :condominiums="condoStore.activeCondominiums" @add="add">
+      <div class="stats">
+        <div class="stat"><span>{{ t('devices.stats.total') }}</span><strong>{{ store.total }}</strong></div>
+        <div class="stat"><span><i class="dot on" />{{ t('devices.stats.online') }}</span><strong>{{ store.online }}</strong></div>
+        <div class="stat" :class="{ bad: store.offline }"><span><i class="dot down" />{{ t('devices.stats.offline') }}</span><strong>{{ store.offline }}</strong></div>
+        <div class="stat"><span>{{ t('devices.stats.sampling') }}</span><strong>1 min</strong></div>
+      </div>
+    </device-list-header>
     <devices-table :devices="filtered" :loading="store.isLoading" @edit="edit" @unlink="unlink" />
     <device-edit-dialog v-model:visible="showDialog" :device="editing" :condominiumId="condominiumId" @save="save" />
   </div>
@@ -72,12 +70,13 @@ function unlink(d) {
 
 <style scoped>
 .page { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.filter { min-width: 16rem; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; }
 .stat { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 4px; }
 .stat span { color: #6B7280; font-size: .85rem; }
 .stat strong { font-size: 1.5rem; }
-.stat.ok { background: #ECFDF5; border-color: #10B981; }
-.stat.bad { background: #FEF2F2; border-color: #ef4444; }
+.stat span { display: inline-flex; align-items: center; gap: .4rem; }
+.stat.bad { background: #FEF2F2; border-color: #fca5a5; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.on { background: #10B981; }
+.dot.down { background: #ef4444; }
 </style>

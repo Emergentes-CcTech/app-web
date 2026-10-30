@@ -15,6 +15,7 @@ import { ROUTES } from "./shared/infrastructure/paths.js";
 import { RETRY_DELAY_SHORT_MS } from "./shared/infrastructure/constants.js";
 import { isActiveStatus } from "./subscriptions/domain/model/subscription-status.enum.js";
 import { normalizeRole, isAdmin, ROLES } from "./shared/infrastructure/roles.js";
+import i18n from "./i18n.js";
 
 const subscriptionApi = new SubscriptionApi();
 
@@ -135,11 +136,15 @@ router.beforeEach(async (to, from, next) => {
     next();
 });
 
-router.afterEach((to) => {
-    // Synchronize document.title after navigation resolves
+// Título de la pestaña en el idioma activo: pageTitles.<nombre de ruta>, con meta.title como respaldo
+export function syncDocumentTitle(to = router.currentRoute.value) {
     const baseTitle = 'IoBuild';
-    const title = to.meta?.title || to.matched.slice().reverse().find(r => r.meta?.title)?.meta?.title;
+    const key = `pageTitles.${String(to.name || '')}`;
+    const title = i18n.global.te(key) ? i18n.global.t(key)
+        : (to.meta?.title || to.matched.slice().reverse().find(r => r.meta?.title)?.meta?.title);
     document.title = title ? `${baseTitle} - ${title}` : baseTitle;
-});
+}
+
+router.afterEach((to) => syncDocumentTitle(to));
 
 export default router;

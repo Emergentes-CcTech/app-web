@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "openNav": "Abrir navegación",
+    "closeNav": "Cerrar navegación",
+    "alerts": "Ver alertas",
+    "notifications": "Notificaciones",
+    "user": "Usuario",
+    "language": "Idioma",
+    "criticalAlert": "Alerta crítica"
   },
   "profile": {
     "title": "Perfil",
@@ -176,13 +183,41 @@
     },
     "planCatalog": {
       "boutique": {
-        "description": "Para condominios pequeños de hasta 20 departamentos."
+        "description": "Para condominios pequeños de hasta 20 departamentos.",
+        "features": [
+          "Hasta 20 departamentos",
+          "4 equipos IoT en comodato (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
+          "Detección continua de fugas nocturnas (01:00 a 04:00 AM)",
+          "Monitoreo de Cisterna Principal y Tableros Eléctricos",
+          "Prorrateo mensual automatizado según Alícuota Legal (Ley 27157)",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Soporte técnico prioritario y reemplazo de hardware por falla"
+        ]
       },
       "urbano": {
-        "description": "Para edificios de 21 a 50 departamentos."
+        "description": "Para edificios de 21 a 80 departamentos.",
+        "features": [
+          "De 21 a 80 departamentos",
+          "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
+          "Monitoreo integral: Cisterna, Bombas, Ascensores e Iluminación Común",
+          "Detección de sobrecargas eléctricas y fugas nocturnas en cisterna",
+          "Conciliación mensual contra recibos matriz oficiales (Sedapal y Luz del Sur)",
+          "Prorrateo legal al céntimo y liquidación digital por departamento",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Acceso BFF para Administrador y App Web para Residentes"
+        ]
       },
       "gran-torre": {
-        "description": "Para torres de 51 a 80 departamentos."
+        "description": "Para torres de más de 80 departamentos.",
+        "features": [
+          "Más de 80 departamentos",
+          "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
+          "Monitoreo extendido de múltiples tableros, ascensores y cuartos hidroneumáticos",
+          "Detección avanzada de anomalías y conciliación de macro-medición",
+          "Prorrateo por alícuotas con cuadre estricto al 100.0000%",
+          "Contrato de 12 meses + 2 meses de garantía de servicio",
+          "Mantenimiento preventivo presencial y calibración periódica de sensores"
+        ]
       }
     },
     "usage-units": "Departamentos registrados",
@@ -199,7 +234,8 @@
       "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
       "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
     },
-    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos."
+    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos.",
+    "unitsFrom": "Más de {min} departamentos"
   },
   "iam": {
     "logout": "Cerrar Sesión",
@@ -322,7 +358,9 @@
     "confirm": "Confirmar",
     "back": "Volver",
     "view": "Ver",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "error": "Error",
+    "loadError": "No se pudo cargar la información. Intenta de nuevo."
   },
   "option": {
     "dashboard": "Panel",
@@ -361,7 +399,8 @@
       "district": "Distrito",
       "totalUnits": "Número de departamentos",
       "waterSupplyCode": "Código de suministro de agua",
-      "electricitySupplyCode": "Código de suministro de luz"
+      "electricitySupplyCode": "Código de suministro de luz",
+      "totalFloors": "Número de pisos"
     },
     "unitTypes": {
       "apartment": "Departamento",
@@ -380,7 +419,8 @@
       "assigned": "Asignada",
       "unassigned": "Sin asignar",
       "activationCode": "Código de activación",
-      "registry": "Padrón de unidades y alícuotas"
+      "registry": "Padrón de unidades y alícuotas",
+      "empty": "Aún no hay unidades en el padrón. Registra los {n} departamentos con su alícuota; deben sumar 100.0000 % (Ley N.° 27157)."
     },
     "stats": {
       "totalUnits": "Total de unidades",
@@ -403,7 +443,8 @@
       "area": "Ingrese un área válida.",
       "percentage": "Ingrese un valor entre 0.01 y 100 con hasta 2 decimales.",
       "commonAreasRequired": "Registra al menos un área común.",
-      "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres."
+      "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres.",
+      "floors": "El número de pisos debe estar entre 1 y 80."
     },
     "messages": {
       "saved": "Condominio guardado.",
@@ -432,12 +473,63 @@
         "event_room": "Salón de eventos",
         "garden": "Jardín",
         "parking": "Estacionamiento",
-        "elevator": "Ascensor",
+        "elevator": "Banco de ascensores",
         "pump_room": "Cuarto de bombas",
         "cistern": "Cisterna",
         "laundry": "Lavandería",
-        "other": "Otra"
+        "other": "Otra",
+        "panel": "Tablero eléctrico general"
       }
+    },
+    "form": {
+      "breadcrumb": "Ruta de navegación",
+      "subtitle": "Registra el edificio, los suministros de sus recibos matriz y las áreas comunes que IoBuild monitoreará.",
+      "building": "Datos del edificio",
+      "namePlaceholder": "Ej. Residencial Los Robles",
+      "addressPlaceholder": "Ej. Av. Arnaldo Márquez 1234",
+      "districtPlaceholder": "Selecciona o escribe el distrito",
+      "unitsHint": "Define el plan HaaS. Hasta 20: Boutique · 21 a 80: Urbano · más de 80: Gran Torre.",
+      "photo": "Foto del edificio",
+      "uploadPhoto": "Subir foto",
+      "changePhoto": "Cambiar foto",
+      "removePhoto": "Quitar foto",
+      "uploadError": "No se pudo abrir la carga de imágenes.",
+      "supplies": "Suministros de los recibos matriz",
+      "suppliesHint": "Están impresos en los recibos de Sedapal y Luz del Sur; se usan para conciliar lo facturado con lo medido por los sensores.",
+      "areas": "Áreas comunes monitoreadas",
+      "areasHint": "Son los subsistemas que mide el kit IoBuild. Puedes renombrarlos e indicar dónde están ubicados.",
+      "areaLocation": "Ubicación",
+      "areaLocationPlaceholder": "Ubicación, ej. Sótano 1",
+      "meter": {
+        "water": "Caudalímetro",
+        "energy": "Pinza CT"
+      },
+      "create": "Crear condominio",
+      "summary": "Resumen",
+      "plan": "Plan que corresponde",
+      "perMonth": "al mes, IGV incluido",
+      "planPending": "Ingresa el número de departamentos para ver el plan y el kit de equipos.",
+      "kit": {
+        "gateways": "Gateways",
+        "flowMeters": "Caudalímetros",
+        "ctClamps": "Pinzas CT",
+        "total": "Equipos en comodato"
+      },
+      "areasCount": "{n} áreas comunes monitoreadas",
+      "reviewTitle": "Revisa el formulario",
+      "reviewDetail": "Hay campos obligatorios sin completar o con errores."
+    },
+    "card": {
+      "units": "Departamentos",
+      "areas": "Áreas monitoreadas",
+      "registered": "Residentes en el padrón",
+      "plan": "Plan {plan}",
+      "view": "Ver detalle"
+    },
+    "details": {
+      "unitsAndFloors": "{units} departamentos",
+      "floors": "{n} pisos",
+      "notRegistered": "Sin registrar: complétalo para conciliar los recibos"
     }
   },
   "residents": {
@@ -504,7 +596,12 @@
       "unassigned": "Residente desvinculado.",
       "updated": "Residente actualizado.",
       "alreadyLinked": "La unidad {unit} ya tiene un residente vinculado; no requiere código."
-    }
+    },
+    "filters": {
+      "all": "Todos"
+    },
+    "subtitle": "{n} residentes en el padrón de {condominium}",
+    "searchPlaceholder": "Buscar por nombre, correo o unidad"
   },
   "devices": {
     "title": "Dispositivos IoT",
@@ -522,11 +619,13 @@
       "lastSeenAt": "Última señal",
       "status": "Estado",
       "nightFlowThresholdLpm": "Umbral de flujo nocturno",
-      "baselineAmps": "Línea base de corriente"
+      "baselineAmps": "Línea base de corriente",
+      "location": "Ubicación física",
+      "nightFlowThreshold": "Umbral de caudal nocturno"
     },
     "types": {
-      "water_pulse_meter": "Medidor de pulsos de agua",
-      "current_sensor": "Sensor de corriente",
+      "water_pulse_meter": "Caudalímetro",
+      "current_sensor": "Pinza CT",
       "gateway": "Gateway"
     },
     "points": {
@@ -560,12 +659,20 @@
       "required": "Campo obligatorio.",
       "deviceId": "El ID debe tener entre 3 y 40 caracteres.",
       "idTaken": "Ya existe un dispositivo con ese ID en el condominio.",
-      "mac": "Ingrese una dirección MAC válida."
+      "mac": "Ingrese una dirección MAC válida.",
+      "location": "Indica dónde está instalado (3 a 120 caracteres)."
     },
     "messages": {
       "saved": "Dispositivo guardado.",
       "error": "No se pudo guardar el dispositivo.",
       "unlinked": "Dispositivo desvinculado."
+    },
+    "subtitle": "Kit IoT en comodato que mide las áreas comunes del condominio.",
+    "neverSeen": "Sin latidos aún",
+    "dialog": {
+      "intro": "Registra un equipo del kit HaaS instalado en un área común. Aparecerá fuera de línea hasta su primer latido.",
+      "locationPlaceholder": "Ej. Sótano 1 - Tablero de bombas",
+      "thresholdHint": "Caudal continuo entre 01:00 y 04:00 por encima de este valor dispara una alerta de fuga nocturna."
     }
   },
   "telemetry": {
@@ -591,7 +698,8 @@
     },
     "alertStatus": {
       "open": "Abierta",
-      "acknowledged": "Reconocida"
+      "acknowledged": "Reconocida",
+      "resolved": "Resuelta"
     }
   },
   "billing": {
@@ -652,6 +760,14 @@
       "error": "No se pudo completar la operación.",
       "notBalanced": "El condominio no tiene participación sumando 100 %. Corrige el padrón antes de calcular.",
       "noBill": "No hay recibo matriz registrado para ese periodo."
+    },
+    "summary": {
+      "title": "Resumen de cobranza",
+      "period": "Último periodo liquidado",
+      "commonExpense": "Gasto común",
+      "collected": "Cobrado",
+      "receivable": "Por cobrar",
+      "progress": "{paid} de {total} cuotas pagadas"
     }
   },
   "payments": {
@@ -761,7 +877,23 @@
         "subscriptions": "Suscripciones activas",
         "plan": "Plan",
         "status": "Estado"
-      }
+      },
+      "justNow": "hace un momento",
+      "minutesAgo": "hace {n} min",
+      "plan": "Plan {plan}",
+      "updatedAt": "actualizado {time}",
+      "subscriptionInactive": "La suscripción de este condominio no está activa; el monitoreo y la facturación están limitados.",
+      "projectionTo": "Proyección al cierre: {value}",
+      "criticalCount": "{n} críticas",
+      "overdueUnits": "{n} departamentos con deuda vencida",
+      "equipmentTitle": "Equipos de áreas comunes",
+      "cumulative": "acumulado",
+      "liveTitle": "En vivo · {name}",
+      "noLiveData": "Sin lecturas en los últimos 10 minutos.",
+      "noDailyData": "Aún no hay consumo registrado este mes.",
+      "openAlerts": "Abiertas",
+      "allAlerts": "Todas",
+      "overcost": "Sobrecosto estimado: {amount}"
     },
     "resident": {
       "myStatement": "Mi liquidación de {month}",
@@ -808,5 +940,34 @@
       "offline": "Sin señal",
       "noMeter": "Sin medidor"
     }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "text": "La dirección que buscas no existe o fue movida.",
+    "home": "Ir al inicio"
+  },
+  "pageTitles": {
+    "login": "Iniciar sesión",
+    "register-administrator": "Registro de administrador",
+    "register-resident": "Registro de residente",
+    "dashboard": "Panel",
+    "analytics": "Áreas comunes",
+    "account-statement": "Estado de cuenta",
+    "audit": "Auditoría",
+    "billing": "Facturación y cobranzas",
+    "bills": "Recibos matriz",
+    "settlements": "Prorrateo y liquidación",
+    "settlement-detail": "Liquidación",
+    "delinquency": "Morosidad",
+    "condominiums": "Condominios",
+    "condominium-new": "Nuevo condominio",
+    "condominium-edit": "Editar condominio",
+    "condominium-details": "Condominio",
+    "residents": "Residentes",
+    "resident-profile": "Residente",
+    "device-management": "Dispositivos",
+    "profile": "Perfil",
+    "my-subscription": "Suscripción",
+    "NotFound": "Página no encontrada"
   }
 }

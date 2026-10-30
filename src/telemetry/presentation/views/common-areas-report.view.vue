@@ -6,7 +6,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { useTelemetryStore } from '../../application/telemetry.store.js';
 import { useDeviceStore } from '../../../devices/application/device.store.js';
 import { useCondominiumStore } from '../../../condominiums/application/condominium.store.js';
-import { buildCommonAreaReport, dailySeries, consumption, changePct } from '../../application/common-area-report.js';
+import { buildCommonAreaReport, dailySeries, sumTotals, changePct } from '../../application/common-area-report.js';
 import { projectToMonthEnd } from '../../application/projection.js';
 import { commonAreaIcon } from '../../../condominiums/domain/model/common-area.entity.js';
 import { getSessionUserId } from '../../../shared/infrastructure/session.js';
@@ -24,14 +24,15 @@ const loading = ref(true);
 const failed = ref(false);
 const condominium = ref(null);
 const unitNumber = ref('');
-const previousReadings = ref([]);
+const currentTotals = ref([]);   // consumo por medidor del mes en curso
+const previousTotals = ref([]);  // mismo tramo del mes anterior
 const metric = ref('water');
 const metricOptions = computed(() => [{ value: 'water', label: t('analytics.water') }, { value: 'energy', label: t('analytics.energy') }]);
 
 const monthLabel = computed(() => new Date().toLocaleDateString(locale.value === 'en' ? 'en-US' : 'es-PE', { month: 'long', year: 'numeric' }));
 
-const report = computed(() => buildCommonAreaReport(condominium.value?.commonAreas || [], devices.devices, telemetry.monthReadings));
-const previous = computed(() => consumption(previousReadings.value));
+const report = computed(() => buildCommonAreaReport(condominium.value?.commonAreas || [], devices.devices, currentTotals.value));
+const previous = computed(() => sumTotals(previousTotals.value));
 const waterChange = computed(() => changePct(report.value.totals.waterM3, previous.value.waterM3));
 const energyChange = computed(() => changePct(report.value.totals.energyKwh, previous.value.energyKwh));
 const projection = computed(() => projectToMonthEnd(metric.value === 'water' ? report.value.totals.waterM3 : report.value.totals.energyKwh));
@@ -49,7 +50,7 @@ const byAreaData = computed(() => ({
     borderRadius: 6,
   }],
 }));
-const daily = computed(() => dailySeries(telemetry.monthReadings, metric.value));
+const daily = computed(() => dailySeries(telemetry.dailyConsumption, new Date().toISOString().slice(0, 7), metric.value));
 const dailyData = computed(() => ({
   labels: daily.value.labels,
   datasets: [{ label: unitLabel.value, data: daily.value.values, borderColor: '#059669', backgroundColor: 'rgba(16,185,129,.15)', fill: true, tension: .3 }],
@@ -76,14 +77,17 @@ onMounted(async () => {
     const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
     const prevTo = new Date(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), prevMonthEnd.getDate()),
       now.getHours(), now.getMinutes(), now.getSeconds());
-    const [condo, , , prev] = await Promise.all([
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [condo, , current, prev] = await Promise.all([
       condoStore.fetchById(condominiumId),
       devices.fetchByCondominium(condominiumId),
-      telemetry.fetchMonth(condominiumId),
-      telemetry.fetchPeriod(condominiumId, prevFrom, prevTo),
+      telemetry.fetchDeviceConsumption(condominiumId, monthStart, now),
+      telemetry.fetchDeviceConsumption(condominiumId, prevFrom, prevTo),
+      telemetry.fetchDailyConsumption(condominiumId),
     ]);
     condominium.value = condo;
-    previousReadings.value = prev;
+    currentTotals.value = current;
+    previousTotals.value = prev;
   } catch (_) {
     failed.value = true;
   } finally {

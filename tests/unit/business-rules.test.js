@@ -6,7 +6,7 @@ import { UtilityBill } from '../../src/billing/domain/model/utility-bill.entity.
 import { Settlement } from '../../src/billing/domain/model/settlement.entity.js';
 import { recommendedTier, PLAN_TIERS } from '../../src/subscriptions/domain/model/plan-limits.js';
 import { Plan } from '../../src/subscriptions/domain/model/plan.entity.js';
-import { buildCommonAreaReport, dailySeries, changePct } from '../../src/telemetry/application/common-area-report.js';
+import { buildCommonAreaReport, dailySeries, sumTotals, changePct } from '../../src/telemetry/application/common-area-report.js';
 import { isParticipationBalanced, isValidRuc, isValidPassword, isValidDni, sumParticipation, isValidPercentage } from '../../src/shared/presentation/validators.js';
 import { normalizeRole, ROLES } from '../../src/shared/infrastructure/roles.js';
 
@@ -39,12 +39,17 @@ describe('RF-006 participación', () => {
     expect(isParticipationBalanced([{ participationPct: 99.99 }])).toBe(false);
     expect(isParticipationBalanced([{ participationPct: 100.01 }])).toBe(false);
   });
-  it('suma exacta en centésimas', () => { expect(sumParticipation(units)).toBe(100); });
-  it('porcentaje válido: 0.01–100 con hasta 2 decimales', () => {
+  it('suma exacta en diezmilésimas', () => { expect(sumParticipation(units)).toBe(100); });
+  it('alícuotas de 4 decimales que suman 100.0000 % están balanceadas (Ley N.° 27157)', () => {
+    expect(isParticipationBalanced([{ participationPct: 3.85 }, { participationPct: 4.0062 }, { participationPct: 92.1438 }])).toBe(true);
+    expect(isParticipationBalanced([{ participationPct: 3.85 }, { participationPct: 96.1499 }])).toBe(false);
+  });
+  it('porcentaje válido: 0.0001–100 con hasta 4 decimales', () => {
     expect(isValidPercentage(0.01)).toBe(true);
+    expect(isValidPercentage(4.0062)).toBe(true);
     expect(isValidPercentage(0)).toBe(false);
     expect(isValidPercentage(100.5)).toBe(false);
-    expect(isValidPercentage(10.123)).toBe(false);
+    expect(isValidPercentage(10.12345)).toBe(false);
   });
 });
 
@@ -72,21 +77,26 @@ describe('RF-012 conciliación', () => {
 });
 
 describe('RF-014 planes', () => {
-  it('tramos por departamentos: ≤20 Boutique, 21-50 Urbano, 51-80 Gran Torre', () => {
+  it('tramos por departamentos (catálogo del backend): ≤20 Boutique, 21-80 Urbano, más de 80 Gran Torre', () => {
     expect(recommendedTier(20).name).toBe('Boutique');
     expect(recommendedTier(21).name).toBe('Urbano');
-    expect(recommendedTier(50).name).toBe('Urbano');
-    expect(recommendedTier(51).name).toBe('Gran Torre');
-    expect(recommendedTier(80).name).toBe('Gran Torre');
-    expect(recommendedTier(81)).toBeNull();
+    expect(recommendedTier(80).name).toBe('Urbano');
+    expect(recommendedTier(81).name).toBe('Gran Torre');
+    expect(recommendedTier(500).name).toBe('Gran Torre');
+    expect(recommendedTier(501)).toBeNull();
   });
 
   it('precios y kits de equipos', () => {
     const [boutique, urbano, granTorre] = PLAN_TIERS.map(t => new Plan({ code: t.code }));
-    expect([boutique.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([500, 750, 1000]);
+    expect([boutique.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([500, 700, 1000]);
     expect([boutique.hardwareIncluded, urbano.hardwareIncluded, granTorre.hardwareIncluded]).toEqual([4, 6, 10]);
     expect(granTorre.kit).toEqual({ gateways: 2, flowMeters: 3, ctClamps: 5 });
     expect(boutique.getFormattedPrice()).toBe('S/ 500');
+  });
+
+  it('reconoce el nombre del catálogo del backend ("GranTorre")', () => {
+    const plan = new Plan({ name: 'GranTorre' });
+    expect([plan.minUnits, plan.maxUnits, plan.monthlyPen]).toEqual([81, 500, 1000]);
   });
 });
 
@@ -101,24 +111,33 @@ describe('Analytics: reporte de áreas comunes', () => {
     { id: 20, type: 'current_sensor', measurementPoint: 'pump_room', isOnline: false },
     { id: 30, type: 'gateway', measurementPoint: 'panel', isOnline: true },
   ];
-  const readings = [
-    { deviceId: 10, timestamp: '2026-10-01T10:00:00Z', value: 1000, unit: 'L/min' }, // 1 m³
-    { deviceId: 10, timestamp: '2026-10-02T10:00:00Z', value: 3000, unit: 'L/min' }, // 3 m³
-    { deviceId: 20, timestamp: '2026-10-01T10:00:00Z', value: 60, unit: 'A' },       // 0.23 kWh
+  // Consumo por medidor tal como lo entrega /analytics/projects/{id}/device-consumption
+  const deviceTotals = [
+    { deviceId: 10, waterM3: 4, energyKwh: 0, countsTowardTotal: true, lastReadingAt: '2026-10-02T10:00:00Z' },
+    { deviceId: 11, waterM3: 3.5, energyKwh: 0, countsTowardTotal: false, lastReadingAt: '2026-10-02T10:00:00Z' }, // impulsión: no suma
+    { deviceId: 20, waterM3: 0, energyKwh: 0.23, countsTowardTotal: true, lastReadingAt: '2026-10-01T10:00:00Z' },
   ];
+  const devicesWithOutflow = [...devices, { id: 11, type: 'water_pulse_meter', measurementPoint: 'cistern', isOnline: true }];
 
   it('agrupa el consumo por área según el punto de medición', () => {
-    const { rows, totals, monitoredCount } = buildCommonAreaReport(areas, devices, readings);
+    const { rows, totals, monitoredCount } = buildCommonAreaReport(areas, devicesWithOutflow, deviceTotals);
     expect(rows.map(r => [r.name, r.waterM3, r.energyKwh])).toEqual([['Cisterna', 4, 0], ['Cuarto de bombas', 0, 0.23], ['Piscina', 0, 0]]);
     expect(totals).toEqual({ waterM3: 4, energyKwh: 0.23 });
     expect(monitoredCount).toBe(2);
     expect(rows[0].waterShare).toBe(100);
+    expect(rows[0].metersTotal).toBe(2);
     expect(rows[1].metersOnline).toBe(0);
     expect(rows[2].monitored).toBe(false);
   });
 
-  it('serie diaria y variación vs mes anterior', () => {
-    expect(dailySeries(readings, 'water')).toEqual({ labels: ['01', '02'], values: [1, 3] });
+  it('la impulsión de la cisterna no duplica el agua del total', () => {
+    expect(sumTotals(deviceTotals)).toEqual({ waterM3: 4, energyKwh: 0.23 });
+  });
+
+  it('serie diaria del mes y variación vs mes anterior', () => {
+    const days = [{ date: '2026-09-30', waterM3: 9, energyKwh: 1 }, { date: '2026-10-01', waterM3: 1, energyKwh: 2 }, { date: '2026-10-02', waterM3: 3, energyKwh: 4 }];
+    expect(dailySeries(days, '2026-10', 'water')).toEqual({ labels: ['01', '02'], values: [1, 3] });
+    expect(dailySeries(days, '2026-10', 'energy')).toEqual({ labels: ['01', '02'], values: [2, 4] });
     expect(changePct(110, 100)).toBe(10);
     expect(changePct(5, 0)).toBeNull();
   });

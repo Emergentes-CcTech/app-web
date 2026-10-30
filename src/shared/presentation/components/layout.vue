@@ -12,7 +12,7 @@ import { isActiveStatus } from "../../../subscriptions/domain/model/subscription
 import { useTelemetryStore } from "../../../telemetry/application/telemetry.store.js";
 import { ROLES, normalizeRole, isAdmin } from "../../infrastructure/roles.js";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const drawer = ref(false);
 const profileStore = useProfileStore();
@@ -22,7 +22,7 @@ const telemetryStore = useTelemetryStore();
 const toast = useToast();
 // RF-011: toast rojo cuando llega una alerta crítica nueva
 watch(() => telemetryStore.lastCriticalNotice, (a) => {
-  if (a) toast.add({ severity: 'error', summary: a.message || 'Alerta crítica', detail: new Date(a.createdAt).toLocaleString(), life: 8000 });
+  if (a) toast.add({ severity: 'error', summary: t(`telemetry.alertTypes.${a.type}`, a.title || t('header.criticalAlert')), detail: new Date(a.createdAt).toLocaleString(locale.value), life: 8000 });
 });
 
 const toggleDrawer = () => {
@@ -69,7 +69,7 @@ watch(
 const userName = computed(() => {
   return profileStore.profile?.displayName ||
          currentUser.value?.name ||
-         'Usuario';
+         t('header.user');
 });
 
 const userPhoto = computed(() => {
@@ -77,7 +77,7 @@ const userPhoto = computed(() => {
   if (photo && photo !== 'undefined' && typeof photo === 'string' && photo.trim() !== '') {
     return photo;
   }
-  const name = userName.value && userName.value !== 'Usuario' ? userName.value.trim() : 'U';
+  const name = userName.value && userName.value !== t('header.user') ? userName.value.trim() : 'U';
   const initial = name.charAt(0).toUpperCase();
   return `data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 rx=%2220%22 fill=%22%2310B981%22/%3E%3Ctext x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22 font-family=%22sans-serif%22%3E${initial}%3C/text%3E%3C/svg%3E`;
 });
@@ -89,9 +89,8 @@ const handleLogout = async () => {
 };
 
 const items = [
-  // Administrador (Simplificado: 8 ítems claros y sin redundancias)
+  // Administrador: el panel ya reúne monitoreo en vivo y alertas
   { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home' },
-  { label: 'option.monitoring', to: ROUTES.MONITORING, use_role: ROLES.ADMIN, icon: 'pi pi-chart-line', requiresSubscription: true },
   { label: 'option.condominiums', to: ROUTES.CONDOMINIUMS, use_role: ROLES.ADMIN, icon: 'pi pi-building' },
   { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users' },
   { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
@@ -126,7 +125,7 @@ const filteredItems = computed(() => {
           <div class="header-start">
             <pv-button
                 class="menu-button"
-                :aria-label="drawer ? 'Close navigation' : 'Open navigation'"
+                :aria-label="drawer ? t('header.closeNav') : t('header.openNav')"
                 :aria-expanded="drawer"
                 icon="pi pi-bars"
                 text
@@ -151,8 +150,8 @@ const filteredItems = computed(() => {
         <template #end>
           <div class="header-end">
 
-            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" aria-label="Alerts" style="position: relative; display: inline-flex;">
-              <pv-button class="notification-button" aria-label="Notifications" icon="pi pi-bell" text rounded severity="secondary" />
+            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" :aria-label="t('header.alerts')" style="position: relative; display: inline-flex;">
+              <pv-button class="notification-button" :aria-label="t('header.notifications')" icon="pi pi-bell" text rounded severity="secondary" />
               <span v-if="telemetryStore.openAlertsCount > 0" class="alert-badge" style="position:absolute;top:2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;">{{ telemetryStore.openAlertsCount }}</span>
             </router-link>
 
@@ -461,17 +460,15 @@ const filteredItems = computed(() => {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  color: #475569;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  color: black;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  margin: 0.2rem 0.75rem;
+  margin: 0.25rem 1rem;
   border-radius: 8px;
-  font-size: 0.925rem;
-  font-weight: 500;
 }
 
 .menu-item::before {
@@ -480,16 +477,16 @@ const filteredItems = computed(() => {
   left: 0;
   top: 0;
   height: 100%;
-  width: 3px;
-  background: #059669;
+  width: 4px;
+  background: black;
   transform: scaleY(0);
-  transition: transform 0.2s ease;
-  border-radius: 0 3px 3px 0;
+  transition: transform 0.3s ease;
+  border-radius: 0 4px 4px 0;
 }
 
 .menu-item:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: rgba(0, 0, 0, 0.1);
+  color: black;
 }
 
 .menu-item:hover::before {
@@ -497,47 +494,40 @@ const filteredItems = computed(() => {
 }
 
 .menu-item.router-link-active {
-  background: #ecfdf5;
-  color: #047857;
+  background: black;
+  color: white;
   font-weight: 600;
   border-radius: 8px;
 }
 
-.menu-item.router-link-active .menu-icon {
-  color: #059669;
-}
-
 .menu-item.router-link-active::before {
   transform: scaleY(1);
-  background: #059669;
+  background: white;
 }
 
 .menu-icon {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   width: 1.5rem;
-  color: #64748b;
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .menu-item:hover .menu-icon {
-  transform: scale(1.1);
-  color: #0f172a;
+  transform: scale(1.15);
 }
 
 .menu-label {
   flex: 1;
+  font-size: 0.95rem;
 }
 
 .menu-arrow {
-  font-size: 0.75rem;
-  color: #94a3b8;
+  font-size: 0.875rem;
   opacity: 0;
-  transform: translateX(-6px);
-  transition: all 0.2s ease;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
 }
 
-.menu-item:hover .menu-arrow,
-.menu-item.router-link-active .menu-arrow {
+.menu-item:hover .menu-arrow {
   opacity: 1;
   transform: translateX(0);
 }
@@ -546,34 +536,29 @@ const filteredItems = computed(() => {
 .logout-item {
   cursor: pointer;
   margin-top: auto;
-  margin-bottom: 1rem;
-  width: calc(100% - 1.5rem);
+  width: calc(100% - 2rem);
   box-sizing: border-box;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
   background: transparent;
-  color: #64748b;
+  color: #111827;
   font: inherit;
   text-align: left;
 }
 
 .logout-item:hover {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.logout-item:hover .menu-icon {
-  color: #dc2626;
+  background: rgba(0, 0, 0, 0.1);
+  color: #111827;
 }
 
 .logout-item::before {
-  background: #dc2626;
+  background: #111827;
 }
 
 .logout-item:focus-visible {
-  outline: 3px solid #ef4444;
+  outline: 3px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -597,15 +582,12 @@ const filteredItems = computed(() => {
 }
 
 .sidebar-content {
-  width: 300px;
+  width: 320px;
   height: 100%;
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #10B981;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.06);
+  animation: slideIn 0.3s ease;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .sidebar-header {

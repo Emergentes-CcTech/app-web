@@ -87,6 +87,48 @@ public static class PublishingEndpoints
         return unitIds.Union(projectedIds).Distinct().ToList();
     }
 
+    // Validación del alta/edición de condominio (el frontend valida lo mismo, pero la API no confía en él)
+    private static string? ValidateCondominium(CondominiumRequest r)
+    {
+        static bool Len(string? v, int min, int max) => !string.IsNullOrWhiteSpace(v) && v.Trim().Length >= min && v.Trim().Length <= max;
+        if (!Len(r.Name, 3, 120)) return "El nombre debe tener entre 3 y 120 caracteres.";
+        if (!Len(r.Address, 5, 200)) return "La dirección debe tener entre 5 y 200 caracteres.";
+        if (!Len(r.District, 3, 80)) return "El distrito debe tener entre 3 y 80 caracteres.";
+        if (r.TotalUnits < 1 || r.TotalUnits > 500) return "El número de departamentos debe estar entre 1 y 500.";
+        if (r.TotalFloors is < 1 or > 80) return "El número de pisos debe estar entre 1 y 80.";
+        if (r.CommonAreas is null || r.CommonAreas.Count == 0) return "Registra al menos un área común monitoreada.";
+        foreach (var area in r.CommonAreas)
+        {
+            if (!Enum.TryParse<IoBuild.Api.Publishing.Domain.Model.ValueObjects.CommonAreaSubsystem>(area.Subsystem, true, out _))
+                return $"Subsistema de área común no válido: {area.Subsystem}.";
+            if (!Len(area.Name, 2, 80)) return "Cada área común necesita un nombre de 2 a 80 caracteres.";
+        }
+        if (!string.IsNullOrWhiteSpace(r.ImageUrl)
+            && !(Uri.TryCreate(r.ImageUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps))
+            return "La imagen del edificio debe ser un enlace https.";
+        return null;
+    }
+
+    private static void ApplyCondominium(IoBuild.Api.Publishing.Domain.Model.Aggregates.Project p, CondominiumRequest r)
+    {
+        p.Name = r.Name.Trim();
+        p.Description = r.Description?.Trim() ?? string.Empty;
+        p.Address = r.Address.Trim();
+        p.District = r.District.Trim();
+        p.TotalUnits = r.TotalUnits;
+        if (r.TotalFloors.HasValue) p.TotalFloors = r.TotalFloors.Value;
+        p.SedapalSupplyCode = r.WaterSupplyCode?.Trim() ?? string.Empty;
+        p.LuzDelSurSupplyCode = r.ElectricitySupplyCode?.Trim() ?? string.Empty;
+        p.ImageUrl = string.IsNullOrWhiteSpace(r.ImageUrl) ? null : r.ImageUrl;
+    }
+
+    private static IEnumerable<IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea> ToCommonAreas(int projectId, CondominiumRequest r) =>
+        r.CommonAreas!.Select(a => new IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea(
+            projectId,
+            a.Name.Trim(),
+            Enum.Parse<IoBuild.Api.Publishing.Domain.Model.ValueObjects.CommonAreaSubsystem>(a.Subsystem, true),
+            a.Location?.Trim() ?? string.Empty));
+
     private static bool OwnsProject(ClaimsPrincipal user, IoBuild.Api.Publishing.Domain.Model.Aggregates.Project project)
     {
         var self = SelfId(user);
@@ -1440,6 +1482,7 @@ public static class PublishingEndpoints
                 Location = p.Address,
                 District = p.District ?? "Jesús María",
                 p.TotalUnits,
+                p.TotalFloors,
                 OccupiedUnits = occupiedCounts.GetValueOrDefault(p.Id, 0),
                 WaterSupplyCode = p.SedapalSupplyCode,
                 ElectricitySupplyCode = p.LuzDelSurSupplyCode,
@@ -1478,6 +1521,7 @@ public static class PublishingEndpoints
                 Location = p.Address,
                 District = p.District ?? "Jesús María",
                 p.TotalUnits,
+                p.TotalFloors,
                 OccupiedUnits = occupiedUnits,
                 WaterSupplyCode = p.SedapalSupplyCode,
                 ElectricitySupplyCode = p.LuzDelSurSupplyCode,
@@ -1498,24 +1542,36 @@ public static class PublishingEndpoints
             });
         }).RequireAuthorization();
 
-        condos.MapPost("", async (CreateProjectRequest request, ClaimsPrincipal user, CoreBusinessService service, CancellationToken ct) =>
+        // Alta de condominio: datos del edificio, suministros de los recibos matriz y subsistemas de áreas comunes monitoreados
+        condos.MapPost("", async (CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
-            var tokenBuilderId = SelfId(user);
-            var builderId = request.BuilderId.HasValue && request.BuilderId.Value > 0 ? request.BuilderId.Value : tokenBuilderId;
-            var project = await service.CreateProjectAsync(request.Name, request.Description, request.Location, request.TotalUnits, builderId, request.ImageUrl, ct);
-            return Results.Created($"/api/v1/condominiums/{project.Id}", project);
+            if (!IsAdministrator(user)) return Results.Forbid();
+            var error = ValidateCondominium(request);
+            if (error is not null) return Results.BadRequest(new { message = error });
+
+            var project = new Project { AdministratorId = SelfId(user), Status = "Activo", CreatedAt = DateTimeOffset.UtcNow };
+            ApplyCondominium(project, request);
+            db.Projects.Add(project);
+            await db.SaveChangesAsync(ct);
+
+            db.CommonAreas.AddRange(ToCommonAreas(project.Id, request));
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/condominiums/{project.Id}", new { project.Id, project.Name });
         }).RequireAuthorization();
 
-        condos.MapPut("/{id:int}", async (int id, CreateProjectRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        condos.MapPut("/{id:int}", async (int id, CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var item = await db.Projects.FindAsync([id], ct);
             if (item is null || !OwnsProject(user, item)) return Results.NotFound();
-            item.Name = request.Name;
-            item.Description = request.Description;
-            item.Location = request.Location;
-            item.TotalUnits = request.TotalUnits;
+            var error = ValidateCondominium(request);
+            if (error is not null) return Results.BadRequest(new { message = error });
+
+            ApplyCondominium(item, request);
+            // Las áreas comunes se reemplazan por las enviadas; los equipos se vinculan por subsistema, no por id de área
+            db.CommonAreas.RemoveRange(await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct));
+            db.CommonAreas.AddRange(ToCommonAreas(id, request));
             await db.SaveChangesAsync(ct);
-            return Results.Ok(item);
+            return Results.Ok(new { item.Id, item.Name });
         }).RequireAuthorization();
 
         condos.MapPatch("/{id:int}", async (int id, [FromBody] System.Text.Json.JsonElement body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
@@ -1609,3 +1665,23 @@ public static class PublishingEndpoints
     }
 }
 
+
+/// <summary>
+/// Alta o edición de un condominio desde la consola de administración.
+/// </summary>
+public sealed record CondominiumRequest(
+    string Name,
+    string Address,
+    string District,
+    int TotalUnits,
+    int? TotalFloors,
+    string? WaterSupplyCode,
+    string? ElectricitySupplyCode,
+    string? ImageUrl,
+    string? Description,
+    List<CondominiumCommonAreaRequest>? CommonAreas);
+
+/// <summary>
+/// Área común monitoreada: el subsistema enlaza los equipos IoT del kit HaaS.
+/// </summary>
+public sealed record CondominiumCommonAreaRequest(string Name, string Subsystem, string? Location);

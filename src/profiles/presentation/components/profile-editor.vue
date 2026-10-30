@@ -50,7 +50,7 @@ async function save() {
     isEditing.value = false;
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('profile.saveSuccess'), life: 2500 });
   } catch (_) {
-    toast.add({ severity: 'error', summary: 'Error', detail: t('profile.saveError'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('profile.saveError'), life: 3000 });
   } finally {
     isSaving.value = false;
   }

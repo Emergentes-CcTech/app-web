@@ -39,7 +39,7 @@ onMounted(async () => {
         ? { severity: 'success', summary: t('common.success'), detail: t('payments.statement.paidToast'), life: 3500 }
         : { severity: 'warn', summary: t('payments.statement.pending'), detail: t('payments.statement.paymentProcessing'), life: 4500 });
     } catch (_) {
-      toast.add({ severity: 'error', summary: 'Error', detail: t('payments.statement.confirmError'), life: 4500 });
+      toast.add({ severity: 'error', summary: t('common.error'), detail: t('payments.statement.confirmError'), life: 4500 });
     }
     router.replace({ query: {} });
   } else if (route.query.canceled === '1') {
@@ -59,7 +59,7 @@ async function payWithCard() {
     else paying.value = false;
   } catch (_) {
     paying.value = false;
-    toast.add({ severity: 'error', summary: 'Error', detail: t('payments.statement.checkoutError'), life: 3500 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('payments.statement.checkoutError'), life: 3500 });
   }
 }
 
