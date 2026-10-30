@@ -89,19 +89,16 @@ const handleLogout = async () => {
 };
 
 const items = [
-  // Administrador
+  // Administrador (Simplificado: 8 ítems claros y sin redundancias)
   { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home' },
+  { label: 'option.monitoring', to: ROUTES.MONITORING, use_role: ROLES.ADMIN, icon: 'pi pi-chart-line', requiresSubscription: true },
   { label: 'option.condominiums', to: ROUTES.CONDOMINIUMS, use_role: ROLES.ADMIN, icon: 'pi pi-building' },
   { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users' },
   { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
-  { label: 'option.alerts', to: ROUTES.ALERTS, use_role: ROLES.ADMIN, icon: 'pi pi-bell', requiresSubscription: true },
-  { label: 'option.bills', to: ROUTES.BILLING_BILLS, use_role: ROLES.ADMIN, icon: 'pi pi-file', requiresSubscription: true },
-  { label: 'option.settlements', to: ROUTES.BILLING_SETTLEMENTS, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
-  { label: 'option.delinquency', to: ROUTES.DELINQUENCY, use_role: ROLES.ADMIN, icon: 'pi pi-exclamation-circle', requiresSubscription: true },
-  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.ADMIN, icon: 'pi pi-history', requiresSubscription: true },
+  { label: 'option.billing', to: ROUTES.BILLING, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
   { label: 'option.subscription', to: ROUTES.SUBSCRIPTION_DETAIL, use_role: ROLES.ADMIN, icon: 'pi pi-credit-card' },
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.ADMIN, icon: 'pi pi-user' },
-  // Residente
+  // Residente (Permanece intacto)
   { label: 'option.myConsumption', to: ROUTES.DASHBOARD, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-line' },
   { label: 'option.analytics', to: ROUTES.ANALYTICS, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-bar' },
   { label: 'option.accountStatement', to: ROUTES.ACCOUNT_STATEMENT, use_role: ROLES.RESIDENT, icon: 'pi pi-wallet' },
@@ -464,15 +461,17 @@ const filteredItems = computed(() => {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  color: black;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  color: #475569;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  margin: 0.25rem 1rem;
+  margin: 0.2rem 0.75rem;
   border-radius: 8px;
+  font-size: 0.925rem;
+  font-weight: 500;
 }
 
 .menu-item::before {
@@ -481,16 +480,16 @@ const filteredItems = computed(() => {
   left: 0;
   top: 0;
   height: 100%;
-  width: 4px;
-  background: black;
+  width: 3px;
+  background: #059669;
   transform: scaleY(0);
-  transition: transform 0.3s ease;
-  border-radius: 0 4px 4px 0;
+  transition: transform 0.2s ease;
+  border-radius: 0 3px 3px 0;
 }
 
 .menu-item:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: black;
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .menu-item:hover::before {
@@ -498,40 +497,47 @@ const filteredItems = computed(() => {
 }
 
 .menu-item.router-link-active {
-  background: black;
-  color: white;
+  background: #ecfdf5;
+  color: #047857;
   font-weight: 600;
   border-radius: 8px;
 }
 
+.menu-item.router-link-active .menu-icon {
+  color: #059669;
+}
+
 .menu-item.router-link-active::before {
   transform: scaleY(1);
-  background: white;
+  background: #059669;
 }
 
 .menu-icon {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   width: 1.5rem;
-  transition: transform 0.3s ease;
+  color: #64748b;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .menu-item:hover .menu-icon {
-  transform: scale(1.15);
+  transform: scale(1.1);
+  color: #0f172a;
 }
 
 .menu-label {
   flex: 1;
-  font-size: 0.95rem;
 }
 
 .menu-arrow {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
   opacity: 0;
-  transform: translateX(-10px);
-  transition: all 0.3s ease;
+  transform: translateX(-6px);
+  transition: all 0.2s ease;
 }
 
-.menu-item:hover .menu-arrow {
+.menu-item:hover .menu-arrow,
+.menu-item.router-link-active .menu-arrow {
   opacity: 1;
   transform: translateX(0);
 }
@@ -540,29 +546,34 @@ const filteredItems = computed(() => {
 .logout-item {
   cursor: pointer;
   margin-top: auto;
-  width: calc(100% - 2rem);
+  margin-bottom: 1rem;
+  width: calc(100% - 1.5rem);
   box-sizing: border-box;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #e2e8f0;
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
   background: transparent;
-  color: #111827;
+  color: #64748b;
   font: inherit;
   text-align: left;
 }
 
 .logout-item:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #111827;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.logout-item:hover .menu-icon {
+  color: #dc2626;
 }
 
 .logout-item::before {
-  background: #111827;
+  background: #dc2626;
 }
 
 .logout-item:focus-visible {
-  outline: 3px solid #ffffff;
+  outline: 3px solid #ef4444;
   outline-offset: 2px;
 }
 
@@ -586,12 +597,15 @@ const filteredItems = computed(() => {
 }
 
 .sidebar-content {
-  width: 320px;
+  width: 300px;
   height: 100%;
-  background: #10B981;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.06);
-  animation: slideIn 0.3s ease;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-header {

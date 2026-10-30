@@ -18,7 +18,13 @@ public record UnitResource(
     decimal AliquotPercentage = 0.0m,
     string? ResidentEmail = null,
     string? ResidentFullName = null,
-    string AccountStatus = "Al día"
+    string AccountStatus = "Al día",
+    int? CondominiumId = null,
+    string? Number = null,
+    decimal? ParticipationPct = null,
+    int? ResidentUserId = null,
+    int? OwnerUserId = null,
+    string Type = "apartment"
 );
 
 public record CreateUnitResource(
@@ -31,7 +37,7 @@ public record CreateUnitResource(
     decimal AliquotPercentage = 0.0m
 );
 
-public record AssignUnitOwnerResource(string? OwnerEmail = null, int? OwnerId = null, string? ResidentFullName = null);
+public record AssignUnitOwnerResource(string? OwnerEmail = null, int? OwnerId = null, string? ResidentFullName = null, int? ResidentUserId = null);
 
 // DTO para actualización de alícuotas bajo Ley 27157
 public sealed record UpdateUnitAliquotItem(int UnitId, decimal AliquotPercentage);

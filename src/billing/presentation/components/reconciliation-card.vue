@@ -24,6 +24,7 @@ const warn = computed(() => (props.bill?.differencePct ?? 0) > RECONCILIATION_WA
 
 <style scoped>
 .recon { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; margin: 1rem 0; }
+.recon h3 { margin: 0 0 1rem; font-size: 1.05rem; line-height: 1.3; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: .75rem; }
 .grid div { display: flex; flex-direction: column; gap: 4px; }
 .grid span { color: #6B7280; font-size: .85rem; }

@@ -126,5 +126,102 @@ public static class AnalyticsEndpoints
             var result = await analytics.Handle(new GetHistoricalDataQuery(projectId, metric ?? "temperature", start, end), ct);
             return Results.Ok(result);
         }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/alerts ──
+        app.MapGet("/api/v1/alerts", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? status, [FromQuery] string? _sort, [FromQuery] string? _order, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId;
+            var query = db.AnomalyAlerts.AsQueryable();
+            if (targetProjectId.HasValue)
+            {
+                query = query.Where(a => a.ProjectId == targetProjectId.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normStatus = status.Trim().ToLowerInvariant();
+                if (normStatus == "open" || normStatus == "active")
+                {
+                    query = query.Where(a => a.Status.ToLower() == "active" || a.Status.ToLower() == "open");
+                }
+                else if (normStatus == "resolved")
+                {
+                    query = query.Where(a => a.Status.ToLower() == "resolved");
+                }
+                else
+                {
+                    query = query.Where(a => a.Status.ToLower() == normStatus);
+                }
+            }
+
+            var alerts = await query.OrderByDescending(a => a.DetectedAtUtc).ToListAsync(ct);
+            var result = alerts.Select(a => new
+            {
+                a.Id,
+                CondominiumId = a.ProjectId,
+                a.ProjectId,
+                a.DeviceId,
+                a.Subsystem,
+                Type = a.AlertType.ToLowerInvariant(),
+                a.AlertType,
+                Severity = a.Severity.ToLowerInvariant(),
+                a.Title,
+                a.Description,
+                Message = !string.IsNullOrWhiteSpace(a.Title) ? $"{a.Title}: {a.Description}" : a.Description,
+                a.EstimatedOvercostSoles,
+                CreatedAt = a.DetectedAtUtc,
+                DetectedAtUtc = a.DetectedAtUtc,
+                ResolvedAtUtc = a.ResolvedAtUtc,
+                Status = a.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) ? "open" : a.Status.ToLowerInvariant()
+            });
+
+            return Results.Ok(result);
+        }).RequireAuthorization();
+
+        app.MapPatch("/api/v1/alerts/{id:int}", async (int id, [FromBody] System.Text.Json.JsonElement body, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var alert = await db.AnomalyAlerts.FindAsync([id], ct);
+            if (alert is null) return Results.NotFound();
+            alert.Resolve();
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new
+            {
+                alert.Id,
+                CondominiumId = alert.ProjectId,
+                alert.ProjectId,
+                alert.DeviceId,
+                alert.Subsystem,
+                Type = alert.AlertType.ToLowerInvariant(),
+                Severity = alert.Severity.ToLowerInvariant(),
+                alert.Title,
+                alert.Description,
+                Message = !string.IsNullOrWhiteSpace(alert.Title) ? $"{alert.Title}: {alert.Description}" : alert.Description,
+                CreatedAt = alert.DetectedAtUtc,
+                Status = "resolved"
+            });
+        }).RequireAuthorization();
+
+        // ── Compatibilidad REST: /api/v1/readings ──
+        app.MapGet("/api/v1/readings", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] int? deviceId, [FromQuery] string? _sort, [FromQuery] string? _order, [FromQuery] int? _limit, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var targetProjectId = condominiumId ?? projectId ?? 1;
+            var deviceIds = await db.Devices.Where(d => d.ProjectId == targetProjectId).Select(d => d.Id).ToListAsync(ct);
+            var query = db.DeviceTelemetry.Where(t => deviceIds.Contains(t.DeviceId));
+            if (deviceId.HasValue)
+            {
+                query = query.Where(t => t.DeviceId == deviceId.Value);
+            }
+            var limit = Math.Clamp(_limit ?? 100, 1, 1000);
+            var readings = await query.OrderByDescending(t => t.OccurredAt).Take(limit).ToListAsync(ct);
+            var result = readings.Select(t => new
+            {
+                t.Id,
+                t.DeviceId,
+                CondominiumId = targetProjectId,
+                Timestamp = t.OccurredAt.ToString("o"),
+                Value = t.EnergyKwh > 0 ? t.EnergyKwh : (t.TemperatureC > 0 ? t.TemperatureC : 420.5),
+                Unit = t.EnergyKwh > 0 ? "kWh" : "m³"
+            });
+            return Results.Ok(result);
+        }).RequireAuthorization();
     }
 }

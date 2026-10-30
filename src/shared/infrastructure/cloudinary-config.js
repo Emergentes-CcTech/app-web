@@ -80,6 +80,46 @@ export function getAvatarUploadConfig(cloudName, uploadPreset) {
 }
 
 /**
+ * Configuración para recibos matrices (Sedapal / Luz del Sur)
+ * - Foto o escaneo en imagen o PDF
+ * - Carpeta dedicada para separar comprobantes de avatares
+ * - Idioma español y paleta verde IoBuild
+ */
+export function getReceiptUploadConfig(cloudName, uploadPreset) {
+    return {
+        cloud_name: cloudName,
+        upload_preset: uploadPreset,
+        folder: 'iobuild/receipts',
+        sources: ['local', 'camera'],
+        multiple: false,
+        resourceType: 'auto',
+        language: 'es',
+        text: {
+            es: {
+                menu: {
+                    files: "Mis Archivos",
+                    camera: "Cámara"
+                },
+                local: {
+                    browse: "Explorar",
+                    dd_title_single: "Arrastra y suelta el recibo aquí",
+                    drop_title_single: "Suelta el archivo para subir"
+                },
+                queue: {
+                    title: "Subiendo recibo...",
+                    done: "Listo"
+                }
+            }
+        },
+        singleUploadAutoClose: true,
+        cropping: false,
+        clientAllowedFormats: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
+        maxFileSize: 10 * 1024 * 1024, // 10MB
+        styles: ioBuildStyles
+    };
+}
+
+/**
  * Configuración para fotos de proyectos/edificios
  * - Cierre automático al completar
  * - Proporción libre / panorámica

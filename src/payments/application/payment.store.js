@@ -12,6 +12,7 @@ export const usePaymentStore = defineStore('payment', () => {
     const payments = ref([]);
     const unitsTotal = ref(0);
     const myUnits = ref([]);
+    const myCondominium = ref(null);
     const isLoading = ref(false);
     const errors = ref([]);
 
@@ -29,7 +30,13 @@ export const usePaymentStore = defineStore('payment', () => {
         try {
             myUnits.value = await condoApi.getUnitsByResident(userId);
             const ids = myUnits.value.map(u => u.id);
-            payments.value = ids.length ? PaymentAssembler.toEntities((await api.getByUnits(ids)).data) : [];
+            const condominiumId = myUnits.value[0]?.condominiumId;
+            const [paymentsRes, condoRes] = await Promise.all([
+                ids.length ? api.getByUnits(ids) : Promise.resolve({ data: [] }),
+                condominiumId ? condoApi.getById(condominiumId).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+            ]);
+            payments.value = PaymentAssembler.toEntities(paymentsRes.data);
+            myCondominium.value = condoRes.data;
         } catch (e) { errors.value.push(e.message || 'Error'); }
         finally { isLoading.value = false; }
     }
@@ -55,8 +62,13 @@ export const usePaymentStore = defineStore('payment', () => {
         return data;
     }
 
-    function clearUserSession() { payments.value = []; myUnits.value = []; unitsTotal.value = 0; errors.value = []; }
+    async function confirmCheckout(paymentId, sessionId) {
+        const { data } = await api.confirmCheckout(paymentId, sessionId);
+        return data;
+    }
 
-    return { payments, unitsTotal, myUnits, isLoading, errors, overduePayments, overdueUnitIds, overdueAmount,
-        delinquencyRate, pendingForResident, fetchForResident, fetchByCondominium, register, createCheckout, clearUserSession };
+    function clearUserSession() { payments.value = []; myUnits.value = []; myCondominium.value = null; unitsTotal.value = 0; errors.value = []; }
+
+    return { payments, unitsTotal, myUnits, myCondominium, isLoading, errors, overduePayments, overdueUnitIds, overdueAmount,
+        delinquencyRate, pendingForResident, fetchForResident, fetchByCondominium, register, createCheckout, confirmCheckout, clearUserSession };
 });

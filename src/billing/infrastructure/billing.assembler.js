@@ -3,7 +3,7 @@ import { Settlement } from '../domain/model/settlement.entity.js';
 import { SettlementLine } from '../domain/model/settlement-line.entity.js';
 
 export class BillingAssembler {
-    static toBill(r) { return new UtilityBill(r || {}); }
+    static toBill(r) { return new UtilityBill({ ...(r || {}), attachmentUrl: r?.attachmentUrl || r?.receiptImageUrl || '' }); }
     static toBills(list) { return (Array.isArray(list) ? list : []).map(BillingAssembler.toBill); }
     static toLine(r) { return new SettlementLine(r || {}); }
     static toSettlement(r) {

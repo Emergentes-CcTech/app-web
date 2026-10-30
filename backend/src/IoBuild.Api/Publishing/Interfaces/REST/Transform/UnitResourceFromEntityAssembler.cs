@@ -25,7 +25,13 @@ public static class UnitResourceFromEntityAssembler
             entity.AliquotPercentage,
             entity.ResidentEmail,
             entity.ResidentFullName,
-            entity.AccountStatus
+            entity.AccountStatus,
+            entity.ProjectId,
+            entity.UnitNumber,
+            entity.AliquotPercentage,
+            entity.OwnerId,
+            entity.OwnerId,
+            "apartment"
         );
     }
 }

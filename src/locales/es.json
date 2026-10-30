@@ -326,9 +326,11 @@
   },
   "option": {
     "dashboard": "Panel",
+    "monitoring": "Telemetría y monitoreo",
     "condominiums": "Condominios",
     "residents": "Residentes",
     "devices": "Dispositivos",
+    "billing": "Facturación y cobranzas",
     "alerts": "Alertas",
     "bills": "Recibos matriz",
     "settlements": "Prorrateo y liquidación",
@@ -483,7 +485,15 @@
       "personal": "Datos personales",
       "unit": "Unidad asignada",
       "account": "Estado de cuenta",
-      "noSettlements": "Aún no hay liquidaciones."
+      "noSettlements": "Aún no hay liquidaciones.",
+      "contact": "Contacto",
+      "floor": "Piso",
+      "area": "Área",
+      "aliquot": "Alícuota",
+      "pendingBalance": "Saldo pendiente",
+      "paidPeriods": "Periodos pagados",
+      "notRegistered": "No registrado",
+      "loadError": "No se pudo cargar la ficha del residente."
     },
     "validation": {
       "unitRequired": "Selecciona una unidad libre.",
@@ -595,9 +605,13 @@
       "measuredConsumption": "Consumo medido",
       "amount": "Monto (S/)",
       "dueDate": "Vencimiento",
-      "attachment": "Comprobante (URL)",
+      "attachment": "Recibo escaneado",
       "empty": "No hay recibos registrados.",
-      "saved": "Recibo registrado."
+      "saved": "Recibo registrado.",
+      "uploadReceipt": "Subir recibo",
+      "replaceReceipt": "Reemplazar recibo",
+      "viewReceipt": "Ver recibo",
+      "uploadError": "No se pudo subir el recibo. Intenta de nuevo."
     },
     "reconciliation": {
       "title": "Conciliación: facturado vs medido",
@@ -658,7 +672,16 @@
       "empty": "Aún no tienes liquidaciones.",
       "paidToast": "Pago registrado correctamente.",
       "checkoutError": "No se pudo iniciar el pago.",
-      "receipt": "Comprobante de pago"
+      "receipt": "Comprobante de pago",
+      "subtitle": "Cuotas de mantenimiento de tu unidad y su desglose según la Ley N.° 27157.",
+      "unit": "Departamento",
+      "condominium": "Condominio",
+      "aliquot": "Alícuota",
+      "holder": "Titular",
+      "paymentProcessing": "Stripe aún no confirma el cobro. Actualiza en unos minutos.",
+      "confirmError": "No se pudo confirmar el pago con Stripe.",
+      "canceledTitle": "Pago cancelado",
+      "canceledToast": "No se realizó ningún cargo a tu tarjeta."
     },
     "status": {
       "pending": "Pendiente",

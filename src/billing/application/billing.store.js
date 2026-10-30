@@ -25,7 +25,8 @@ export const useBillingStore = defineStore('billing', () => {
     }
 
     async function addBill(bill) {
-        const payload = { ...bill }; delete payload.id;
+        // El backend guarda la imagen del recibo (Cloudinary) en el periodo como receiptImageUrl
+        const payload = { ...bill, receiptImageUrl: bill.attachmentUrl || null }; delete payload.id;
         const { data } = await api.createBill(payload);
         bills.value.unshift(BillingAssembler.toBill(data));
     }

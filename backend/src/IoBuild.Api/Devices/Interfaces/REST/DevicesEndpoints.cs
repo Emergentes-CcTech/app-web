@@ -47,11 +47,12 @@ public static class DevicesEndpoints
 
         group.MapGet("/devices/types", () => Results.Ok(deviceTypesResult)).AllowAnonymous();
         group.MapGet("/custom-device-types", () => Results.Ok(deviceTypesResult)).AllowAnonymous();
-        group.MapGet("/devices", async ([FromQuery] int? unitId, [FromQuery] int? projectId, IoBuildDbContext db, CancellationToken ct) =>
+        group.MapGet("/devices", async ([FromQuery] int? unitId, [FromQuery] int? projectId, [FromQuery] int? condominiumId, IoBuildDbContext db, CancellationToken ct) =>
         {
+            var targetProjectId = projectId ?? condominiumId;
             var query = db.Devices.AsQueryable();
             if (unitId.HasValue) query = query.Where(d => d.UnitId == unitId.Value);
-            if (projectId.HasValue) query = query.Where(d => d.ProjectId == projectId.Value);
+            if (targetProjectId.HasValue) query = query.Where(d => d.ProjectId == targetProjectId.Value);
             return Results.Ok((await query.OrderBy(device => device.Id).ToListAsync(ct)).Select(DeviceResponse.From));
         }).RequireAuthorization();
         group.MapGet("/devices/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) => await db.Devices.FindAsync([id], ct) is { } device ? Results.Ok(DeviceResponse.From(device)) : Results.NotFound()).RequireAuthorization();

@@ -43,6 +43,19 @@ const routes = [
     { path: '/payments', children: paymentsRoutes },                                    // el rol se define por hijo
     { path: '/audit', children: auditRoutes },                                          // ambos roles
     { path: '/subscriptions', meta: { requiresRole: ROLES.ADMIN }, children: subscriptionsRoutes },
+    // Route aliases and compatibility redirects matching DDD terminology
+    { path: '/cadastre/condominiums', redirect: '/condominiums', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/units', redirect: to => `/condominiums/${to.params.id}`, meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/common-areas', redirect: to => `/condominiums/${to.params.id}`, meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/equipment', redirect: '/devices/device-management', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/residents', redirect: '/residents', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/subscriptions/plans', redirect: '/subscriptions/my-subscription', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/analytics/alerts', redirect: '/telemetry/alerts', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/utility-bills', redirect: '/billing/bills', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/settlements', redirect: '/billing/settlements', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/delinquency', redirect: '/payments/delinquency', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/my-statement', redirect: '/payments/account-statement', meta: { requiresRole: ROLES.RESIDENT } },
+    { path: '/proration/payment-history', redirect: '/payments/account-statement', meta: { requiresRole: ROLES.RESIDENT } },
     { path: '/', redirect: ROUTES.IAM_LOGIN },
     { path: '/home', name: 'home', redirect: ROUTES.DASHBOARD },
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('./shared/presentation/views/page-not-found.vue') },
@@ -96,6 +109,7 @@ router.beforeEach(async (to, from, next) => {
             || to.path.startsWith(ROUTES.IAM_BASE)
             || to.path.startsWith(ROUTES.PROFILES_BASE)
             || to.path.startsWith(ROUTES.CONDOMINIUMS_BASE)
+            || to.path.startsWith('/cadastre')
             // Panel, residentes y dispositivos se muestran siempre al administrador
             || to.path === ROUTES.DASHBOARD
             || to.path.startsWith(ROUTES.RESIDENTS_BASE)

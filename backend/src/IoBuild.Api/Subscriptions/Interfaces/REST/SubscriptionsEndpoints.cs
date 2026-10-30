@@ -89,29 +89,43 @@ public static class SubscriptionsEndpoints
         subs.MapGet("/subscriptions", async (System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var self = SelfId(user);
-            var subscriptions = await db.Subscriptions.Where(s => s.ProjectId == self || s.BuilderId == self || self == 0).ToListAsync(ct);
+            var adminProjectIds = await db.Projects
+                .Where(p => p.BuilderId == self)
+                .Select(p => p.Id)
+                .ToListAsync(ct);
+            var subscriptions = await db.Subscriptions
+                .Where(s => s.ProjectId == self || s.BuilderId == self || adminProjectIds.Contains(s.ProjectId) || self == 0)
+                .ToListAsync(ct);
             var plansDict = await db.Plans.ToDictionaryAsync(p => p.Id, ct);
-            var result = subscriptions.Select(s => new
+            var projectsDict = await db.Projects.ToDictionaryAsync(p => p.Id, ct);
+            var result = subscriptions.Select(s =>
             {
-                s.Id,
-                s.ProjectId,
-                s.BuilderId,
-                s.PlanId,
-                s.Status,
-                s.StartDate,
-                s.EndDate,
-                Plan = plansDict.TryGetValue(s.PlanId, out var plan) ? new
+                var project = projectsDict.TryGetValue(s.ProjectId, out var p) ? p : null;
+                var adminId = project != null ? project.AdministratorId : s.BuilderId;
+                return new
                 {
-                    plan.Id,
-                    plan.Name,
-                    plan.Price,
-                    plan.Description,
-                    plan.MaxUnits,
-                    plan.MaxDevices,
-                    Features = !string.IsNullOrWhiteSpace(plan.FeaturesJson)
-                        ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(plan.FeaturesJson)
-                        : new List<string>()
-                } : null
+                    s.Id,
+                    s.ProjectId,
+                    CondominiumId = s.ProjectId,
+                    s.BuilderId,
+                    AdministratorId = adminId,
+                    s.PlanId,
+                    s.Status,
+                    s.StartDate,
+                    s.EndDate,
+                    Plan = plansDict.TryGetValue(s.PlanId, out var plan) ? new
+                    {
+                        plan.Id,
+                        plan.Name,
+                        plan.Price,
+                        plan.Description,
+                        plan.MaxUnits,
+                        plan.MaxDevices,
+                        Features = !string.IsNullOrWhiteSpace(plan.FeaturesJson)
+                            ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(plan.FeaturesJson)
+                            : new List<string>()
+                    } : null
+                };
             });
             return Results.Ok(result);
         }).RequireAuthorization();
@@ -120,13 +134,19 @@ public static class SubscriptionsEndpoints
         subs.MapGet("/subscriptions/{id:int}", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var s = await db.Subscriptions.FindAsync([id], ct);
-            if (s is null || !OwnsBuilder(user, s.ProjectId)) return Results.NotFound();
+            if (s is null) return Results.NotFound();
+            var project = await db.Projects.FindAsync([s.ProjectId], ct);
+            var adminId = project != null ? project.AdministratorId : s.BuilderId;
+            var self = SelfId(user);
+            if (self != 0 && s.ProjectId != self && s.BuilderId != self && adminId != self) return Results.NotFound();
             var plan = await db.Plans.FindAsync([s.PlanId], ct);
             return Results.Ok(new
             {
                 s.Id,
                 s.ProjectId,
+                CondominiumId = s.ProjectId,
                 s.BuilderId,
+                AdministratorId = adminId,
                 s.PlanId,
                 s.Status,
                 s.StartDate,
