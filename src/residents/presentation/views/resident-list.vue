@@ -25,7 +25,6 @@ const showAdd = ref(false);
 const editing = ref(null);
 const showEdit = ref(false);
 
-const statusOptions = computed(() => ['current', 'overdue', 'pending'].map(v => ({ value: v, label: t(`residents.status.${v}`) })));
 
 onMounted(async () => {
   condominiums.value = (await CondominiumsFacade.getCondominiums()).filter(c => c.isActive);
@@ -56,18 +55,21 @@ function unassign(resident) {
 }
 function edit(resident) { editing.value = resident; showEdit.value = true; }
 async function saveEdit(partial) {
-  await store.updateContact(editing.value, partial);
-  showEdit.value = false;
-  toast.add({ severity: 'success', summary: t('common.success'), detail: t('residents.messages.updated'), life: 2500 });
-  reload();
+  try {
+    await store.updateContact(editing.value, partial);
+    showEdit.value = false;
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('residents.messages.updated'), life: 2500 });
+    reload();
+  } catch (_) {
+    toast.add({ severity: 'error', summary: 'Error', detail: t('residents.messages.error'), life: 3000 });
+  }
 }
 </script>
 
 <template>
   <div class="page">
-    <h1>{{ t('residents.title') }}</h1>
     <resident-list-header v-model:condominium="condominiumId" v-model:status="status" v-model:search="search"
-                          :condominiums="condominiums" :statusOptions="statusOptions" @add="showAdd = true" />
+                          :condominiums="condominiums" :residents="store.residents" @add="showAdd = true" />
     <residents-table :residents="filtered" :loading="store.isLoading"
                      @view="router.push({ name: 'resident-profile', params: { id: $event.unitId } })"
                      @edit="edit" @resend="resend" @unassign="unassign" />

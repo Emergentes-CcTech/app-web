@@ -559,7 +559,12 @@
       "unassigned": "Residente desvinculado.",
       "updated": "Residente actualizado.",
       "alreadyLinked": "La unidad {unit} ya tiene un residente vinculado; no requiere código."
-    }
+    },
+    "filters": {
+      "all": "Todos"
+    },
+    "subtitle": "{n} residentes en el padrón de {condominium}",
+    "searchPlaceholder": "Buscar por nombre, correo o unidad"
   },
   "devices": {
     "title": "Dispositivos IoT",
@@ -577,11 +582,13 @@
       "lastSeenAt": "Última señal",
       "status": "Estado",
       "nightFlowThresholdLpm": "Umbral de flujo nocturno",
-      "baselineAmps": "Línea base de corriente"
+      "baselineAmps": "Línea base de corriente",
+      "location": "Ubicación física",
+      "nightFlowThreshold": "Umbral de caudal nocturno"
     },
     "types": {
-      "water_pulse_meter": "Medidor de pulsos de agua",
-      "current_sensor": "Sensor de corriente",
+      "water_pulse_meter": "Caudalímetro",
+      "current_sensor": "Pinza CT",
       "gateway": "Gateway"
     },
     "points": {
@@ -615,12 +622,20 @@
       "required": "Campo obligatorio.",
       "deviceId": "El ID debe tener entre 3 y 40 caracteres.",
       "idTaken": "Ya existe un dispositivo con ese ID en el condominio.",
-      "mac": "Ingrese una dirección MAC válida."
+      "mac": "Ingrese una dirección MAC válida.",
+      "location": "Indica dónde está instalado (3 a 120 caracteres)."
     },
     "messages": {
       "saved": "Dispositivo guardado.",
       "error": "No se pudo guardar el dispositivo.",
       "unlinked": "Dispositivo desvinculado."
+    },
+    "subtitle": "Kit IoT en comodato que mide las áreas comunes del condominio.",
+    "neverSeen": "Sin latidos aún",
+    "dialog": {
+      "intro": "Registra un equipo del kit HaaS instalado en un área común. Aparecerá fuera de línea hasta su primer latido.",
+      "locationPlaceholder": "Ej. Sótano 1 - Tablero de bombas",
+      "thresholdHint": "Caudal continuo entre 01:00 y 04:00 por encima de este valor dispara una alerta de fuga nocturna."
     }
   },
   "telemetry": {
@@ -708,6 +723,14 @@
       "error": "No se pudo completar la operación.",
       "notBalanced": "El condominio no tiene participación sumando 100 %. Corrige el padrón antes de calcular.",
       "noBill": "No hay recibo matriz registrado para ese periodo."
+    },
+    "summary": {
+      "title": "Resumen de cobranza",
+      "period": "Último periodo liquidado",
+      "commonExpense": "Gasto común",
+      "collected": "Cobrado",
+      "receivable": "Por cobrar",
+      "progress": "{paid} de {total} cuotas pagadas"
     }
   },
   "payments": {

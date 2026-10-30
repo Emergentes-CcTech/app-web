@@ -39,9 +39,15 @@ export const useResidentStore = defineStore('resident', () => {
             const condominiums = await CondominiumsFacade.getCondominiums();
             const condominium = condominiums.find(c => c.id === Number(condominiumId));
             const raw = await api.getRawByCondominium(condominiumId);
-            if (raw.direct) { residents.value = raw.direct.map(ResidentAssembler.toEntity); return; }
             let payments = [];
             try { payments = (await paymentApi.getByCondominium(condominiumId)).data; } catch (_) { /* sin pagos */ }
+            // El padrón del backend no calcula la cobranza; se deriva de las cuotas de cada unidad
+            if (raw.direct) {
+                residents.value = raw.direct.map(r => ResidentAssembler.toEntity({
+                    ...r, collectionStatus: deriveCollectionStatus(payments.filter(p => p.unitId === r.unitId)),
+                }));
+                return;
+            }
             residents.value = raw.units
                 .filter(u => u.residentUserId)
                 .map(unit => ResidentAssembler.fromJoin({

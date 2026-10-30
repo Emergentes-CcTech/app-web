@@ -7,7 +7,7 @@ import { useBillingStore } from '../../application/billing.store.js';
 import { useCondominiumStore } from '../../../condominiums/application/condominium.store.js';
 import { usePaymentStore } from '../../../payments/application/payment.store.js';
 import { useResidentStore } from '../../../residents/application/resident.store.js';
-import { formatPen } from '../../../shared/infrastructure/session.js';
+import { formatPen, formatPeriod } from '../../../shared/infrastructure/session.js';
 import BillForm from '../components/bill-form.vue';
 import ReconciliationCard from '../components/reconciliation-card.vue';
 import RegisterPaymentDialog from '../../../payments/presentation/components/register-payment-dialog.vue';
@@ -19,7 +19,7 @@ const props = defineProps({
   }
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
@@ -58,6 +58,18 @@ function onTabChange(tab) {
   activeTab.value = tab;
   router.replace({ query: { ...route.query, tab } }).catch(() => {});
 }
+
+// Resumen de cobranza del último periodo liquidado: lo primero que la administradora necesita ver
+const latestSettlement = computed(() => [...store.settlements].sort((a, b) => String(b.period).localeCompare(String(a.period)))[0] || null);
+const periodPayments = computed(() => latestSettlement.value ? paymentStore.payments.filter(p => p.period === latestSettlement.value.period) : []);
+const cents = (list) => Math.round(list.reduce((acc, p) => acc + p.amount * 100, 0)) / 100;
+const collected = computed(() => cents(periodPayments.value.filter(p => p.effectiveStatus === 'paid')));
+const receivable = computed(() => cents(periodPayments.value.filter(p => p.effectiveStatus !== 'paid')));
+const collectedPct = computed(() => {
+  const total = collected.value + receivable.value;
+  return total ? Math.round((collected.value / total) * 100) : 0;
+});
+const paidCount = computed(() => periodPayments.value.filter(p => p.effectiveStatus === 'paid').length);
 
 // El título nombra la sección del sidebar; las pestañas ya indican la subvista activa
 const activeTitle = computed(() => t('option.billing'));
@@ -139,8 +151,23 @@ async function confirmPayment(data) {
   <div class="page">
     <div class="page-head">
       <h1>{{ activeTitle }}</h1>
-      <pv-select v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
+      <pv-select v-if="condoStore.activeCondominiums.length > 1" v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
     </div>
+
+    <section v-if="latestSettlement" class="summary" :aria-label="t('billing.summary.title')">
+      <div class="summary-period">
+        <span class="label">{{ t('billing.summary.period') }}</span>
+        <strong>{{ formatPeriod(latestSettlement.period, locale) }}</strong>
+      </div>
+      <div><span class="label">{{ t('billing.summary.commonExpense') }}</span><strong class="num">{{ formatPen(latestSettlement.commonAreaAmount) }}</strong></div>
+      <div><span class="label">{{ t('billing.summary.collected') }}</span><strong class="num ok">{{ formatPen(collected) }}</strong></div>
+      <div><span class="label">{{ t('billing.summary.receivable') }}</span><strong class="num">{{ formatPen(receivable) }}</strong></div>
+      <div class="progress">
+        <div class="progress-label"><span>{{ t('billing.summary.progress', { paid: paidCount, total: periodPayments.length }) }}</span><span class="num">{{ collectedPct }} %</span></div>
+        <div class="track"><div class="fill" :style="{ width: `${collectedPct}%` }"></div></div>
+        <small class="label">{{ t('payments.delinquency.rate') }}: {{ paymentStore.delinquencyRate }} %</small>
+      </div>
+    </section>
 
     <pv-tabs :value="activeTab" @update:value="onTabChange" class="billing-tabs">
       <pv-tab-list class="tabs-header mb-4">
@@ -270,6 +297,18 @@ async function confirmPayment(data) {
 .receipt-link:hover { text-decoration: underline; }
 .page-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .filter { min-width: 16rem; }
+.summary { display: grid; grid-template-columns: auto repeat(3, 1fr) 1.4fr; gap: 1.25rem; align-items: center; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+@media (max-width: 900px) { .summary { grid-template-columns: 1fr 1fr; } }
+.summary > div { display: flex; flex-direction: column; gap: 2px; }
+.summary .label { font-size: .8rem; color: #6B7280; }
+.summary strong { font-size: 1.2rem; }
+.summary-period strong { display: inline-block; }
+.summary-period strong::first-letter { text-transform: uppercase; }
+.summary .num { font-variant-numeric: tabular-nums; }
+.summary .ok { color: #047857; }
+.progress-label { display: flex; justify-content: space-between; font-size: .8rem; color: #374151; }
+.track { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin: .3rem 0; }
+.fill { height: 100%; background: #10B981; }
 .billing-tabs { background: #ffffff; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .tabs-header { border-bottom: 1px solid #e2e8f0; }
 .filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; margin-bottom: 1rem; }

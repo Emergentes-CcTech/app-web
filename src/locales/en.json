@@ -559,7 +559,12 @@
       "unassigned": "Resident unlinked.",
       "updated": "Resident updated.",
       "alreadyLinked": "Unit {unit} already has a linked resident; no code needed."
-    }
+    },
+    "filters": {
+      "all": "All"
+    },
+    "subtitle": "{n} residents registered in {condominium}",
+    "searchPlaceholder": "Search by name, email or unit"
   },
   "devices": {
     "title": "IoT devices",
@@ -577,11 +582,13 @@
       "lastSeenAt": "Last signal",
       "status": "Status",
       "nightFlowThresholdLpm": "Night flow threshold",
-      "baselineAmps": "Current baseline"
+      "baselineAmps": "Current baseline",
+      "location": "Physical location",
+      "nightFlowThreshold": "Night flow threshold"
     },
     "types": {
-      "water_pulse_meter": "Water pulse meter",
-      "current_sensor": "Current sensor",
+      "water_pulse_meter": "Flow meter",
+      "current_sensor": "CT clamp",
       "gateway": "Gateway"
     },
     "points": {
@@ -615,12 +622,20 @@
       "required": "Required field.",
       "deviceId": "The ID must be 3 to 40 characters.",
       "idTaken": "A device with that ID already exists in the condominium.",
-      "mac": "Enter a valid MAC address."
+      "mac": "Enter a valid MAC address.",
+      "location": "Enter where it is installed (3 to 120 characters)."
     },
     "messages": {
       "saved": "Device saved.",
       "error": "Could not save the device.",
       "unlinked": "Device unlinked."
+    },
+    "subtitle": "Loaned IoT kit that meters the condominium common areas.",
+    "neverSeen": "No heartbeat yet",
+    "dialog": {
+      "intro": "Register an HaaS kit device installed in a common area. It shows as offline until its first heartbeat.",
+      "locationPlaceholder": "e.g. Basement 1 - Pump panel",
+      "thresholdHint": "Continuous flow between 01:00 and 04:00 above this value triggers a night-leak alert."
     }
   },
   "telemetry": {
@@ -708,6 +723,14 @@
       "error": "The operation could not be completed.",
       "notBalanced": "The condominium participation does not add up to 100 %. Fix the roll before calculating.",
       "noBill": "No utility bill registered for that period."
+    },
+    "summary": {
+      "title": "Collection summary",
+      "period": "Latest settled period",
+      "commonExpense": "Common expense",
+      "collected": "Collected",
+      "receivable": "Receivable",
+      "progress": "{paid} of {total} fees paid"
     }
   },
   "payments": {
