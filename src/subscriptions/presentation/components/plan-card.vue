@@ -93,8 +93,9 @@ const buttonLabel = computed(() => {
         <div class="price-wrapper">
           <span class="currency-symbol">S/</span>
           <span class="price-amount">{{ plan.price.toLocaleString('es-PE') }}</span>
-          <span class="price-period">/ {{ t("subscriptions.month") }}</span>
+          <span class="price-period">{{ t("subscriptions.plusIgv") }} / {{ t("subscriptions.month") }}</span>
         </div>
+        <span class="billing-frequency">{{ t('subscriptions.withIgv', { amount: plan.monthlyPenWithIgv.toFixed(2) }) }}</span>
         <span class="billing-frequency">{{ t('subscriptions.billing-cycle') }}</span>
       </div>
 

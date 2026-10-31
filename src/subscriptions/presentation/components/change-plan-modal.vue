@@ -55,7 +55,7 @@ const targetFeatures = computed(() => {
           </div>
           <div class="box-price">
             S/ {{ currentPlan?.price || 0 }}
-            <span class="box-price-period">/ {{ t('subscriptions.month') }}</span>
+            <span class="box-price-period">{{ t('subscriptions.plusIgv') }} / {{ t('subscriptions.month') }}</span>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ const targetFeatures = computed(() => {
           </div>
           <div class="box-price price-target">
             S/ {{ targetPlan.price }}
-            <span class="box-price-period">/ {{ t('subscriptions.month') }}</span>
+            <span class="box-price-period">{{ t('subscriptions.plusIgv') }} / {{ t('subscriptions.month') }}</span>
           </div>
         </div>
       </div>

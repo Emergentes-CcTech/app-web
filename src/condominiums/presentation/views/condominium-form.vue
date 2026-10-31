@@ -6,7 +6,7 @@ import { useToast } from 'primevue/usetoast';
 import { useCondominiumStore } from '../../application/condominium.store.js';
 import { Condominium } from '../../domain/model/condominium.entity.js';
 import { CommonArea, COMMON_AREA_TYPES } from '../../domain/model/common-area.entity.js';
-import { recommendedTier, kitTotal, MAX_PLAN_UNITS } from '../../../subscriptions/domain/model/plan-limits.js';
+import { recommendedTier, kitTotal, withIgv, MAX_PLAN_UNITS } from '../../../subscriptions/domain/model/plan-limits.js';
 import { isValidName, isValidSupplyCode, isValidPositiveInteger } from '../../../shared/presentation/validators.js';
 import { loadCloudinaryWidget } from '../../../shared/infrastructure/cloudinary-loader.js';
 import { getProjectImageUploadConfig } from '../../../shared/infrastructure/cloudinary-config.js';
@@ -37,7 +37,7 @@ function toggleArea(type) {
   else form.commonAreas.push(new CommonArea({ type, name: t(`condominiums.commonAreas.types.${type}`) }));
 }
 
-// ── Plan HaaS que corresponde (Boutique / Urbano / Gran Torre) ──
+// ── Plan HaaS que corresponde (Esencial / Urbano / Gran Torre) ──
 const plan = computed(() => form.totalUnits ? recommendedTier(form.totalUnits) : null);
 
 // ── Foto del edificio (Cloudinary) ──
@@ -218,6 +218,7 @@ async function save() {
             <span class="plan-label">{{ t('condominiums.form.plan') }}</span>
             <strong class="plan-name">{{ plan.name }}</strong>
             <span class="plan-price">S/ {{ plan.monthlyPen.toFixed(2) }} <small>{{ t('condominiums.form.perMonth') }}</small></span>
+            <small class="muted">{{ t('condominiums.form.withIgv', { amount: withIgv(plan.monthlyPen).toFixed(2), perUnit: (withIgv(plan.monthlyPen) / form.totalUnits).toFixed(2) }) }}</small>
             <small class="muted">{{ unitsRangeText(plan, t) }}</small>
           </div>
           <dl class="kit">

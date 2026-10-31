@@ -77,26 +77,28 @@ describe('RF-012 conciliación', () => {
 });
 
 describe('RF-014 planes', () => {
-  it('tramos por departamentos (catálogo del backend): ≤20 Boutique, 21-80 Urbano, más de 80 Gran Torre', () => {
-    expect(recommendedTier(20).name).toBe('Boutique');
-    expect(recommendedTier(21).name).toBe('Urbano');
+  it('tramos por departamentos (catálogo del backend): ≤40 Esencial, 41-80 Urbano, más de 80 Gran Torre', () => {
+    expect(recommendedTier(21).name).toBe('Esencial');
+    expect(recommendedTier(40).name).toBe('Esencial');
+    expect(recommendedTier(41).name).toBe('Urbano');
     expect(recommendedTier(80).name).toBe('Urbano');
     expect(recommendedTier(81).name).toBe('Gran Torre');
     expect(recommendedTier(500).name).toBe('Gran Torre');
     expect(recommendedTier(501)).toBeNull();
   });
 
-  it('precios y kits de equipos', () => {
-    const [boutique, urbano, granTorre] = PLAN_TIERS.map(t => new Plan({ code: t.code }));
-    expect([boutique.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([500, 700, 1000]);
-    expect([boutique.hardwareIncluded, urbano.hardwareIncluded, granTorre.hardwareIncluded]).toEqual([4, 6, 10]);
-    expect(granTorre.kit).toEqual({ gateways: 2, flowMeters: 3, ctClamps: 5 });
-    expect(boutique.getFormattedPrice()).toBe('S/ 500');
+  it('precios sin IGV, lo que paga la junta y kits de equipos', () => {
+    const [esencial, urbano, granTorre] = PLAN_TIERS.map(t => new Plan({ code: t.code }));
+    expect([esencial.monthlyPen, urbano.monthlyPen, granTorre.monthlyPen]).toEqual([350, 420, 650]);
+    expect([esencial.monthlyPenWithIgv, urbano.monthlyPenWithIgv, granTorre.monthlyPenWithIgv]).toEqual([413, 495.6, 767]);
+    expect([esencial.hardwareIncluded, urbano.hardwareIncluded, granTorre.hardwareIncluded]).toEqual([3, 5, 7]);
+    expect(granTorre.kit).toEqual({ gateways: 1, flowMeters: 3, ctClamps: 3 });
+    expect(esencial.getFormattedPrice()).toBe('S/ 350');
   });
 
   it('reconoce el nombre del catálogo del backend ("GranTorre")', () => {
     const plan = new Plan({ name: 'GranTorre' });
-    expect([plan.minUnits, plan.maxUnits, plan.monthlyPen]).toEqual([81, 500, 1000]);
+    expect([plan.minUnits, plan.maxUnits, plan.monthlyPen]).toEqual([81, 500, 650]);
   });
 });
 

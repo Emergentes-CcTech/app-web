@@ -41,7 +41,7 @@ export const useSubscriptionStore = defineStore("subscriptions", () => {
                 isLoading.value = false;
             })
             .catch((error) => {
-                // Sin /plans en el backend se usa el catálogo local (Boutique, Urbano, Gran Torre)
+                // Sin /plans en el backend se usa el catálogo local (Esencial, Urbano, Gran Torre)
                 availablePlans.value = PlanAssembler.catalog();
                 errors.value.push(error);
                 isLoading.value = false;

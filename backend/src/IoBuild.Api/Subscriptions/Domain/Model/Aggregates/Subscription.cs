@@ -19,7 +19,7 @@ public sealed class Subscription
         set => ProjectId = value;
     }
 
-    // Identificador del plan contratado (Boutique, Urbano o GranTorre)
+    // Identificador del plan contratado (Esencial, Urbano o GranTorre)
     public int PlanId { get; set; }
 
     // Estado del ciclo de vida de la suscripción (active, cancelled, pending)

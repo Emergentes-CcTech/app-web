@@ -62,7 +62,8 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                 if (plan != null)
                 {
                     name = plan.Name;
-                    amountInCents = (long)(plan.Price * 100);
+                    // La junta paga el precio con IGV
+                    amountInCents = (long)(plan.PriceWithIgv * 100);
                     description = plan.Description;
                 }
                 else
@@ -77,7 +78,8 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                 description = $"Suscripción IoBuild Plan {name}";
             }
 
-            var currency = configuration["Stripe:Currency"] ?? "usd";
+            // El catálogo está en soles: se cobra siempre en PEN, aunque la configuración diga otra moneda
+            const string currency = "pen";
             var successUrl = request.SuccessUrl.Contains("{CHECKOUT_SESSION_ID}")
                 ? request.SuccessUrl
                 : $"{request.SuccessUrl.Split('?')[0]}?success=true&session_id={{CHECKOUT_SESSION_ID}}";
@@ -241,12 +243,13 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
         return request;
     }
 
+    // Respaldo cuando no hay acceso a la base: mismo catálogo que DataSeeder, en céntimos con IGV
     private static (string Name, long AmountInCents) GetPlanInfo(int planId) => planId switch
     {
-        1 => ("Starter", 29900),
-        2 => ("Professional", 79900),
-        3 => ("Enterprise", 129900),
-        _ => ($"Plan {planId}", 29900)
+        1 => ("Esencial", 41300),
+        2 => ("Urbano", 49560),
+        3 => ("GranTorre", 76700),
+        _ => ($"Plan {planId}", 41300)
     };
 
     private async Task<PaymentCheckoutSession?> SendCheckoutAsync(HttpRequestMessage request, CancellationToken cancellationToken)

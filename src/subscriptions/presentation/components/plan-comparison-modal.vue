@@ -16,7 +16,7 @@ const emit = defineEmits(["close", "select-plan"]);
 
 const rowValue = (key, plan) => ({
   units: unitsRangeText(plan, t),
-  price: `S/ ${plan.monthlyPen.toLocaleString('es-PE')}`,
+  price: `S/ ${plan.monthlyPen.toLocaleString('es-PE')} ${t('subscriptions.plusIgv')} (${t('subscriptions.withIgv', { amount: plan.monthlyPenWithIgv.toFixed(2) })})`,
   hardware: t('subscriptions.kit.title', { n: plan.hardwareIncluded }),
   kit: kitSummary(plan.kit, t),
   support: plan.features.find(f => /soporte|support/i.test(f)) || '—',
@@ -44,7 +44,7 @@ const comparisonRows = [{ key: 'units' }, { key: 'price' }, { key: 'hardware' },
               :class="{ 'th-pro': plan.code === recommendedCode }"
             >
               <div class="th-plan-name">{{ plan.name }}</div>
-              <div class="th-plan-price">S/ {{ plan.price.toLocaleString('es-PE') }} / {{ t('subscriptions.month') }}</div>
+              <div class="th-plan-price">S/ {{ plan.price.toLocaleString('es-PE') }} {{ t('subscriptions.plusIgv') }} / {{ t('subscriptions.month') }}</div>
               <div v-if="plan.code === recommendedCode" class="th-current-badge">{{ t('subscriptions.recommended') }}</div>
               <div v-if="plan.id === currentPlanId" class="th-current-badge">
                 {{ t('subscriptions.current-plan-badge') }}

@@ -38,33 +38,45 @@ public sealed class PlanEntityTests
 
     [Fact]
     [Trait("Category", "BDD")]
-    public void Given_boutique_plan_when_validating_capacity_then_accepts_up_to_20_units_and_4_devices()
+    public void Given_esencial_plan_when_validating_capacity_then_accepts_up_to_40_units_and_3_devices()
     {
-        // Dado el plan Boutique con tope de 20 departamentos y 4 equipos en comodato
-        var boutique = new Plan("Boutique", "Plan HaaS Boutique", 500.00m);
+        // Dado el plan Esencial con tope de 40 departamentos y 3 equipos en comodato
+        var esencial = new Plan("Esencial", "Plan HaaS Esencial", 350.00m);
 
-        var valid = boutique.ValidateCapacity(totalUnits: 20, totalDevices: 4, out var error);
+        var valid = esencial.ValidateCapacity(totalUnits: 40, totalDevices: 3, out var error);
         Assert.True(valid);
         Assert.Empty(error);
 
-        var invalidUnits = boutique.ValidateCapacity(totalUnits: 25, totalDevices: 4, out var unitError);
+        var invalidUnits = esencial.ValidateCapacity(totalUnits: 41, totalDevices: 3, out var unitError);
         Assert.False(invalidUnits);
-        Assert.Contains("superando el tope máximo de 20", unitError);
+        Assert.Contains("superando el tope máximo de 40", unitError);
 
-        var invalidDevices = boutique.ValidateCapacity(totalUnits: 15, totalDevices: 5, out var deviceError);
+        var invalidDevices = esencial.ValidateCapacity(totalUnits: 21, totalDevices: 4, out var deviceError);
         Assert.False(invalidDevices);
-        Assert.Contains("superando la dotación máxima de 4 equipos", deviceError);
+        Assert.Contains("superando la dotación máxima de 3 equipos", deviceError);
     }
 
     [Fact]
     [Trait("Category", "BDD")]
-    public void Given_urbano_plan_when_validating_capacity_then_accepts_up_to_80_units_and_6_devices()
+    public void Given_urbano_plan_when_validating_capacity_then_accepts_up_to_80_units_and_5_devices()
     {
-        // Dado el plan Urbano con tope de 80 departamentos y 6 equipos en comodato
-        var urbano = new Plan("Urbano", "Plan HaaS Urbano", 700.00m);
+        // Dado el plan Urbano con tope de 80 departamentos y 5 equipos en comodato
+        var urbano = new Plan("Urbano", "Plan HaaS Urbano", 420.00m);
 
-        Assert.True(urbano.ValidateCapacity(25, 6, out _));
-        Assert.False(urbano.ValidateCapacity(85, 6, out var unitErr));
+        Assert.True(urbano.ValidateCapacity(60, 5, out _));
+        Assert.False(urbano.ValidateCapacity(85, 5, out var unitErr));
         Assert.Contains("superando el tope máximo de 80", unitErr);
+        Assert.False(urbano.ValidateCapacity(60, 6, out _));
+    }
+
+    [Fact]
+    [Trait("Category", "BDD")]
+    public void Given_catalog_prices_without_igv_when_computing_what_the_board_pays_then_igv_is_added()
+    {
+        // La junta de propietarios paga el precio del plan más 18% de IGV
+        Assert.Equal(413.00m, new Plan("Esencial", "", 350.00m).PriceWithIgv);
+        Assert.Equal(495.60m, new Plan("Urbano", "", 420.00m).PriceWithIgv);
+        Assert.Equal(767.00m, new Plan("GranTorre", "", 650.00m).PriceWithIgv);
+        Assert.Equal(24, new Plan("Urbano", "", 420.00m).ContractMonths);
     }
 }

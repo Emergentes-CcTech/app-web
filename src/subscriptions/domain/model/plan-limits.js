@@ -1,14 +1,18 @@
 /**
- * Planes HaaS por escala del condominio (número de departamentos). Precio en soles por condominio.
- * Cada plan incluye un kit de equipos IoT para las áreas comunes:
- * gateways + caudalímetros (agua) + pinzas CT (energía).
+ * Planes HaaS por escala del condominio (número de departamentos). Precio mensual en soles sin IGV, por condominio.
+ * Cada plan incluye un kit de equipos IoT no invasivos para las áreas comunes:
+ * gateway 4G + puntos de medición de agua + puntos de medición de energía (un tablero trifásico cada uno).
  */
 export const PLAN_TIERS = Object.freeze([
-  { code: 'boutique',   name: 'Boutique',   minUnits: 1,  maxUnits: 20, monthlyPen: 500,  kit: { gateways: 1, flowMeters: 1, ctClamps: 2 } },
-  { code: 'urbano',     name: 'Urbano',     minUnits: 21, maxUnits: 80, monthlyPen: 700,  kit: { gateways: 1, flowMeters: 2, ctClamps: 3 } },
+  { code: 'esencial',   name: 'Esencial',   minUnits: 1,  maxUnits: 40,  monthlyPen: 350, kit: { gateways: 1, flowMeters: 1, ctClamps: 1 } },
+  { code: 'urbano',     name: 'Urbano',     minUnits: 41, maxUnits: 80,  monthlyPen: 420, kit: { gateways: 1, flowMeters: 2, ctClamps: 2 } },
   // Gran Torre no tiene tope comercial ("más de 80"); 500 es el límite técnico que valida el backend al registrar un condominio
-  { code: 'gran-torre', name: 'Gran Torre', minUnits: 81, maxUnits: 500, monthlyPen: 1000, kit: { gateways: 2, flowMeters: 3, ctClamps: 5 }, openEnded: true },
+  { code: 'gran-torre', name: 'Gran Torre', minUnits: 81, maxUnits: 500, monthlyPen: 650, kit: { gateways: 1, flowMeters: 3, ctClamps: 3 }, openEnded: true },
 ]);
+
+/** La junta de propietarios paga el precio más IGV (no lo recupera como crédito fiscal) */
+export const IGV_RATE = 0.18;
+export const withIgv = (pen) => Math.round((Number(pen) || 0) * (1 + IGV_RATE) * 100) / 100;
 
 /** Máximo de departamentos que cubre el catálogo (Gran Torre) */
 export const MAX_PLAN_UNITS = PLAN_TIERS[PLAN_TIERS.length - 1].maxUnits;
@@ -20,7 +24,7 @@ const slugOf = (plan) => String(plan?.code ?? plan?.name ?? plan ?? '').trim().r
 
 export const findTier = (plan) => PLAN_TIERS.find(t => t.code === slugOf(plan)) ?? null;
 
-/** Plan que corresponde al número de departamentos; null si supera los 80 del catálogo */
+/** Plan que corresponde al número de departamentos; null si supera el límite técnico del catálogo */
 export function recommendedTier(totalUnits) {
   const units = Number(totalUnits) || 0;
   if (units > MAX_PLAN_UNITS) return null;

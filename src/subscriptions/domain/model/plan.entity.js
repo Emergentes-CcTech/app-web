@@ -1,4 +1,4 @@
-import { findTier, kitTotal } from './plan-limits.js';
+import { findTier, kitTotal, withIgv } from './plan-limits.js';
 
 /**
  * Plan Entity — plan HaaS por escala de condominio (RF-014).
@@ -22,13 +22,16 @@ export class Plan {
         this.features = Array.isArray(parsed) ? parsed : [];
         this.minUnits = Number(minUnits ?? tier?.minUnits ?? 1) || 1;
         this.maxUnits = Number(maxUnits ?? tier?.maxUnits ?? 0) || 0;
-        // Kit de equipos incluido: gateways + caudalímetros + pinzas CT
+        // Kit de equipos incluido: gateway + puntos de medición de agua + puntos de medición de energía
         this.kit = kit ?? tier?.kit ?? { gateways: 0, flowMeters: 0, ctClamps: 0 };
         this.supportLevel = supportLevel;
     }
 
-    /** Total de equipos del kit (Boutique 4, Urbano 6, Gran Torre 10) */
+    /** Total de equipos del kit (Esencial 3, Urbano 5, Gran Torre 7) */
     get hardwareIncluded() { return kitTotal(this.kit); }
+
+    /** Lo que paga la junta al mes: precio del plan más IGV */
+    get monthlyPenWithIgv() { return withIgv(this.monthlyPen); }
 
     getFormattedPrice() { return `S/ ${this.monthlyPen.toLocaleString('es-PE')}`; }
     get unitsRangeLabel() { return `${this.minUnits}-${this.maxUnits}`; }

@@ -101,7 +101,7 @@ const openInvoicesDialog = async () => {
       invoices.value = [{
         id: `in_sub_${store.currentSubscription.id}`,
         description: t('subscriptions.invoice-plan-description', { planName: store.currentPlan.name }),
-        amount: store.currentPlan.price,
+        amount: store.currentPlan.monthlyPenWithIgv,
         currency: 'PEN',
         status: store.currentSubscription.status === 'active' ? 'paid' : store.currentSubscription.status,
         date: formatInvoiceDate(store.currentSubscription.startDate),
