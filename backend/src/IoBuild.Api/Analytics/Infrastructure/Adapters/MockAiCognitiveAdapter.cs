@@ -49,6 +49,10 @@ public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveSe
         water.Add(leaks.Count > 0
             ? $"Se detectó flujo nocturno sobre el umbral de {f.NightFlowThresholdM3H.ToString("F2", Num)} m3/h entre 01:00 y 04:00 ({leaks.Count} vez/veces), con un sobrecosto estimado de {Pen(leaks.Sum(a => a.EstimatedOvercostSoles))}."
             : $"No se superó el umbral de fuga nocturna de {f.NightFlowThresholdM3H.ToString("F2", Num)} m3/h entre 01:00 y 04:00.");
+        // Detección estadística: noches fuera de la línea base propia del edificio
+        var unusualNights = f.Alerts.Where(a => a.Type == "StatisticalNightFlow").ToList();
+        if (unusualNights.Count > 0)
+            water.Add($"La detección estadística marcó {unusualNights.Count} noche(s) con un flujo mínimo por encima de lo normal para este edificio, con un sobrecosto estimado de {Pen(unusualNights.Sum(a => a.EstimatedOvercostSoles))} por día.");
 
         var energy = new List<string> { $"Energía de áreas comunes medida por IoBuild: {Kwh(f.Consumption.EnergyKwh)}{Versus(f.Consumption.EnergyKwh, f.PreviousConsumption.EnergyKwh, previousMonth, Kwh)}." };
         if (f.Bill is not null)
@@ -57,6 +61,9 @@ public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveSe
         energy.Add(overloads.Count > 0
             ? $"Las bombas registraron {overloads.Count} sobrecarga(s) sobre su línea base, con un sobrecosto estimado de {Pen(overloads.Sum(a => a.EstimatedOvercostSoles))}."
             : "Las bombas y tableros no registraron sobrecargas sobre su línea base.");
+        var pumpNights = f.Alerts.Where(a => a.Type == "PumpNightRuntime").ToList();
+        if (pumpNights.Count > 0)
+            energy.Add($"Las bombas trabajaron de madrugada más de lo normal en {pumpNights.Count} noche(s): señal de que la cisterna se vacía sin uso.");
 
         string aliquot;
         if (f.AliquotPercentage is { } pct && f.UnitNumber is not null)
@@ -80,6 +87,8 @@ public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveSe
             recommendations.Add("Revisar filtraciones en las líneas de impulsión hacia las áreas comunes.");
         }
         if (overloads.Count > 0) recommendations.Add("Programar mantenimiento eléctrico y mecánico de las bombas.");
+        if ((unusualNights.Count > 0 || pumpNights.Count > 0) && leaks.Count == 0)
+            recommendations.Add("Revisar de madrugada si corre agua en la cisterna o en las montantes: el patrón nocturno se salió de lo normal del edificio.");
         if (f.Bill is not null && f.Bill.WaterM3 > 0 && f.Bill.WaterLossM3 / f.Bill.WaterM3 > 0.10m)
             recommendations.Add("Revisar la diferencia entre el recibo de Sedapal y lo medido: supera el 10%.");
         if (recommendations.Count == 0) recommendations.Add("Mantener la revisión mensual de la cisterna y la alternancia de las bombas.");

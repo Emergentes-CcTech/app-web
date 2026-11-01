@@ -125,6 +125,9 @@ builder.Services.AddScoped<IAiCognitiveService>(services =>
         ? services.GetRequiredService<MockAiCognitiveAdapter>()
         : services.GetRequiredService<GeminiCognitiveAdapter>());
 builder.Services.AddScoped<IAnomalyDetectionEngine, AnomalyDetectionEngine>();
+// Detección estadística: línea base nocturna por edificio (complementa las reglas de umbral fijo)
+builder.Services.AddScoped<StatisticalAnomalyDetector>();
+builder.Services.AddHostedService<IoBuild.Api.Analytics.Application.Internal.StatisticalDetectionWorker>();
 builder.Services.AddScoped<IProrationSettlementService, ProrationSettlementService>();
 builder.Services.AddScoped<DeviceCommandService>();
 builder.Services.AddScoped<DeviceTelemetryService>();
