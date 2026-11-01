@@ -11,7 +11,9 @@ public sealed record AiExplanationDto(
     List<string> Recommendations,
     bool HasAnomalies,
     // "rules" cuando lo redactan las reglas; "gemini" cuando lo redacta el modelo a partir de esos mismos hechos
-    string Source = "rules");
+    string Source = "rules",
+    // Periodo explicado (yyyy-MM): si no se pide uno, el de la última cuota o recibo emitido
+    string? Period = null);
 
 /// <summary>
 /// Contrato del dominio para servicios cognitivos de análisis de consumo.

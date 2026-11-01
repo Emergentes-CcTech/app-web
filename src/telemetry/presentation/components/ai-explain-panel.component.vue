@@ -17,8 +17,6 @@ const answer = ref(null);
 const loading = ref(false);
 const failed = ref(false);
 
-const now = new Date();
-const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 const suggestions = computed(() => [1, 2, 3].map(i => t(`ai.suggestions.${props.audience}.${i}`)));
 
 async function ask(text = question.value) {
@@ -31,7 +29,8 @@ async function ask(text = question.value) {
     const { data } = await api.explainConsumption({
       projectId: props.condominiumId,
       unitId: props.unitId ?? null,
-      billingPeriod: period,
+      // Sin periodo: el backend explica la última cuota o el último recibo emitido
+      billingPeriod: null,
       question: q,
       language: locale.value === 'en' ? 'en' : 'es'
     });
@@ -42,6 +41,11 @@ async function ask(text = question.value) {
     loading.value = false;
   }
 }
+
+const periodLabel = computed(() => {
+  const [y, m] = String(answer.value?.period || '').split('-').map(Number);
+  return y && m ? new Date(y, m - 1, 1).toLocaleDateString(locale.value === 'en' ? 'en-US' : 'es-PE', { month: 'long', year: 'numeric' }) : '';
+});
 
 watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; question.value = ''; });
 </script>
@@ -66,6 +70,7 @@ watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; qu
     <pv-message v-if="failed" severity="warn" :closable="false">{{ t('ai.error') }}</pv-message>
 
     <div v-if="answer" class="ai-answer" aria-live="polite">
+      <span v-if="periodLabel" class="period"><i class="pi pi-calendar" aria-hidden="true" /> {{ t('ai.period', { period: periodLabel }) }}</span>
       <p class="summary">{{ answer.summary }}</p>
       <dl>
         <div><dt><i class="pi pi-filter" aria-hidden="true" /> {{ t('ai.water') }}</dt><dd>{{ answer.waterAnalysis }}</dd></div>
@@ -95,6 +100,7 @@ watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; qu
 .chip:hover:not(:disabled) { background: #D1FAE5; }
 .chip:disabled { opacity: .6; cursor: not-allowed; }
 .ai-answer { display: flex; flex-direction: column; gap: .75rem; border-top: 1px solid #f1f5f9; padding-top: .9rem; }
+.period { font-size: .78rem; color: #047857; font-weight: 600; display: inline-flex; gap: .35rem; align-items: center; }
 .summary { margin: 0; font-weight: 600; color: #0f172a; line-height: 1.5; }
 dl { margin: 0; display: grid; gap: .6rem; }
 dt { font-weight: 600; font-size: .85rem; color: #334155; display: flex; align-items: center; gap: .4rem; }
