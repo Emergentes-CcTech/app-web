@@ -127,6 +127,7 @@ builder.Services.AddScoped<IAiCognitiveService>(services =>
 builder.Services.AddScoped<IAnomalyDetectionEngine, AnomalyDetectionEngine>();
 // Detección estadística: línea base nocturna por edificio (complementa las reglas de umbral fijo)
 builder.Services.AddScoped<StatisticalAnomalyDetector>();
+builder.Services.AddScoped<IoBuild.Api.Analytics.Application.Internal.DemoNightHistorySeeder>();
 builder.Services.AddHostedService<IoBuild.Api.Analytics.Application.Internal.StatisticalDetectionWorker>();
 builder.Services.AddScoped<IProrationSettlementService, ProrationSettlementService>();
 builder.Services.AddScoped<DeviceCommandService>();

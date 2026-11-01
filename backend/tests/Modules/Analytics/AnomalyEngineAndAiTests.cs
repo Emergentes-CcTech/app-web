@@ -130,6 +130,10 @@ public sealed class AnomalyEngineAndAiTests
         Assert.NotNull(alert);
         Assert.Equal("GatewayOfflineInBasement", alert.AlertType);
         Assert.Equal("Warning", alert.Severity);
+
+        // Mientras la alerta siga abierta, volver a evaluar no crea otra
+        Assert.Null(await engine.EvaluateGatewayHeartbeatAsync(device, DateTimeOffset.UtcNow.AddMinutes(5), TimeSpan.FromMinutes(15)));
+        Assert.Equal(1, await db.AnomalyAlerts.CountAsync());
     }
 
     [Fact]

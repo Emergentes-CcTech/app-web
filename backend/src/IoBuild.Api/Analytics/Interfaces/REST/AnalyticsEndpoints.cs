@@ -59,6 +59,16 @@ public static class AnalyticsEndpoints
             return Results.Ok(await detector.EvaluateProjectAsync(projectId, DateTimeOffset.UtcNow, raiseAlerts: false, ct));
         }).RequireAuthorization();
 
+        // Solo demostraciones (Demo:Enabled): noches históricas para que el detector estadístico tenga línea base
+        group.MapPost("/projects/{projectId:int}/demo/night-history", async (int projectId, System.Security.Claims.ClaimsPrincipal user, IConfiguration configuration, IoBuildDbContext db, IoBuild.Api.Analytics.Application.Internal.DemoNightHistorySeeder seeder, CancellationToken ct) =>
+        {
+            if (!configuration.GetValue("Demo:Enabled", false)) return Results.NotFound();
+            var self = SelfId(user);
+            if (!await db.Projects.AnyAsync(p => p.Id == projectId && p.BuilderId == self, ct)) return Results.Forbid();
+            var result = await seeder.SeedAsync(projectId, ct);
+            return result is null ? Results.BadRequest(new { error = "El condominio no tiene medidor de ingreso de agua ni de bombas." }) : Results.Ok(result);
+        }).RequireAuthorization();
+
         // Resolución de una alerta de anomalía operativa
         group.MapPost("/projects/{projectId:int}/alerts/{alertId:int}/resolve", async (int projectId, int alertId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
