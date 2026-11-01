@@ -992,7 +992,7 @@
   },
   "ai": {
     "title": "Ask IoBuild",
-    "subtitle": "Explains this month's consumption in plain language. Alerts are detected by rules; AI only explains them.",
+    "subtitle": "Explains the latest fee or bill issued in plain language. Alerts are detected by rules; AI only explains them.",
     "placeholder": "Type your question about this month's consumption",
     "ask": "Ask",
     "error": "The explanation could not be loaded. Try again in a few seconds.",
@@ -1014,6 +1014,7 @@
         "3": "Was there any leak in the building?"
       }
     },
-    "aliquotAdmin": "Split by aliquot"
+    "aliquotAdmin": "Split by aliquot",
+    "period": "Period explained: {period}"
   }
 }

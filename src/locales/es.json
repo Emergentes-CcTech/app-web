@@ -992,7 +992,7 @@
   },
   "ai": {
     "title": "Pregúntale a IoBuild",
-    "subtitle": "Explica el consumo del mes con lenguaje simple. Las alertas las detectan las reglas; la IA solo las explica.",
+    "subtitle": "Explica la última cuota o recibo emitido con lenguaje simple. Las alertas las detectan las reglas; la IA solo las explica.",
     "placeholder": "Escribe tu pregunta sobre el consumo de este mes",
     "ask": "Preguntar",
     "error": "No se pudo obtener la explicación. Inténtalo de nuevo en unos segundos.",
@@ -1014,6 +1014,7 @@
         "3": "¿Hubo alguna fuga en el edificio?"
       }
     },
-    "aliquotAdmin": "Reparto por alícuota"
+    "aliquotAdmin": "Reparto por alícuota",
+    "period": "Periodo explicado: {period}"
   }
 }

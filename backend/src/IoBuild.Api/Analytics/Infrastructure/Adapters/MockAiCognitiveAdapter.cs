@@ -1,123 +1,122 @@
+using System.Globalization;
+using IoBuild.Api.Analytics.Application.Internal.QueryServices;
 using IoBuild.Api.Analytics.Domain.Services;
 using IoBuild.Api.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace IoBuild.Api.Analytics.Infrastructure.Adapters;
 
 /// <summary>
-/// Adaptador simulado determinístico para el servicio cognitivo de análisis de consumo.
-/// Construye diagnósticos basados en datos reales de telemetría, series temporales (ConsumptionRecord) y prorrateo legal (Ley N.° 27157).
+/// Explicación determinística del consumo del periodo: compara con el mes anterior, el recibo matriz, las alertas
+/// del motor de reglas y la cuota del departamento (Ley N.° 27157). También es el respaldo del adaptador de Gemini.
 /// </summary>
 public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveService
 {
-    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es")
+    private static readonly CultureInfo Es = CultureInfo.GetCultureInfo("es-PE");
+    private static readonly CultureInfo Num = CultureInfo.InvariantCulture;
+
+    public Task<ConsumptionFacts> BuildFactsAsync(int projectId, int? unitId, string? billingPeriod) =>
+        new ConsumptionFactsBuilder(db).BuildAsync(projectId, unitId, billingPeriod);
+
+    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es") =>
+        Render(await BuildFactsAsync(projectId, unitId, billingPeriod));
+
+    public static AiExplanationDto Render(ConsumptionFacts f)
     {
-        var project = await db.Projects.FindAsync([projectId]);
-        var projectName = project?.Name ?? $"Condominio #{projectId}";
+        var month = MonthName(f.Period);
+        var previousMonth = MonthName(f.PreviousPeriod);
+        var unitLabel = f.UnitNumber is null ? string.Empty : $" para el Departamento {f.UnitNumber}";
+        var progress = f.PeriodInProgress ? $" (mes en curso, {f.Consumption.DaysWithData} días con lecturas)" : string.Empty;
 
-        // Determina el rango de fechas para el periodo mensual de facturación (ej. "2026-10")
-        var startDate = DateTime.UtcNow.AddDays(-30);
-        var endDate = DateTime.UtcNow;
-        if (!string.IsNullOrWhiteSpace(billingPeriod))
+        // Resumen: primero la cuota (lo que pregunta el residente), luego qué la movió
+        var summary = new List<string> { $"{f.ProjectName}{unitLabel}, {month}{progress}." };
+        if (f.UnitNumber is not null)
         {
-            var parts = billingPeriod.Split('-');
-            if (parts.Length >= 2 && int.TryParse(parts[0], out var year) && int.TryParse(parts[1], out var month))
-            {
-                startDate = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-                endDate = startDate.AddMonths(1).AddTicks(-1);
-            }
+            if (f.Statement is null)
+                summary.Add($"Aún no se emitió la cuota de {month} para el Departamento {f.UnitNumber}.");
+            else if (f.PreviousStatement is null)
+                summary.Add($"Su cuota fue {Pen(f.Statement.TotalSoles)}; no hay cuota de {previousMonth} para comparar.");
+            else
+                summary.Add($"Su cuota fue {Pen(f.Statement.TotalSoles)} frente a {Pen(f.PreviousStatement.TotalSoles)} en {previousMonth} ({Change(f.Statement.TotalSoles, f.PreviousStatement.TotalSoles)}), principalmente por {MainDriver(f.Statement, f.PreviousStatement)}.");
         }
+        summary.Add(f.HasActiveAnomalies
+            ? $"Hay {f.Alerts.Count(a => a.Status == "Active")} alerta(s) activa(s) con un sobrecosto estimado de {Pen(f.ActiveOvercostSoles)}."
+            : "No hay alertas activas en el periodo.");
 
-        // Consulta de series temporales de consumo en áreas comunes del periodo
-        var consumptionRecords = await db.ConsumptionRecords
-            .Where(r => r.ProjectId == projectId && r.TimestampUtc >= startDate && r.TimestampUtc <= endDate)
-            .ToListAsync();
+        var water = new List<string> { $"Agua de áreas comunes medida por IoBuild: {M3(f.Consumption.WaterM3)}{Versus(f.Consumption.WaterM3, f.PreviousConsumption.WaterM3, previousMonth, M3)}." };
+        if (f.Bill is not null)
+            water.Add($"Recibo matriz de Sedapal: {M3((double)f.Bill.WaterM3)} por {Pen(f.Bill.WaterSoles)}; diferencia entre lo facturado y lo medido: {M3((double)f.Bill.WaterLossM3)}.");
+        var leaks = f.Alerts.Where(a => a.Type == "NocturnalWaterLeak").ToList();
+        water.Add(leaks.Count > 0
+            ? $"Se detectó flujo nocturno sobre el umbral de {f.NightFlowThresholdM3H.ToString("F2", Num)} m3/h entre 01:00 y 04:00 ({leaks.Count} vez/veces), con un sobrecosto estimado de {Pen(leaks.Sum(a => a.EstimatedOvercostSoles))}."
+            : $"No se superó el umbral de fuga nocturna de {f.NightFlowThresholdM3H.ToString("F2", Num)} m3/h entre 01:00 y 04:00.");
 
-        var totalWaterM3 = consumptionRecords
-            .Where(r => r.MetricType == "WaterM3" || r.Subsystem == "MainCistern")
-            .Select(r => r.Value)
-            .DefaultIfEmpty(0.0)
-            .Max(); // Lectura acumulada máxima del periodo
+        var energy = new List<string> { $"Energía de áreas comunes medida por IoBuild: {Kwh(f.Consumption.EnergyKwh)}{Versus(f.Consumption.EnergyKwh, f.PreviousConsumption.EnergyKwh, previousMonth, Kwh)}." };
+        if (f.Bill is not null)
+            energy.Add($"Recibo matriz de Luz del Sur: {Kwh((double)f.Bill.EnergyKwh)} por {Pen(f.Bill.EnergySoles)}.");
+        var overloads = f.Alerts.Where(a => a.Type == "PumpElectricalOverload").ToList();
+        energy.Add(overloads.Count > 0
+            ? $"Las bombas registraron {overloads.Count} sobrecarga(s) sobre su línea base, con un sobrecosto estimado de {Pen(overloads.Sum(a => a.EstimatedOvercostSoles))}."
+            : "Las bombas y tableros no registraron sobrecargas sobre su línea base.");
 
-        var totalEnergyKwh = consumptionRecords
-            .Where(r => r.MetricType == "EnergyKwh" || r.Subsystem == "PressurePumpsRoom" || r.Subsystem == "ElevatorsBank" || r.Subsystem == "GeneralElectricalPanel")
-            .Select(r => r.Value)
-            .DefaultIfEmpty(0.0)
-            .Max();
-
-        // Consulta de alertas de anomalías activas del condominio registradas en el periodo
-        var periodAlerts = await db.AnomalyAlerts
-            .Where(alert => alert.ProjectId == projectId && alert.DetectedAtUtc >= startDate && alert.DetectedAtUtc <= endDate)
-            .OrderByDescending(alert => alert.DetectedAtUtc)
-            .ToListAsync();
-
-        // Consulta del umbral nocturno configurado para los caudalímetros del condominio
-        var waterSensor = await db.Devices.FirstOrDefaultAsync(d => d.ProjectId == projectId && d.Type == "WaterFlowSensor");
-        var nightThreshold = waterSensor?.NightFlowThresholdM3H ?? 0.1500m;
-
-        // Filtra únicamente anomalías activas para el cómputo de sobrecostos no resueltos
-        var waterLeakAlerts = periodAlerts.Where(a => a.AlertType == "NocturnalWaterLeak" && a.Status == "Active").ToList();
-        var overloadAlerts = periodAlerts.Where(a => a.AlertType == "PumpElectricalOverload" && a.Status == "Active").ToList();
-
-        var waterLeakOvercost = waterLeakAlerts.Sum(a => a.EstimatedOvercostSoles);
-        var overloadOvercost = overloadAlerts.Sum(a => a.EstimatedOvercostSoles);
-        var totalOvercost = waterLeakOvercost + overloadOvercost;
-
-        var hasNightLeak = waterLeakAlerts.Count > 0;
-        var hasOverload = overloadAlerts.Count > 0;
-        var hasActiveAnomalies = periodAlerts.Any(a => a.Status == "Active");
-
-        var unitContext = string.Empty;
-        var aliquotImpact = "El costo de las áreas comunes se distribuye entre los departamentos según su alícuota legal (Ley N.° 27157).";
-
-        if (unitId.HasValue)
+        string aliquot;
+        if (f.AliquotPercentage is { } pct && f.UnitNumber is not null)
         {
-            var unit = await db.Units.FindAsync([unitId.Value]);
-            if (unit is not null && unit.ProjectId == projectId)
-            {
-                unitContext = $" para el Departamento {unit.UnitNumber} (Alícuota: {unit.AliquotPercentage:F4}%)";
-                var unitOvercost = totalOvercost * (unit.AliquotPercentage / 100m);
-                aliquotImpact = $"Para su departamento ({unit.UnitNumber}), su alícuota legal de {unit.AliquotPercentage:F4}% representa un impacto estimado de S/ {unitOvercost:F2} sobre el sobrecosto comunal reportado este mes.";
-            }
+            var share = f.Bill is null ? string.Empty : $" del gasto común de {Pen(f.Bill.TotalCommonExpenseSoles)}, es decir {Pen(f.Bill.TotalCommonExpenseSoles * pct / 100m)}";
+            var detail = f.Statement is null ? string.Empty : $" Su cuota se compone de agua {Pen(f.Statement.WaterSoles)}, luz {Pen(f.Statement.EnergySoles)} y otros gastos {Pen(f.Statement.OtherSoles)}.";
+            var overcost = f.ActiveOvercostSoles > 0 ? $" De las alertas activas le corresponderían {Pen(f.ActiveOvercostSoles * pct / 100m)}." : string.Empty;
+            aliquot = $"Con su alícuota legal de {pct.ToString("F4", Num)}%, al Departamento {f.UnitNumber} le corresponde ese porcentaje{share}.{detail}{overcost}";
         }
-
-        var summary = $"Análisis de consumo para {projectName}{unitContext} correspondiente al periodo {billingPeriod}. " +
-            (hasNightLeak ? "Se identificó flujo nocturno anómalo en cisterna durante la madrugada." : "Consumo hídrico y eléctrico comunal dentro de parámetros operativos normales.");
-
-        var waterAnalysis = hasNightLeak
-            ? $"Se identificó fuga nocturna continua (> {nightThreshold:F2} m3/h) en el subsistema de Cisterna entre 01:00 y 04:00 AM, generando un sobrecosto estimado acumulado de S/ {waterLeakOvercost:F2}."
-            : $"El caudalímetro no invasivo de la cisterna reportó estabilidad sin superar el umbral nocturno de {nightThreshold:F2} m3/h (01:00 a 04:00 AM). Consumo hídrico acumulado: {totalWaterM3:F2} m3.";
-
-        var energyAnalysis = hasOverload
-            ? $"El transformador de corriente CT en el Cuarto de Bombas Hidroneumáticas registró sobrecargas eléctricas superiores al 25% sobre la línea base, con sobrecosto estimado de S/ {overloadOvercost:F2}."
-            : $"Los tableros generales, banco de ascensores e iluminación mantuvieron consumos estables dentro de la línea base esperada. Consumo eléctrico acumulado: {totalEnergyKwh:F2} kWh.";
+        else
+        {
+            aliquot = f.Bill is null
+                ? "El gasto común se reparte entre los departamentos según su alícuota legal (Ley N.° 27157)."
+                : $"El gasto común de {Pen(f.Bill.TotalCommonExpenseSoles)} se reparte entre los {f.TotalUnits} departamentos según su alícuota legal (Ley N.° 27157).";
+        }
 
         var recommendations = new List<string>();
-        if (hasNightLeak)
+        if (leaks.Count > 0)
         {
-            recommendations.Add("Inspeccionar boyas y válvulas de llenado de la cisterna principal en el sótano.");
-            recommendations.Add("Revisar posibles filtraciones en las líneas matrices de impulsión hacia la red común.");
+            recommendations.Add("Inspeccionar boyas y válvulas de llenado de la cisterna principal.");
+            recommendations.Add("Revisar filtraciones en las líneas de impulsión hacia las áreas comunes.");
         }
-        else
-        {
-            recommendations.Add("Mantener la calibración y lectura periódica del caudalímetro en cisterna.");
-        }
-
-        if (hasOverload)
-        {
-            recommendations.Add("Programar mantenimiento mecánico y eléctrico a las bombas hidroneumáticas.");
-        }
-        else
-        {
-            recommendations.Add("Continuar con el régimen de alternancia automática de bombas hidroneumáticas.");
-        }
+        if (overloads.Count > 0) recommendations.Add("Programar mantenimiento eléctrico y mecánico de las bombas.");
+        if (f.Bill is not null && f.Bill.WaterM3 > 0 && f.Bill.WaterLossM3 / f.Bill.WaterM3 > 0.10m)
+            recommendations.Add("Revisar la diferencia entre el recibo de Sedapal y lo medido: supera el 10%.");
+        if (recommendations.Count == 0) recommendations.Add("Mantener la revisión mensual de la cisterna y la alternancia de las bombas.");
 
         return new AiExplanationDto(
-            Summary: summary,
-            WaterAnalysis: waterAnalysis,
-            EnergyAnalysis: energyAnalysis,
-            AliquotImpact: aliquotImpact,
-            Recommendations: recommendations,
-            HasAnomalies: hasActiveAnomalies);
+            string.Join(" ", summary),
+            string.Join(" ", water),
+            string.Join(" ", energy),
+            aliquot,
+            recommendations,
+            f.HasActiveAnomalies,
+            Period: f.Period);
+    }
+
+    private static string MonthName(string period) =>
+        DateTime.TryParseExact(period + "-01", "yyyy-MM-dd", Num, DateTimeStyles.None, out var d) ? d.ToString("MMMM 'de' yyyy", Es) : period;
+
+    private static string Pen(decimal amount) => $"S/ {amount.ToString("N2", Num)}";
+    private static string M3(double value) => $"{value.ToString("N2", Num)} m³";
+    private static string Kwh(double value) => $"{value.ToString("N2", Num)} kWh";
+
+    private static string Change(decimal current, decimal previous) =>
+        previous == 0 ? "sin base de comparación" : $"{(current >= previous ? "+" : "")}{((current - previous) / previous * 100m).ToString("F1", Num)}%";
+
+    private static string Versus(double current, double previous, string previousMonth, Func<double, string> unit) =>
+        previous <= 0 ? $" (sin lecturas de {previousMonth} para comparar)" : $", frente a {unit(previous)} en {previousMonth} ({Change((decimal)current, (decimal)previous)})";
+
+    // El componente de la cuota que más cambió explica la variación
+    private static string MainDriver(StatementFact current, StatementFact previous)
+    {
+        var deltas = new[]
+        {
+            ("el agua", current.WaterSoles - previous.WaterSoles),
+            ("la luz", current.EnergySoles - previous.EnergySoles),
+            ("otros gastos comunes", current.OtherSoles - previous.OtherSoles)
+        };
+        var (name, delta) = deltas.OrderByDescending(d => Math.Abs(d.Item2)).First();
+        return $"{name} ({(delta >= 0 ? "+" : "-")}{Pen(Math.Abs(delta))})";
     }
 }

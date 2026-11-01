@@ -11,7 +11,7 @@ namespace IoBuild.Api.Analytics.Interfaces.REST;
 /// <summary>
 /// Solicitud de análisis cognitivo de consumos y variaciones para el asistente AI.
 /// </summary>
-public sealed record AiExplanationRequest(int ProjectId, int? UnitId, string BillingPeriod, string? Question = null, string? Language = null);
+public sealed record AiExplanationRequest(int ProjectId, int? UnitId, string? BillingPeriod = null, string? Question = null, string? Language = null);
 
 /// <summary>
 /// Endpoints REST para el contexto de Analytics (métricas comunales, alertas de anomalías y diagnóstico AI).
@@ -22,17 +22,9 @@ public static class AnalyticsEndpoints
     private static int SelfId(System.Security.Claims.ClaimsPrincipal user) =>
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
 
-    // La cisterna tiene medidor de ingreso (Sedapal) y de impulsión; sumar ambos duplicaría el agua.
-    // Cuenta el de ingreso (sufijo -IN del kit HaaS), que es el que se concilia con el recibo matriz.
-    private static async Task<List<int>> NonIntakeWaterSensorIdsAsync(IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct)
-    {
-        var waterSensors = await db.Devices
-            .Where(d => d.ProjectId == projectId && d.Type == "WaterFlowSensor")
-            .Select(d => new { d.Id, d.Name })
-            .ToListAsync(ct);
-        var intakeIds = waterSensors.Where(d => d.Name.EndsWith("-IN", StringComparison.OrdinalIgnoreCase)).Select(d => d.Id).ToList();
-        return intakeIds.Count > 0 ? waterSensors.Select(d => d.Id).Except(intakeIds).ToList() : new List<int>();
-    }
+    // Solo cuenta el medidor de ingreso de la cisterna (ver ConsumptionFactsBuilder)
+    private static Task<List<int>> NonIntakeWaterSensorIdsAsync(IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct) =>
+        IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.NonIntakeWaterSensorIdsAsync(db, projectId, ct);
 
     // Valida que el usuario tenga acceso al condominio (Administrador o Residente)
     private static async Task<bool> MaySeeProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuild.Api.Persistence.IoBuildDbContext db, int projectId, CancellationToken ct)
@@ -164,7 +156,7 @@ public static class AnalyticsEndpoints
             var question = string.IsNullOrWhiteSpace(request.Question) ? "Explicar variación mensual" : request.Question.Trim();
             if (question.Length > 500) question = question[..500];
             var language = request.Language == "en" ? "en" : "es";
-            var result = await cognitive.ExplainConsumptionVariationAsync(request.ProjectId, request.UnitId, request.BillingPeriod, question, language);
+            var result = await cognitive.ExplainConsumptionVariationAsync(request.ProjectId, request.UnitId, request.BillingPeriod ?? string.Empty, question, language);
             return Results.Ok(result);
         }).RequireAuthorization();
 
