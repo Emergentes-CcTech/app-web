@@ -235,7 +235,29 @@
     "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos.",
     "unitsFrom": "Más de {min} departamentos",
     "plusIgv": "+ IGV",
-    "withIgv": "S/ {amount} con IGV"
+    "withIgv": "S/ {amount} con IGV",
+    "activation": {
+      "pill": "Activación del servicio",
+      "title": "Activa IoBuild en {name}",
+      "assigned": "Por sus {units} departamentos le corresponde el plan {plan}. El plan se asigna automáticamente y cambia si cambia el número de departamentos.",
+      "monthlyDetail": "{amount} al mes con IGV · {perUnit} por departamento",
+      "contract": "Contrato de {months} meses con los equipos en comodato",
+      "guaranteeTerm": "Garantía reembolsable de {months} cuotas: se devuelve al terminar el contrato",
+      "earlyExit": "Si se cancela antes, se paga el saldo pendiente de los equipos (se descuenta de la garantía)",
+      "todayTitle": "Pago de activación",
+      "firstFee": "Primera cuota (con IGV)",
+      "activationFee": "Cuota de activación: instalación (con IGV)",
+      "guarantee": "Garantía reembolsable (2 cuotas, sin IGV)",
+      "total": "Total a pagar hoy",
+      "payerHint": "El pago corresponde a la junta de propietarios del condominio; el comprobante se emite a su nombre.",
+      "cta": "Activar y pagar",
+      "unavailable": "No se pudo calcular la activación de este condominio. Revisa su número de departamentos.",
+      "assignedOnly": "El plan se asigna por el número de departamentos del condominio; solo puedes activar el que le corresponde."
+    },
+    "cancellation": {
+      "early": "Faltan {months} meses del contrato. Saldo pendiente de los equipos: {balance}. Se aplica la garantía de {guarantee}: quedan {due} por pagar y se devuelven {refund}. ¿Confirmas la cancelación?",
+      "completed": "El contrato ya se cumplió: no hay saldo de equipos y se devuelve la garantía de {refund}. ¿Confirmas la cancelación?"
+    }
   },
   "iam": {
     "logout": "Cerrar Sesión",

@@ -25,6 +25,9 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_RESTRICTED_API_KEY=${STRIPE_RESTRICTED_API_KEY:-}
       - STRIPE_USE_SIMULATED_PAYMENTS=${STRIPE_USE_SIMULATED_PAYMENTS:-true}
+      # Checkout de suscripciones: lee Stripe:RestrictedApiKey y Stripe:UseSimulatedPayments
+      - Stripe__RestrictedApiKey=${STRIPE_RESTRICTED_API_KEY:-}
+      - Stripe__UseSimulatedPayments=${STRIPE_USE_SIMULATED_PAYMENTS:-true}
     depends_on:
       mysql-monolith:
         condition: service_healthy

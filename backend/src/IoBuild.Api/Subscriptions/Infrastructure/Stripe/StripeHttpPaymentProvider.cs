@@ -53,6 +53,9 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
             string name;
             long amountInCents;
             string description;
+            // Pago de activación: además de la primera cuota se cobran la activación (instalación) y la garantía
+            long activationInCents = 0;
+            long guaranteeInCents = 0;
 
             if (serviceProvider != null)
             {
@@ -64,6 +67,8 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                     name = plan.Name;
                     // La junta paga el precio con IGV
                     amountInCents = (long)(plan.PriceWithIgv * 100);
+                    activationInCents = (long)(plan.ActivationFeeWithIgv * 100);
+                    guaranteeInCents = (long)(plan.Guarantee * 100);
                     description = plan.Description;
                 }
                 else
@@ -97,6 +102,19 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                 ["metadata[builder_id]"] = request.BuilderId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["metadata[plan_id]"] = request.PlanId.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
+            var line = 1;
+            void AddLine(long cents, string itemName, string itemDescription)
+            {
+                if (cents <= 0) return;
+                formFields[$"line_items[{line}][quantity]"] = "1";
+                formFields[$"line_items[{line}][price_data][currency]"] = currency;
+                formFields[$"line_items[{line}][price_data][unit_amount]"] = cents.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                formFields[$"line_items[{line}][price_data][product_data][name]"] = itemName;
+                formFields[$"line_items[{line}][price_data][product_data][description]"] = itemDescription;
+                line++;
+            }
+            AddLine(activationInCents, "Cuota de activación", "Instalación no invasiva del kit IoT (pago único)");
+            AddLine(guaranteeInCents, "Garantía reembolsable", "Dos cuotas sin IGV; se devuelve o se aplica al terminar el contrato de 24 meses");
         }
 
         using var body = new FormUrlEncodedContent(formFields);

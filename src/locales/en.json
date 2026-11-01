@@ -235,7 +235,29 @@
     "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments.",
     "unitsFrom": "More than {min} units",
     "plusIgv": "+ VAT",
-    "withIgv": "S/ {amount} incl. VAT"
+    "withIgv": "S/ {amount} incl. VAT",
+    "activation": {
+      "pill": "Service activation",
+      "title": "Activate IoBuild at {name}",
+      "assigned": "With {units} units, this condominium gets the {plan} plan. The plan is assigned automatically and changes if the number of units changes.",
+      "monthlyDetail": "{amount} per month incl. VAT · {perUnit} per unit",
+      "contract": "{months}-month contract with loaned equipment",
+      "guaranteeTerm": "Refundable deposit of {months} fees: returned when the contract ends",
+      "earlyExit": "Cancelling early means paying the remaining equipment balance (deducted from the deposit)",
+      "todayTitle": "Activation payment",
+      "firstFee": "First fee (incl. VAT)",
+      "activationFee": "Activation fee: installation (incl. VAT)",
+      "guarantee": "Refundable deposit (2 fees, no VAT)",
+      "total": "Total due today",
+      "payerHint": "The payment belongs to the condominium's owners' board; the receipt is issued in its name.",
+      "cta": "Activate and pay",
+      "unavailable": "The activation for this condominium could not be calculated. Check its number of units.",
+      "assignedOnly": "The plan is assigned by the condominium's number of units; you can only activate the one that applies."
+    },
+    "cancellation": {
+      "early": "{months} months of the contract remain. Remaining equipment balance: {balance}. The {guarantee} deposit is applied: {due} remains to be paid and {refund} is refunded. Confirm the cancellation?",
+      "completed": "The contract is complete: there is no equipment balance and the {refund} deposit is refunded. Confirm the cancellation?"
+    }
   },
   "iam": {
     "logout": "Log Out",

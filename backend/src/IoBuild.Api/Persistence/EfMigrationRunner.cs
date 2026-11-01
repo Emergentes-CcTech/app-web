@@ -165,6 +165,37 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 if (shouldClose) await connection.CloseAsync();
             }
 
+            // Contrato HaaS: garantía, cuota de activación y liquidación de salida anticipada
+            var existingSubscriptionColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (shouldClose) await connection.OpenAsync(cancellationToken);
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscriptions';";
+                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    existingSubscriptionColumns.Add(reader.GetString(0));
+                }
+            }
+            finally
+            {
+                if (shouldClose) await connection.CloseAsync();
+            }
+            foreach (var (colName, colType) in new (string Name, string Type)[]
+            {
+                ("GuaranteeSoles", "DECIMAL(18,2) NOT NULL DEFAULT 0"),
+                ("ActivationFeeSoles", "DECIMAL(18,2) NOT NULL DEFAULT 0"),
+                ("EarlyTerminationFeeSoles", "DECIMAL(18,2) NULL"),
+                ("GuaranteeRefundSoles", "DECIMAL(18,2) NULL")
+            })
+            {
+                if (!existingSubscriptionColumns.Contains(colName))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync($"ALTER TABLE subscriptions ADD COLUMN {colName} {colType};", cancellationToken);
+                }
+            }
+
             // Asegura la existencia de la tabla de áreas comunes para el contexto Cadastre
             if (shouldClose) await connection.OpenAsync(cancellationToken);
             try

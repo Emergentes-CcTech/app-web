@@ -121,7 +121,7 @@ internal static class CoreBusinessTestSupport
     private sealed class FakePaymentProvider : IPaymentProvider
     {
         public Task<PaymentCheckoutSession?> CreateCheckoutSessionAsync(PaymentCheckoutRequest request, StripeIntegrationOptions options, CancellationToken cancellationToken = default) => Task.FromResult<PaymentCheckoutSession?>(new("cs_fake", "https://checkout.example/cs_fake", 1200));
-        public Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default) => Task.FromResult<PaymentSessionConfirmation?>(new(sessionId, "confirmed", 7, 3));
+        public Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default) => Task.FromResult<PaymentSessionConfirmation?>(new(sessionId, "paid", 7, 3));
         public Task<IReadOnlyList<PaymentInvoice>?> GetInvoicesAsync(int builderId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PaymentInvoice>?>([new PaymentInvoice("in_fake", "paid", 1200)]);
     }
 }

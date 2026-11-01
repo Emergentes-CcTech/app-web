@@ -88,6 +88,63 @@ public sealed class Plan
     [NotMapped]
     public int GuaranteeMonths => 2;
 
+    // Costo del kit ESP32 en comodato (sin IGV): base del saldo que se cobra si el contrato termina antes
+    [NotMapped]
+    public decimal KitCost => Name switch
+    {
+        "Esencial" => 700.00m,
+        "Urbano" => 1040.00m,
+        "GranTorre" => 1380.00m,
+        _ => 1040.00m
+    };
+
+    // Cuota única de activación: cubre la instalación (técnico + electricista), sin IGV
+    [NotMapped]
+    public decimal ActivationFee => Name switch
+    {
+        "Esencial" => 250.00m,
+        "Urbano" => 300.00m,
+        "GranTorre" => 400.00m,
+        _ => 300.00m
+    };
+
+    [NotMapped]
+    public decimal ActivationFeeWithIgv => WithIgv(ActivationFee);
+
+    // Garantía reembolsable de dos cuotas sin IGV: es un depósito, no una venta
+    [NotMapped]
+    public decimal Guarantee => Price * GuaranteeMonths;
+
+    // Pago de activación: primera cuota y cuota de activación con IGV, más la garantía
+    [NotMapped]
+    public decimal ActivationTotal => PriceWithIgv + ActivationFeeWithIgv + Guarantee;
+
+    private static decimal WithIgv(decimal amount) => Math.Round(amount * (1 + IgvRate), 2, MidpointRounding.AwayFromZero);
+
+    // Plan que corresponde al número de departamentos del condominio
+    public static string NameForUnits(int totalUnits) => totalUnits switch
+    {
+        <= 40 => "Esencial",
+        <= 80 => "Urbano",
+        _ => "GranTorre"
+    };
+
+    // Saldo de equipos al terminar antes de tiempo: el kit se amortiza en partes iguales durante el contrato
+    public EarlyTerminationQuote QuoteEarlyTermination(DateTimeOffset contractEnd, decimal guaranteeHeld, DateTimeOffset now)
+    {
+        var monthsRemaining = 0;
+        if (contractEnd > now)
+        {
+            monthsRemaining = (contractEnd.Year - now.Year) * 12 + contractEnd.Month - now.Month;
+            if (contractEnd.Day > now.Day) monthsRemaining++;
+            monthsRemaining = Math.Clamp(monthsRemaining, 0, ContractMonths);
+        }
+        var equipmentBalance = Math.Round(KitCost * monthsRemaining / ContractMonths, 2, MidpointRounding.AwayFromZero);
+        var amountDue = Math.Max(0, equipmentBalance - guaranteeHeld);
+        var refund = Math.Max(0, guaranteeHeld - equipmentBalance);
+        return new EarlyTerminationQuote(monthsRemaining, equipmentBalance, guaranteeHeld, amountDue, refund);
+    }
+
     public Plan() { }
 
     public Plan(string name, string description, decimal price, string interval = "monthly", string featuresJson = "[]")
@@ -130,3 +187,6 @@ public sealed class Plan
         return true;
     }
 }
+
+/// <summary>Liquidación de una salida anticipada: saldo de equipos, garantía aplicada y lo que queda por pagar o devolver.</summary>
+public sealed record EarlyTerminationQuote(int MonthsRemaining, decimal EquipmentBalance, decimal GuaranteeHeld, decimal AmountDue, decimal GuaranteeRefund);
