@@ -42,7 +42,18 @@ export class SubscriptionApi extends BaseApi {
         const baseUrl = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : APP_URL;
         const successUrl = `${baseUrl}/subscriptions/my-subscription?success=true`;
         const cancelUrl = `${baseUrl}/subscriptions/my-subscription?canceled=true`;
-        return this.http.post(`${subscriptionsEndpointPath}/payments/sessions`, { administratorId, condominiumId, planId, successUrl, cancelUrl });
+        // builderId es el condominio en el contrato del backend
+        return this.http.post(`${subscriptionsEndpointPath}/payments/sessions`, { administratorId, condominiumId, builderId: condominiumId, planId, successUrl, cancelUrl });
+    }
+
+    /** Plan asignado por departamentos y montos del pago de activación (primera cuota, activación y garantía). */
+    getActivationQuote(condominiumId) {
+        return this.http.get(`${subscriptionsEndpointPath}/activation-quote`, { params: { condominiumId } });
+    }
+
+    /** Saldo de equipos y garantía si se cancela antes de terminar el contrato. */
+    getCancellationQuote(subscriptionId) {
+        return this.http.get(`${subscriptionsEndpointPath}/${subscriptionId}/cancellation-quote`);
     }
 
     confirmPayment({ administratorId, condominiumId }, sessionId) {

@@ -30,7 +30,6 @@
     "administratorRole": "Administrator",
     "residentRole": "Apartment owner",
     "companyName": "Company name",
-    "ruc": "RUC",
     "legalRepresentative": "Legal representative",
     "dni": "DNI",
     "notifications": {
@@ -182,41 +181,40 @@
       }
     },
     "planCatalog": {
-      "boutique": {
-        "description": "For small condominiums with up to 20 apartments.",
+      "esencial": {
+        "description": "For condominiums with up to 40 apartments.",
         "features": [
-          "Up to 20 units",
-          "4 loaned IoT devices (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
-          "Continuous night-leak detection (1:00 to 4:00 AM)",
-          "Main cistern and electrical panel monitoring",
-          "Automated monthly proration by legal aliquot (Law 27157)",
-          "12-month contract + 2-month service warranty",
-          "Priority technical support and hardware replacement on failure"
+          "Up to 40 units",
+          "3 loaned IoT devices (1 4G gateway, 1 water point and 1 energy panel)",
+          "Night-leak detection in the cistern",
+          "Cistern and pump panel monitoring",
+          "Monthly proration by legal aliquot (Law 27157)",
+          "24-month contract with a refundable 2-fee deposit",
+          "Non-invasive installation: no water or power cuts"
         ]
       },
       "urbano": {
-        "description": "For buildings with 21 to 80 apartments.",
+        "description": "For buildings with 41 to 80 apartments.",
         "features": [
-          "21 to 80 units",
-          "6 loaned IoT devices (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
-          "Full monitoring: cistern, pumps, elevators and common lighting",
-          "Electrical overload and cistern night-leak detection",
-          "Monthly reconciliation against official master bills (Sedapal and Luz del Sur)",
+          "41 to 80 units",
+          "5 loaned IoT devices (1 4G gateway, 2 water points and 2 energy panels)",
+          "Cistern, pump and elevator monitoring",
+          "Night-leak and off-hours consumption detection",
+          "Monthly reconciliation against Sedapal and Luz del Sur bills",
           "Cent-exact legal proration and digital settlement per unit",
-          "12-month contract + 2-month service warranty",
-          "BFF access for the administrator and web app for residents"
+          "24-month contract with a refundable 2-fee deposit"
         ]
       },
       "gran-torre": {
         "description": "For towers with more than 80 apartments.",
         "features": [
           "More than 80 units",
-          "10 loaned IoT devices (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
-          "Extended monitoring of multiple panels, elevators and pump rooms",
-          "Advanced anomaly detection and macro-metering reconciliation",
-          "Aliquot proration with a strict 100.0000% balance",
-          "12-month contract + 2-month service warranty",
-          "On-site preventive maintenance and periodic sensor calibration"
+          "7 loaned IoT devices (1 4G gateway, 3 water points and 3 energy panels)",
+          "Monitoring of multiple cisterns, panels and elevators",
+          "Anomaly detection and reconciliation with master bills",
+          "Aliquot proration with an exact 100.0000% balance",
+          "24-month contract with a refundable 2-fee deposit",
+          "Preventive maintenance and periodic sensor calibration"
         ]
       }
     },
@@ -231,11 +229,35 @@
     "kit": {
       "title": "Kit of {n} devices",
       "gateways": "{n} Gateway | {n} Gateways",
-      "flowMeters": "{n} Flow meter | {n} Flow meters",
-      "ctClamps": "{n} CT clamp | {n} CT clamps"
+      "flowMeters": "{n} Water point | {n} Water points",
+      "ctClamps": "{n} Energy panel | {n} Energy panels"
     },
     "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments.",
-    "unitsFrom": "More than {min} units"
+    "unitsFrom": "More than {min} units",
+    "plusIgv": "+ VAT",
+    "withIgv": "S/ {amount} incl. VAT",
+    "activation": {
+      "pill": "Service activation",
+      "title": "Activate IoBuild at {name}",
+      "assigned": "With {units} units, this condominium gets the {plan} plan. The plan is assigned automatically and changes if the number of units changes.",
+      "monthlyDetail": "{amount} per month incl. VAT · {perUnit} per unit",
+      "contract": "{months}-month contract with loaned equipment",
+      "guaranteeTerm": "Refundable deposit of {months} fees: returned when the contract ends",
+      "earlyExit": "Cancelling early means paying the remaining equipment balance (deducted from the deposit)",
+      "todayTitle": "Activation payment",
+      "firstFee": "First fee (incl. VAT)",
+      "activationFee": "Activation fee: installation (incl. VAT)",
+      "guarantee": "Refundable deposit (2 fees, no VAT)",
+      "total": "Total due today",
+      "payerHint": "The payment belongs to the condominium's owners' board; the receipt is issued in its name.",
+      "cta": "Activate and pay",
+      "unavailable": "The activation for this condominium could not be calculated. Check its number of units.",
+      "assignedOnly": "The plan is assigned by the condominium's number of units; you can only activate the one that applies."
+    },
+    "cancellation": {
+      "early": "{months} months of the contract remain. Remaining equipment balance: {balance}. The {guarantee} deposit is applied: {due} remains to be paid and {refund} is refunded. Confirm the cancellation?",
+      "completed": "The contract is complete: there is no equipment balance and the {refund} deposit is refunded. Confirm the cancellation?"
+    }
   },
   "iam": {
     "logout": "Log Out",
@@ -282,14 +304,13 @@
       "credentialsInvalid": "Invalid email or password.",
       "registrationDataInvalid": "Registration details are invalid. Please review the form and try again.",
       "registrationFailed": "Registration failed. Please try again.",
-      "rucRequired": "RUC is required.",
-      "rucInvalid": "RUC must be a valid 11-digit number.",
       "legalRepresentativeRequired": "Legal representative is required.",
       "nameInvalid": "Enter a valid name.",
       "activationCodeRequired": "Activation code is required.",
       "dniRequired": "DNI is required.",
       "dniInvalid": "DNI must have 8 digits.",
-      "privacyRequired": "You must accept the privacy policies."
+      "privacyRequired": "You must accept the privacy policies.",
+      "addressRequired": "Enter the management company address (5 to 200 characters)."
     },
     "registerAdministrator": {
       "title": "Administrator sign-up",
@@ -311,11 +332,9 @@
       "cancelButton": "Cancel",
       "companyName": "Company name",
       "companyNamePlaceholder": "Vista Verde Administration S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Legal representative",
       "legalRepresentativePlaceholder": "Full name",
-      "address": "Tax address (optional)",
+      "address": "Address",
       "addressPlaceholder": "123 Main Ave"
     },
     "registerResident": {
@@ -488,7 +507,7 @@
       "namePlaceholder": "e.g. Los Robles Residences",
       "addressPlaceholder": "e.g. 1234 Arnaldo Márquez Ave.",
       "districtPlaceholder": "Select or type the district",
-      "unitsHint": "Sets the HaaS plan. Up to 20: Boutique · 21 to 80: Urbano · over 80: Gran Torre.",
+      "unitsHint": "Sets the HaaS plan. Up to 40: Esencial · 41 to 80: Urbano · over 80: Gran Torre.",
       "photo": "Building photo",
       "uploadPhoto": "Upload photo",
       "changePhoto": "Change photo",
@@ -501,23 +520,24 @@
       "areaLocation": "Location",
       "areaLocationPlaceholder": "Location, e.g. Basement 1",
       "meter": {
-        "water": "Flow meter",
-        "energy": "CT clamp"
+        "water": "Water meter",
+        "energy": "Energy meter"
       },
       "create": "Create condominium",
       "summary": "Summary",
       "plan": "Matching plan",
-      "perMonth": "per month, VAT incl.",
+      "perMonth": "per month + VAT",
       "planPending": "Enter the number of units to see the plan and equipment kit.",
       "kit": {
         "gateways": "Gateways",
-        "flowMeters": "Flow meters",
-        "ctClamps": "CT clamps",
+        "flowMeters": "Water points",
+        "ctClamps": "Energy panels",
         "total": "Loaned devices"
       },
       "areasCount": "{n} monitored common areas",
       "reviewTitle": "Check the form",
-      "reviewDetail": "Some required fields are missing or invalid."
+      "reviewDetail": "Some required fields are missing or invalid.",
+      "withIgv": "S/ {amount} per month incl. VAT · S/ {perUnit} per unit"
     },
     "card": {
       "units": "Units",

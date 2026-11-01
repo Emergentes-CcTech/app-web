@@ -13,6 +13,17 @@ public static class PlanResourceFromEntityAssembler
             entity.Description,
             entity.Price,
             entity.Interval,
-            entity.FeaturesJson);
+            entity.FeaturesJson)
+        {
+            PriceWithIgv = entity.PriceWithIgv,
+            ActivationFee = entity.ActivationFee,
+            ActivationFeeWithIgv = entity.ActivationFeeWithIgv,
+            Guarantee = entity.Guarantee,
+            ActivationTotal = entity.ActivationTotal,
+            ContractMonths = entity.ContractMonths,
+            MinUnits = entity.MinUnits,
+            // GranTorre no tiene tope comercial; se expone el límite técnico de registro (500)
+            MaxUnits = Math.Min(entity.MaxUnits, 500)
+        };
     }
 }

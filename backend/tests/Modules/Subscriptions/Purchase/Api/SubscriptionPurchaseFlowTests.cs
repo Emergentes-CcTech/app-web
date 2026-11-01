@@ -36,9 +36,9 @@ public sealed partial class SubscriptionPurchaseFlowTests
         Assert.NotNull(planList);
         Assert.NotEmpty(planList);
 
-        var buyer = Token(1, "buyer1@example.test", "Builder");
+        var buyer = Token(11, "buyer11@example.test", "Builder");
         var checkout = await SendAsync(client, HttpMethod.Post, "/api/v1/subscriptions/payments/sessions", buyer,
-            "{\"builderId\":1,\"planId\":3,\"successUrl\":\"https://success.example\",\"cancelUrl\":\"https://cancel.example\"}");
+            "{\"builderId\":11,\"planId\":3,\"successUrl\":\"https://success.example\",\"cancelUrl\":\"https://cancel.example\"}");
         Assert.Equal(HttpStatusCode.Created, checkout.StatusCode);
         var session = await checkout.Content.ReadFromJsonAsync<JsonElement>();
         var sessionId = session.GetProperty("sessionId").GetString()!;
@@ -48,9 +48,69 @@ public sealed partial class SubscriptionPurchaseFlowTests
         Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
         Assert.Equal("paid", (await confirm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
 
-        var invoices = await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions/payments/invoices?builderId=1", buyer);
+        var invoices = await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions/payments/invoices?builderId=11", buyer);
         Assert.Equal(HttpStatusCode.OK, invoices.StatusCode);
-        Assert.Contains("in_sim_1", await invoices.Content.ReadAsStringAsync());
+        Assert.Contains("in_sim_11", await invoices.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    [Trait("Flow", "SUBSCRIPTIONS.PURCHASE")]
+    [Trait("Layer", "Api")]
+    [Trait("Risk", "A")]
+    public async Task ACTIVATION_plan_is_assigned_by_units_and_charges_first_fee_activation_and_guarantee()
+    {
+        await using var factory = new PurchaseApiFactory();
+        using var client = factory.CreateClient();
+        // El condominio sembrado (Id 1, del administrador 1) tiene 25 departamentos: le corresponde Esencial
+        var owner = Token(1, "owner1@example.test", "PropertyManager");
+
+        var quote = await (await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions/activation-quote?condominiumId=1", owner))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Esencial", quote.GetProperty("planName").GetString());
+        Assert.Equal(413.00m, quote.GetProperty("monthlyPriceWithIgv").GetDecimal());
+        Assert.Equal(295.00m, quote.GetProperty("activationFeeWithIgv").GetDecimal());
+        Assert.Equal(700.00m, quote.GetProperty("guarantee").GetDecimal());
+        Assert.Equal(1408.00m, quote.GetProperty("total").GetDecimal());
+        Assert.Equal(24, quote.GetProperty("contractMonths").GetInt32());
+
+        // Otro plan que no corresponde a sus departamentos se rechaza antes de cobrar
+        var wrongPlan = await SendAsync(client, HttpMethod.Post, "/api/v1/subscriptions/payments/sessions", owner,
+            "{\"builderId\":1,\"planId\":3,\"successUrl\":\"https://s.example\",\"cancelUrl\":\"https://c.example\"}");
+        Assert.Equal(HttpStatusCode.BadRequest, wrongPlan.StatusCode);
+        Assert.Contains("Esencial", await wrongPlan.Content.ReadAsStringAsync());
+
+        // Un administrador ajeno no ve la cotización del condominio
+        var stranger = Token(42, "stranger@example.test", "PropertyManager");
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions/activation-quote?condominiumId=1", stranger)).StatusCode);
+    }
+
+    [Fact]
+    [Trait("Flow", "SUBSCRIPTIONS.PURCHASE")]
+    [Trait("Layer", "Api")]
+    [Trait("Risk", "A")]
+    public async Task CANCEL_EARLY_settles_the_equipment_balance_against_the_guarantee()
+    {
+        await using var factory = new PurchaseApiFactory();
+        using var client = factory.CreateClient();
+        var buyer12 = Token(12, "buyer12@example.test", "Builder");
+        await ConfirmPlanAsync(client, buyer12, builderId: 12, planId: 2);
+        var id = (await (await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions", buyer12)).Content.ReadFromJsonAsync<List<JsonElement>>())!
+            .First(s => s.GetProperty("builderId").GetInt32() == 12).GetProperty("id").GetInt32();
+
+        // Urbano recién activado: faltan 24 meses, saldo de equipos S/ 1,040 menos garantía S/ 840 = S/ 200 por pagar
+        var quote = await (await SendAsync(client, HttpMethod.Get, $"/api/v1/subscriptions/{id}/cancellation-quote", buyer12))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(24, quote.GetProperty("monthsRemaining").GetInt32());
+        Assert.Equal(1040.00m, quote.GetProperty("equipmentBalance").GetDecimal());
+        Assert.Equal(840.00m, quote.GetProperty("guaranteeHeld").GetDecimal());
+        Assert.Equal(200.00m, quote.GetProperty("amountDue").GetDecimal());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await SendAsync(client, HttpMethod.Post, $"/api/v1/subscriptions/{id}/cancel", buyer12)).StatusCode);
+        var after = await (await SendAsync(client, HttpMethod.Get, $"/api/v1/subscriptions/{id}", buyer12)).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("cancelled", after.GetProperty("status").GetString());
+        Assert.Equal(200.00m, after.GetProperty("earlyTerminationFeeSoles").GetDecimal());
+        Assert.Equal(0m, after.GetProperty("guaranteeRefundSoles").GetDecimal());
     }
 
     [Fact]

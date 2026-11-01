@@ -22,6 +22,14 @@ public static class SubscriptionsEndpoints
     private static bool OwnsBuilder(System.Security.Claims.ClaimsPrincipal user, int builderId) =>
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) && (id == builderId || builderId == 0);
 
+    // El solicitante puede operar el condominio si es su id directo (compatibilidad) o si él lo registró
+    private static async Task<bool> OwnsProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, int projectId, CancellationToken ct)
+    {
+        if (OwnsBuilder(user, projectId)) return true;
+        var self = SelfId(user);
+        return self != 0 && await db.Projects.AnyAsync(p => p.Id == projectId && p.BuilderId == self, ct);
+    }
+
     // Obtiene el identificador del usuario autenticado a partir de las credenciales del token
     private static int SelfId(System.Security.Claims.ClaimsPrincipal user) =>
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
@@ -113,11 +121,18 @@ public static class SubscriptionsEndpoints
                     s.Status,
                     s.StartDate,
                     s.EndDate,
+                    ContractEndDate = s.EndDate,
+                    s.GuaranteeSoles,
+                    s.ActivationFeeSoles,
+                    s.EarlyTerminationFeeSoles,
+                    s.GuaranteeRefundSoles,
                     Plan = plansDict.TryGetValue(s.PlanId, out var plan) ? new
                     {
                         plan.Id,
                         plan.Name,
                         plan.Price,
+                        plan.PriceWithIgv,
+                        plan.ContractMonths,
                         plan.Description,
                         plan.MaxUnits,
                         plan.MaxDevices,
@@ -151,11 +166,18 @@ public static class SubscriptionsEndpoints
                 s.Status,
                 s.StartDate,
                 s.EndDate,
+                ContractEndDate = s.EndDate,
+                s.GuaranteeSoles,
+                s.ActivationFeeSoles,
+                s.EarlyTerminationFeeSoles,
+                s.GuaranteeRefundSoles,
                 Plan = plan is not null ? new
                 {
                     plan.Id,
                     plan.Name,
                     plan.Price,
+                    plan.PriceWithIgv,
+                    plan.ContractMonths,
                     plan.Description,
                     plan.MaxUnits,
                     plan.MaxDevices,
@@ -170,7 +192,7 @@ public static class SubscriptionsEndpoints
         subs.MapPut("/subscriptions/{id:int}", async (int id, CreateSubscriptionRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var item = await db.Subscriptions.FindAsync([id], ct);
-            if (item is null || !OwnsBuilder(user, item.ProjectId)) return Results.NotFound();
+            if (item is null || !await OwnsProjectAsync(user, db, item.ProjectId, ct)) return Results.NotFound();
 
             // Validación de capacidad al escalar el plan
             var plan = await db.Plans.FindAsync([request.PlanId], ct);
@@ -192,12 +214,66 @@ public static class SubscriptionsEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
 
-        // Cancelar o desvincular una suscripción activa
+        // Pago de activación del condominio: plan asignado por departamentos, primera cuota, activación y garantía
+        subs.MapGet("/subscriptions/activation-quote", async (int condominiumId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var project = await db.Projects.FindAsync([condominiumId], ct);
+            if (project is null || !await OwnsProjectAsync(user, db, condominiumId, ct)) return Results.NotFound();
+            var planName = Plan.NameForUnits(project.TotalUnits);
+            var plan = await db.Plans.FirstOrDefaultAsync(p => p.Name == planName, ct);
+            if (plan is null) return Results.NotFound(new { error = "El plan del condominio no está en el catálogo." });
+            return Results.Ok(new
+            {
+                CondominiumId = project.Id,
+                project.TotalUnits,
+                PlanId = plan.Id,
+                PlanName = plan.Name,
+                MonthlyPrice = plan.Price,
+                MonthlyPriceWithIgv = plan.PriceWithIgv,
+                PricePerUnitWithIgv = project.TotalUnits > 0 ? Math.Round(plan.PriceWithIgv / project.TotalUnits, 2) : 0m,
+                ActivationFeeWithIgv = plan.ActivationFeeWithIgv,
+                plan.Guarantee,
+                Total = plan.ActivationTotal,
+                plan.ContractMonths,
+                plan.GuaranteeMonths
+            });
+        }).RequireAuthorization();
+
+        // Liquidación de una cancelación: saldo de equipos pendiente según los meses que faltan del contrato
+        subs.MapGet("/subscriptions/{id:int}/cancellation-quote", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var item = await db.Subscriptions.FindAsync([id], ct);
+            if (item is null || !await OwnsProjectAsync(user, db, item.ProjectId, ct)) return Results.NotFound();
+            var plan = await db.Plans.FindAsync([item.PlanId], ct);
+            if (plan is null) return Results.NotFound();
+            var quote = plan.QuoteEarlyTermination(item.EndDate ?? item.StartDate.AddMonths(plan.ContractMonths), item.GuaranteeSoles, DateTimeOffset.UtcNow);
+            return Results.Ok(new
+            {
+                SubscriptionId = item.Id,
+                ContractEndDate = item.EndDate,
+                quote.MonthsRemaining,
+                quote.EquipmentBalance,
+                quote.GuaranteeHeld,
+                quote.AmountDue,
+                quote.GuaranteeRefund
+            });
+        }).RequireAuthorization();
+
+        // Cancelar la suscripción registrando el saldo de equipos y la devolución de la garantía
         subs.MapPost("/subscriptions/{id:int}/cancel", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var item = await db.Subscriptions.FindAsync([id], ct);
-            if (item is null || !OwnsBuilder(user, item.ProjectId)) return Results.NotFound();
-            item.Cancel();
+            if (item is null || !await OwnsProjectAsync(user, db, item.ProjectId, ct)) return Results.NotFound();
+            var plan = await db.Plans.FindAsync([item.PlanId], ct);
+            if (plan is null)
+            {
+                item.Cancel();
+            }
+            else
+            {
+                var contractEnd = item.EndDate ?? item.StartDate.AddMonths(plan.ContractMonths);
+                item.Cancel(plan.QuoteEarlyTermination(contractEnd, item.GuaranteeSoles, DateTimeOffset.UtcNow));
+            }
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         }).RequireAuthorization();
@@ -205,7 +281,7 @@ public static class SubscriptionsEndpoints
         // Iniciar sesión de pago en Stripe validando la compatibilidad de departamentos y sensores
         subs.MapPost("/subscriptions/payments/sessions", async (PaymentCheckoutRequest request, System.Security.Claims.ClaimsPrincipal user, IConfiguration configuration, IPaymentProvider provider, IoBuildDbContext db, CancellationToken ct) =>
         {
-            if (!OwnsBuilder(user, request.BuilderId)) return Results.Forbid();
+            if (!await OwnsProjectAsync(user, db, request.BuilderId, ct)) return Results.Forbid();
             var restrictedKey = StripeRestrictedKeyResolver.Resolve(configuration);
             if (restrictedKey is null)
             {
@@ -219,6 +295,11 @@ public static class SubscriptionsEndpoints
             var project = await db.Projects.FindAsync([request.BuilderId], ct);
             if (project is not null)
             {
+                // El plan no se elige: corresponde al número de departamentos del condominio
+                if (plan.Name != Plan.NameForUnits(project.TotalUnits))
+                {
+                    return Results.BadRequest(new { error = $"Al condominio le corresponde el plan {Plan.NameForUnits(project.TotalUnits)} por sus {project.TotalUnits} departamentos." });
+                }
                 var deviceCount = await db.Devices.CountAsync(d => d.ProjectId == request.BuilderId, ct);
                 if (!plan.ValidateCapacity(project.TotalUnits, deviceCount, out var capacityError))
                 {
@@ -248,6 +329,11 @@ public static class SubscriptionsEndpoints
         {
             var confirmation = await provider.ConfirmSessionAsync(sessionId, ct);
             if (confirmation is null) return Results.Problem(statusCode: 503);
+            // Una sesión abierta o expirada no activa el servicio
+            if (!string.Equals(confirmation.Status, "paid", StringComparison.OrdinalIgnoreCase))
+                return Results.Conflict(new { error = "El pago de activación todavía no se completó." });
+            var paidPlan = await db.Plans.FindAsync([confirmation.PlanId], ct);
+            if (paidPlan is null) return Results.NotFound(new { error = "Plan no encontrado." });
 
             var existing = await db.Subscriptions.FirstOrDefaultAsync(s => s.ProjectId == confirmation.BuilderId && s.PlanId == confirmation.PlanId && s.Status == "active", ct);
             
@@ -263,13 +349,7 @@ public static class SubscriptionsEndpoints
 
             if (existing is null)
             {
-                db.Subscriptions.Add(new Subscription
-                {
-                    ProjectId = confirmation.BuilderId,
-                    PlanId = confirmation.PlanId,
-                    Status = "active",
-                    StartDate = DateTime.UtcNow
-                });
+                db.Subscriptions.Add(Subscription.Activate(confirmation.BuilderId, paidPlan, DateTimeOffset.UtcNow));
             }
             try
             {
@@ -286,7 +366,7 @@ public static class SubscriptionsEndpoints
         // Consultar el historial de comprobantes de pago emitidos
         subs.MapGet("/subscriptions/payments/invoices", async (int builderId, System.Security.Claims.ClaimsPrincipal user, IPaymentProvider provider, IoBuildDbContext db, CancellationToken ct) =>
         {
-            if (!OwnsBuilder(user, builderId)) return Results.Forbid();
+            if (!await OwnsProjectAsync(user, db, builderId, ct)) return Results.Forbid();
             var invoices = await provider.GetInvoicesAsync(builderId, ct);
             if (invoices is not null)
             {
@@ -300,15 +380,15 @@ public static class SubscriptionsEndpoints
             var fallbackInvoices = builderSubs.Select(s =>
             {
                 var plan = plansDict.TryGetValue(s.PlanId, out var p) ? p : null;
-                var amountInCents = plan is not null ? (long)(plan.Price * 100) : 50000L;
+                var amountInCents = plan is not null ? (long)(plan.ActivationTotal * 100) : 0L;
                 return new
                 {
                     Id = $"in_sub_{s.Id}",
                     Status = s.Status == "active" ? "paid" : s.Status,
                     AmountInCents = amountInCents,
-                    Amount = plan?.Price ?? 500m,
+                    Amount = plan?.ActivationTotal ?? 0m,
                     Currency = "PEN",
-                    Description = $"Suscripción Plan {plan?.Name ?? "IoBuild HaaS"}",
+                    Description = $"Activación Plan {plan?.Name ?? "IoBuild HaaS"}: primera cuota, activación y garantía",
                     Date = s.StartDate,
                     ReceiptUrl = (string?)null
                 };
@@ -320,7 +400,7 @@ public static class SubscriptionsEndpoints
         // Registrar una suscripción validando la capacidad del condominio
         subs.MapPost("/subscriptions", async (CreateSubscriptionRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
-            if (!OwnsBuilder(user, request.BuilderId)) return Results.Forbid();
+            if (!await OwnsProjectAsync(user, db, request.BuilderId, ct)) return Results.Forbid();
 
             // Valida que el plan exista y admita los departamentos del condominio
             var plan = await db.Plans.FindAsync([request.PlanId], ct);
@@ -341,7 +421,7 @@ public static class SubscriptionsEndpoints
                 ProjectId = request.BuilderId,
                 PlanId = request.PlanId,
                 StartDate = request.StartDate,
-                EndDate = request.EndDate ?? request.StartDate.AddMonths(12)
+                EndDate = request.EndDate ?? request.StartDate.AddMonths(plan.ContractMonths)
             };
             db.Subscriptions.Add(subscription);
             await db.SaveChangesAsync(ct);

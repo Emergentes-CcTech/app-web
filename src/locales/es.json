@@ -30,7 +30,6 @@
     "administratorRole": "Administrador",
     "residentRole": "Dueño de departamento",
     "companyName": "Razón social",
-    "ruc": "RUC",
     "legalRepresentative": "Representante legal",
     "dni": "DNI",
     "notifications": {
@@ -182,41 +181,40 @@
       }
     },
     "planCatalog": {
-      "boutique": {
-        "description": "Para condominios pequeños de hasta 20 departamentos.",
+      "esencial": {
+        "description": "Para condominios de hasta 40 departamentos.",
         "features": [
-          "Hasta 20 departamentos",
-          "4 equipos IoT en comodato (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
-          "Detección continua de fugas nocturnas (01:00 a 04:00 AM)",
-          "Monitoreo de Cisterna Principal y Tableros Eléctricos",
-          "Prorrateo mensual automatizado según Alícuota Legal (Ley 27157)",
-          "Contrato de 12 meses + 2 meses de garantía de servicio",
-          "Soporte técnico prioritario y reemplazo de hardware por falla"
+          "Hasta 40 departamentos",
+          "3 equipos IoT en comodato (1 gateway 4G, 1 punto de agua y 1 tablero de energía)",
+          "Detección de fugas nocturnas en la cisterna",
+          "Monitoreo de cisterna y tablero de bombas",
+          "Prorrateo mensual según alícuota legal (Ley 27157)",
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Instalación no invasiva: sin cortar agua ni energía"
         ]
       },
       "urbano": {
-        "description": "Para edificios de 21 a 80 departamentos.",
+        "description": "Para edificios de 41 a 80 departamentos.",
         "features": [
-          "De 21 a 80 departamentos",
-          "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
-          "Monitoreo integral: Cisterna, Bombas, Ascensores e Iluminación Común",
-          "Detección de sobrecargas eléctricas y fugas nocturnas en cisterna",
-          "Conciliación mensual contra recibos matriz oficiales (Sedapal y Luz del Sur)",
+          "De 41 a 80 departamentos",
+          "5 equipos IoT en comodato (1 gateway 4G, 2 puntos de agua y 2 tableros de energía)",
+          "Monitoreo de cisterna, bombas y ascensores",
+          "Detección de fugas nocturnas y consumos fuera de horario",
+          "Conciliación mensual contra los recibos de Sedapal y Luz del Sur",
           "Prorrateo legal al céntimo y liquidación digital por departamento",
-          "Contrato de 12 meses + 2 meses de garantía de servicio",
-          "Acceso BFF para Administrador y App Web para Residentes"
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas"
         ]
       },
       "gran-torre": {
         "description": "Para torres de más de 80 departamentos.",
         "features": [
           "Más de 80 departamentos",
-          "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
-          "Monitoreo extendido de múltiples tableros, ascensores y cuartos hidroneumáticos",
-          "Detección avanzada de anomalías y conciliación de macro-medición",
-          "Prorrateo por alícuotas con cuadre estricto al 100.0000%",
-          "Contrato de 12 meses + 2 meses de garantía de servicio",
-          "Mantenimiento preventivo presencial y calibración periódica de sensores"
+          "7 equipos IoT en comodato (1 gateway 4G, 3 puntos de agua y 3 tableros de energía)",
+          "Monitoreo de varias cisternas, tableros y ascensores",
+          "Detección de anomalías y conciliación con los recibos matriz",
+          "Prorrateo por alícuotas con cuadre exacto al 100.0000%",
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Mantenimiento preventivo y calibración periódica de sensores"
         ]
       }
     },
@@ -231,11 +229,35 @@
     "kit": {
       "title": "Kit de {n} equipos",
       "gateways": "{n} Gateway | {n} Gateways",
-      "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
-      "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
+      "flowMeters": "{n} Punto de agua | {n} Puntos de agua",
+      "ctClamps": "{n} Tablero de energía | {n} Tableros de energía"
     },
     "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos.",
-    "unitsFrom": "Más de {min} departamentos"
+    "unitsFrom": "Más de {min} departamentos",
+    "plusIgv": "+ IGV",
+    "withIgv": "S/ {amount} con IGV",
+    "activation": {
+      "pill": "Activación del servicio",
+      "title": "Activa IoBuild en {name}",
+      "assigned": "Por sus {units} departamentos le corresponde el plan {plan}. El plan se asigna automáticamente y cambia si cambia el número de departamentos.",
+      "monthlyDetail": "{amount} al mes con IGV · {perUnit} por departamento",
+      "contract": "Contrato de {months} meses con los equipos en comodato",
+      "guaranteeTerm": "Garantía reembolsable de {months} cuotas: se devuelve al terminar el contrato",
+      "earlyExit": "Si se cancela antes, se paga el saldo pendiente de los equipos (se descuenta de la garantía)",
+      "todayTitle": "Pago de activación",
+      "firstFee": "Primera cuota (con IGV)",
+      "activationFee": "Cuota de activación: instalación (con IGV)",
+      "guarantee": "Garantía reembolsable (2 cuotas, sin IGV)",
+      "total": "Total a pagar hoy",
+      "payerHint": "El pago corresponde a la junta de propietarios del condominio; el comprobante se emite a su nombre.",
+      "cta": "Activar y pagar",
+      "unavailable": "No se pudo calcular la activación de este condominio. Revisa su número de departamentos.",
+      "assignedOnly": "El plan se asigna por el número de departamentos del condominio; solo puedes activar el que le corresponde."
+    },
+    "cancellation": {
+      "early": "Faltan {months} meses del contrato. Saldo pendiente de los equipos: {balance}. Se aplica la garantía de {guarantee}: quedan {due} por pagar y se devuelven {refund}. ¿Confirmas la cancelación?",
+      "completed": "El contrato ya se cumplió: no hay saldo de equipos y se devuelve la garantía de {refund}. ¿Confirmas la cancelación?"
+    }
   },
   "iam": {
     "logout": "Cerrar Sesión",
@@ -282,14 +304,13 @@
       "credentialsInvalid": "Correo o contraseña incorrectos.",
       "registrationDataInvalid": "Los datos de registro no son válidos. Revise el formulario e inténtelo de nuevo.",
       "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
-      "rucRequired": "El RUC es obligatorio.",
-      "rucInvalid": "El RUC debe tener 11 dígitos válidos.",
       "legalRepresentativeRequired": "El representante legal es obligatorio.",
       "nameInvalid": "Ingrese un nombre válido.",
       "activationCodeRequired": "El código de activación es obligatorio.",
       "dniRequired": "El DNI es obligatorio.",
       "dniInvalid": "El DNI debe tener 8 dígitos.",
-      "privacyRequired": "Debes aceptar las políticas de privacidad."
+      "privacyRequired": "Debes aceptar las políticas de privacidad.",
+      "addressRequired": "Ingresa la dirección de la administradora (5 a 200 caracteres)."
     },
     "registerAdministrator": {
       "title": "Registro de administrador",
@@ -311,11 +332,9 @@
       "cancelButton": "Cancelar",
       "companyName": "Razón social",
       "companyNamePlaceholder": "Administradora Vista Verde S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Representante legal",
       "legalRepresentativePlaceholder": "Nombre y apellidos",
-      "address": "Dirección fiscal (opcional)",
+      "address": "Dirección",
       "addressPlaceholder": "Av. Javier Prado 1234"
     },
     "registerResident": {
@@ -488,7 +507,7 @@
       "namePlaceholder": "Ej. Residencial Los Robles",
       "addressPlaceholder": "Ej. Av. Arnaldo Márquez 1234",
       "districtPlaceholder": "Selecciona o escribe el distrito",
-      "unitsHint": "Define el plan HaaS. Hasta 20: Boutique · 21 a 80: Urbano · más de 80: Gran Torre.",
+      "unitsHint": "Define el plan HaaS. Hasta 40: Esencial · 41 a 80: Urbano · más de 80: Gran Torre.",
       "photo": "Foto del edificio",
       "uploadPhoto": "Subir foto",
       "changePhoto": "Cambiar foto",
@@ -501,23 +520,24 @@
       "areaLocation": "Ubicación",
       "areaLocationPlaceholder": "Ubicación, ej. Sótano 1",
       "meter": {
-        "water": "Caudalímetro",
-        "energy": "Pinza CT"
+        "water": "Medidor de agua",
+        "energy": "Medidor de energía"
       },
       "create": "Crear condominio",
       "summary": "Resumen",
       "plan": "Plan que corresponde",
-      "perMonth": "al mes, IGV incluido",
+      "perMonth": "al mes + IGV",
       "planPending": "Ingresa el número de departamentos para ver el plan y el kit de equipos.",
       "kit": {
         "gateways": "Gateways",
-        "flowMeters": "Caudalímetros",
-        "ctClamps": "Pinzas CT",
+        "flowMeters": "Puntos de agua",
+        "ctClamps": "Tableros de energía",
         "total": "Equipos en comodato"
       },
       "areasCount": "{n} áreas comunes monitoreadas",
       "reviewTitle": "Revisa el formulario",
-      "reviewDetail": "Hay campos obligatorios sin completar o con errores."
+      "reviewDetail": "Hay campos obligatorios sin completar o con errores.",
+      "withIgv": "S/ {amount} al mes con IGV · S/ {perUnit} por departamento"
     },
     "card": {
       "units": "Departamentos",

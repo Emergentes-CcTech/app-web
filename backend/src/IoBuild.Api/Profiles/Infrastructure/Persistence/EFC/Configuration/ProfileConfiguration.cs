@@ -22,6 +22,7 @@ public static class ProfileConfiguration
             entity.Property(profile => profile.PhotoReference).HasMaxLength(128);
             entity.Property(profile => profile.CloudinaryReference).HasColumnType("longtext");
             entity.Property(profile => profile.PhotoUrl).HasColumnType("longtext");
+            entity.Property(profile => profile.LegalRepresentative).HasMaxLength(150);
         });
     }
 }

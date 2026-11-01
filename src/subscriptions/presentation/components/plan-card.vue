@@ -11,7 +11,9 @@ const props = defineProps({
   isProcessing: { type: Boolean, default: false },
   isPopular: { type: Boolean, default: false },
   // Departamentos del condominio seleccionado: un plan con menos capacidad no se puede elegir
-  registeredUnits: { type: Number, default: 0 }
+  registeredUnits: { type: Number, default: 0 },
+  // El plan se asigna por departamentos: en el catálogo informativo la tarjeta no tiene botón
+  selectable: { type: Boolean, default: true }
 });
 
 const tooSmall = computed(() => props.registeredUnits > 0 && props.plan.maxUnits > 0 && props.registeredUnits > props.plan.maxUnits);
@@ -93,8 +95,9 @@ const buttonLabel = computed(() => {
         <div class="price-wrapper">
           <span class="currency-symbol">S/</span>
           <span class="price-amount">{{ plan.price.toLocaleString('es-PE') }}</span>
-          <span class="price-period">/ {{ t("subscriptions.month") }}</span>
+          <span class="price-period">{{ t("subscriptions.plusIgv") }} / {{ t("subscriptions.month") }}</span>
         </div>
+        <span class="billing-frequency">{{ t('subscriptions.withIgv', { amount: plan.monthlyPenWithIgv.toFixed(2) }) }}</span>
         <span class="billing-frequency">{{ t('subscriptions.billing-cycle') }}</span>
       </div>
 
@@ -119,7 +122,7 @@ const buttonLabel = computed(() => {
     </div>
 
     <!-- Bottom Action -->
-    <div class="card-footer">
+    <div v-if="selectable" class="card-footer">
       <button
         type="button"
         class="action-btn"

@@ -152,20 +152,6 @@
             <small v-if="fieldErrors.companyName" class="p-error block mt-1">{{ fieldErrors.companyName }}</small>
           </div>
 
-          <!-- ruc -->
-          <div class="mb-3">
-            <label for="ruc" class="block mb-2">{{ $t('iam.registerAdministrator.ruc') }} *</label>
-            <pv-input-text
-              id="ruc"
-              v-model="registerForm.ruc"
-              :placeholder="$t('iam.registerAdministrator.rucPlaceholder')"
-              :invalid="!!fieldErrors.ruc"
-              maxlength="11"
-              class="w-full"
-            />
-            <small v-if="fieldErrors.ruc" class="p-error block mt-1">{{ fieldErrors.ruc }}</small>
-          </div>
-
           <!-- legalRepresentative -->
           <div class="mb-3">
             <label for="legalRepresentative" class="block mb-2">{{ $t('iam.registerAdministrator.legalRepresentative') }} *</label>
@@ -194,7 +180,7 @@
 
           <!-- address -->
           <div class="mb-3">
-            <label for="address" class="block mb-2">{{ $t('iam.registerAdministrator.address') }}</label>
+            <label for="address" class="block mb-2">{{ $t('iam.registerAdministrator.address') }} *</label>
             <pv-input-text
               id="address"
               v-model="registerForm.address"
@@ -255,11 +241,9 @@ import {
   isValidEmail,
   isValidPhone,
   isValidName,
-  isValidRuc,
   isValidPassword,
   normalizeEmail
 } from '../../../shared/presentation/validators.js';
-import { ROLES } from '../../../shared/infrastructure/roles.js';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -326,7 +310,6 @@ const registerForm = ref({
   confirmPassword: '',
   photoUrl: '',
   companyName: '',
-  ruc: '',
   legalRepresentative: '',
   phoneNumber: '',
   address: ''
@@ -415,7 +398,6 @@ async function handleRegister() {
   fieldErrors.value = {};
 
   const companyName = (registerForm.value.companyName || '').trim();
-  const ruc = (registerForm.value.ruc || '').trim();
   const legalRepresentative = (registerForm.value.legalRepresentative || '').trim();
   const phoneNumber = (registerForm.value.phoneNumber || '').trim();
   const address = (registerForm.value.address || '').trim();
@@ -424,11 +406,6 @@ async function handleRegister() {
     fieldErrors.value.companyName = t('iam.validation.companyNameRequired');
   } else if (!isValidName(companyName, 3, 120)) {
     fieldErrors.value.companyName = t('iam.validation.companyNameMinLength');
-  }
-  if (!ruc) {
-    fieldErrors.value.ruc = t('iam.validation.rucRequired');
-  } else if (!isValidRuc(ruc)) {
-    fieldErrors.value.ruc = t('iam.validation.rucInvalid');
   }
   if (!legalRepresentative) {
     fieldErrors.value.legalRepresentative = t('iam.validation.legalRepresentativeRequired');
@@ -440,6 +417,9 @@ async function handleRegister() {
   } else if (!isValidPhone(phoneNumber)) {
     fieldErrors.value.phoneNumber = t('iam.validation.phoneInvalid');
   }
+  if (!isValidName(address, 5, 200)) {
+    fieldErrors.value.address = t('iam.validation.addressRequired');
+  }
 
   if (Object.keys(fieldErrors.value).length > 0) {
     errorMessage.value = t('iam.validation.completeProfileInfo');
@@ -449,10 +429,11 @@ async function handleRegister() {
 
   try {
     // 1. Crear usuario con rol administrador
+    // El backend solo admite su nombre de dominio para el rol (PropertyManager); "administrator" es el rol de la interfaz
     await iamStore.signUp({
       email: registerForm.value.email,
       password: registerForm.value.password,
-      role: ROLES.ADMIN
+      role: 'PropertyManager'
     });
 
     // 2. Iniciar sesión para obtener el ID de usuario y el token
@@ -465,7 +446,6 @@ async function handleRegister() {
     const profileData = {
       userId: authenticatedUser.id,
       companyName,
-      ruc,
       legalRepresentative,
       phoneNumber,
       address,

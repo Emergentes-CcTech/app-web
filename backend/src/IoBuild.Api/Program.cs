@@ -381,7 +381,10 @@ public sealed record CreateProfileRequest(
     string? SecondEmail = null,
     int? Age = null,
     string? PhotoUrl = null,
-    int? YearsInBusiness = null);
+    int? YearsInBusiness = null,
+    // Registro de administración: la razón social se guarda como Name y el representante legal aparte
+    string? CompanyName = null,
+    string? LegalRepresentative = null);
 public sealed record CreateSubscriptionRequest(int BuilderId, int PlanId, DateTimeOffset StartDate, DateTimeOffset? EndDate);
 public sealed record ReplaceProfilePhotoRequest(string ExpectedReference, string Content);
 public sealed record ProjectStructureRequest(int Floors, int UnitsPerFloor, List<int>? FloorNumbers);

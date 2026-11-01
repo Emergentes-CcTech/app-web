@@ -25,70 +25,66 @@ public static class DataSeeder
         await SeedSubscriptionIfMissingAsync(context, cancellationToken);
     }
 
+    // Catálogo vigente: el plan se asigna por número de departamentos y el precio es mensual sin IGV.
+    // LegacyName permite actualizar bases creadas con el catálogo anterior (Boutique) sin perder sus suscripciones.
+    private static readonly (string Name, string? LegacyName, string Description, decimal Price, string[] Features)[] PlanCatalog =
+    {
+        ("Esencial", "Boutique",
+            "Plan HaaS para condominios de hasta 40 departamentos. Dotación en comodato: 3 equipos IoT.",
+            350.00m,
+            new[]
+            {
+                "Hasta 40 departamentos",
+                "3 equipos IoT en comodato (1 gateway 4G, 1 punto de agua y 1 tablero de energía)",
+                "Detección de fugas nocturnas en la cisterna",
+                "Monitoreo de cisterna y tablero de bombas",
+                "Prorrateo mensual según alícuota legal (Ley 27157)",
+                "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+                "Instalación no invasiva: sin cortar agua ni energía"
+            }),
+        ("Urbano", null,
+            "Plan HaaS para condominios de 41 a 80 departamentos. Dotación en comodato: 5 equipos IoT.",
+            420.00m,
+            new[]
+            {
+                "De 41 a 80 departamentos",
+                "5 equipos IoT en comodato (1 gateway 4G, 2 puntos de agua y 2 tableros de energía)",
+                "Monitoreo de cisterna, bombas y ascensores",
+                "Detección de fugas nocturnas y consumos fuera de horario",
+                "Conciliación mensual contra los recibos de Sedapal y Luz del Sur",
+                "Prorrateo legal al céntimo y liquidación digital por departamento",
+                "Contrato de 24 meses con garantía reembolsable de 2 cuotas"
+            }),
+        ("GranTorre", null,
+            "Plan HaaS para condominios de más de 80 departamentos. Dotación en comodato: 7 equipos IoT.",
+            650.00m,
+            new[]
+            {
+                "Más de 80 departamentos",
+                "7 equipos IoT en comodato (1 gateway 4G, 3 puntos de agua y 3 tableros de energía)",
+                "Monitoreo de varias cisternas, tableros y ascensores",
+                "Detección de anomalías y conciliación con los recibos matriz",
+                "Prorrateo por alícuotas con cuadre exacto al 100.0000%",
+                "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+                "Mantenimiento preventivo y calibración periódica de sensores"
+            })
+    };
+
     private static async Task SeedPlansAsync(IoBuildDbContext context, CancellationToken cancellationToken)
     {
-        if (await context.Plans.AnyAsync(cancellationToken))
+        var existing = await context.Plans.ToListAsync(cancellationToken);
+        foreach (var entry in PlanCatalog)
         {
-            return;
+            var featuresJson = JsonSerializer.Serialize(entry.Features);
+            // Se conserva el Id de la fila existente para no romper las suscripciones que la referencian
+            var plan = existing.FirstOrDefault(p => p.Name == entry.Name)
+                ?? existing.FirstOrDefault(p => entry.LegacyName != null && p.Name == entry.LegacyName);
+            if (plan is null)
+                context.Plans.Add(new Plan(entry.Name, entry.Description, entry.Price, "monthly", featuresJson));
+            else
+                plan.Update(entry.Name, entry.Description, entry.Price, "monthly", featuresJson);
         }
 
-        var plans = new[]
-        {
-            // Plan Boutique: para condominios pequeños de hasta 20 unidades con 4 equipos IoT
-            new Plan(
-                name: "Boutique",
-                description: "Plan HaaS para condominios boutique de hasta 20 departamentos. Dotación en comodato: 4 equipos IoT.",
-                price: 500.00m,
-                interval: "monthly",
-                featuresJson: JsonSerializer.Serialize(new[]
-                {
-                    "Hasta 20 departamentos",
-                    "4 equipos IoT en comodato (1 GatewayHub, 1 WaterFlowSensor, 2 CurrentTransformerCT)",
-                    "Detección continua de fugas nocturnas (01:00 a 04:00 AM)",
-                    "Monitoreo de Cisterna Principal y Tableros Eléctricos",
-                    "Prorrateo mensual automatizado según Alícuota Legal (Ley 27157)",
-                    "Contrato de 12 meses + 2 meses de garantía de servicio",
-                    "Soporte técnico prioritario y reemplazo de hardware por falla"
-                })
-            ),
-            // Plan Urbano: para edificios medianos de 21 a 80 unidades con 6 equipos IoT
-            new Plan(
-                name: "Urbano",
-                description: "Plan HaaS para condominios urbanos de 21 a 80 departamentos. Dotación en comodato: 6 equipos IoT.",
-                price: 700.00m,
-                interval: "monthly",
-                featuresJson: JsonSerializer.Serialize(new[]
-                {
-                    "De 21 a 80 departamentos",
-                    "6 equipos IoT en comodato (1 GatewayHub, 2 WaterFlowSensor, 3 CurrentTransformerCT)",
-                    "Monitoreo integral: Cisterna, Bombas, Ascensores e Iluminación Común",
-                    "Detección de sobrecargas eléctricas y fugas nocturnas en cisterna",
-                    "Conciliación mensual contra recibos matriz oficiales (Sedapal y Luz del Sur)",
-                    "Prorrateo legal al céntimo y liquidación digital por departamento",
-                    "Contrato de 12 meses + 2 meses de garantía de servicio",
-                    "Acceso BFF para Administrador y App Web para Residentes"
-                })
-            ),
-            // Plan GranTorre: para macro-condominios de más de 80 unidades con 10 equipos IoT
-            new Plan(
-                name: "GranTorre",
-                description: "Plan HaaS para macro-condominios de más de 80 departamentos. Dotación en comodato: 10 equipos IoT.",
-                price: 1000.00m,
-                interval: "monthly",
-                featuresJson: JsonSerializer.Serialize(new[]
-                {
-                    "Más de 80 departamentos",
-                    "10 equipos IoT en comodato (2 GatewayHub, 3 WaterFlowSensor, 5 CurrentTransformerCT)",
-                    "Monitoreo extendido de múltiples tableros, ascensores y cuartos hidroneumáticos",
-                    "Detección avanzada de anomalías y conciliación de macro-medición",
-                    "Prorrateo por alícuotas con cuadre estricto al 100.0000%",
-                    "Contrato de 12 meses + 2 meses de garantía de servicio",
-                    "Mantenimiento preventivo presencial y calibración periódica de sensores"
-                })
-            )
-        };
-
-        context.Plans.AddRange(plans);
         await context.SaveChangesAsync(cancellationToken);
     }
 

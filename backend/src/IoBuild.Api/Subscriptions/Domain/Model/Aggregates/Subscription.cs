@@ -19,7 +19,7 @@ public sealed class Subscription
         set => ProjectId = value;
     }
 
-    // Identificador del plan contratado (Boutique, Urbano o GranTorre)
+    // Identificador del plan contratado (Esencial, Urbano o GranTorre)
     public int PlanId { get; set; }
 
     // Estado del ciclo de vida de la suscripción (active, cancelled, pending)
@@ -31,6 +31,16 @@ public sealed class Subscription
     // Fecha de finalización del periodo de servicio
     public DateTimeOffset? EndDate { get; set; }
 
+    // Garantía reembolsable cobrada al activar (dos cuotas sin IGV)
+    public decimal GuaranteeSoles { get; set; }
+
+    // Cuota de activación cobrada al activar (instalación, con IGV)
+    public decimal ActivationFeeSoles { get; set; }
+
+    // Liquidación registrada al cancelar antes de terminar el contrato
+    public decimal? EarlyTerminationFeeSoles { get; set; }
+    public decimal? GuaranteeRefundSoles { get; set; }
+
     // Constructor por defecto requerido por el ORM
     public Subscription() { }
 
@@ -40,14 +50,35 @@ public sealed class Subscription
         ProjectId = projectId;
         PlanId = planId;
         StartDate = startDate;
-        EndDate = endDate ?? startDate.AddMonths(12);
+        EndDate = endDate ?? startDate.AddMonths(24);
         Status = "active";
     }
+
+    // Activa el contrato HaaS de 24 meses con los montos cobrados en el pago de activación
+    public static Subscription Activate(int projectId, Plan plan, DateTimeOffset startDate) => new()
+    {
+        ProjectId = projectId,
+        PlanId = plan.Id,
+        Status = "active",
+        StartDate = startDate,
+        EndDate = startDate.AddMonths(plan.ContractMonths),
+        GuaranteeSoles = plan.Guarantee,
+        ActivationFeeSoles = plan.ActivationFeeWithIgv
+    };
 
     // Cancela la suscripción activa
     public void Cancel()
     {
         Status = "cancelled";
         EndDate = DateTimeOffset.UtcNow;
+    }
+
+    // Cancela registrando el saldo de equipos y la devolución de la garantía; repetir no cambia la liquidación
+    public void Cancel(EarlyTerminationQuote quote)
+    {
+        if (Status == "cancelled") return;
+        EarlyTerminationFeeSoles = quote.AmountDue;
+        GuaranteeRefundSoles = quote.GuaranteeRefund;
+        Cancel();
     }
 }
