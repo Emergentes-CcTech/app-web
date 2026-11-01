@@ -8,6 +8,7 @@ import { getSessionUserId, formatPeriod, formatPen } from '../../../shared/infra
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import { sumTotals } from '../../application/common-area-report.js';
 import StatCard from './stat-card.component.vue';
+import AiExplainPanel from './ai-explain-panel.component.vue';
 
 // RNF-006: desglose de la liquidación en ≤ 3 interacciones desde el inicio de sesión
 const { t, locale } = useI18n();
@@ -35,6 +36,7 @@ onMounted(async () => {
     }
   } finally { loading.value = false; }
 });
+const myUnit = computed(() => payments.myUnits[0] || null);
 const openBreakdown = () => router.push({ path: ROUTES.AUDIT, query: { line: latest.value.settlementLineId } });
 </script>
 
@@ -61,6 +63,8 @@ const openBreakdown = () => router.push({ path: ROUTES.AUDIT, query: { line: lat
         <stat-card :title="t('dashboard.admin.stats.pumpEnergy')" :value="`${energy} kWh`" icon="pi-bolt" iconBgColor="bg-yellow-100" iconTextColor="text-yellow-600" />
       </div>
 
+      <ai-explain-panel v-if="myUnit" class="ai" :condominium-id="Number(myUnit.condominiumId)" :unit-id="Number(myUnit.id)" audience="resident" />
+
       <div class="head"><h3>{{ t('dashboard.resident.recent') }}</h3><pv-button :label="t('option.accountStatement')" text size="small" @click="router.push(ROUTES.ACCOUNT_STATEMENT)" /></div>
       <ul class="list"><li v-for="p in lastThree" :key="p.id"><span>{{ formatPeriod(p.period, locale) }}</span><span>{{ formatPen(p.amount) }}</span><pv-tag :severity="sev(p.effectiveStatus)" :value="t(`payments.status.${p.effectiveStatus}`)" /></li></ul>
     </template>
@@ -76,6 +80,7 @@ const openBreakdown = () => router.push({ path: ROUTES.AUDIT, query: { line: lat
 .hero.overdue { background: #FEF2F2; border-color: #ef4444; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
 .head { display: flex; justify-content: space-between; align-items: center; }
+.ai { margin: 1.5rem 0; }
 .list { list-style: none; padding: 0; }
 .list li { display: flex; justify-content: space-between; align-items: center; padding: .6rem 0; border-bottom: 1px solid #f3f4f6; }
 .center { text-align: center; padding: 2rem; }

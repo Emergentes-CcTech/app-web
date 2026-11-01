@@ -28,6 +28,9 @@ services:
       # Checkout de suscripciones: lee Stripe:RestrictedApiKey y Stripe:UseSimulatedPayments
       - Stripe__RestrictedApiKey=${STRIPE_RESTRICTED_API_KEY:-}
       - Stripe__UseSimulatedPayments=${STRIPE_USE_SIMULATED_PAYMENTS:-true}
+      # IA para explicar el consumo (Google AI Studio); sin clave se usan las explicaciones de reglas
+      - Gemini__ApiKey=${GEMINI_API_KEY:-}
+      - Gemini__Model=${GEMINI_MODEL:-gemini-3.5-flash-lite}
     depends_on:
       mysql-monolith:
         condition: service_healthy

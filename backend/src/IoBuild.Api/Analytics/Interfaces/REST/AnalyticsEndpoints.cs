@@ -11,7 +11,7 @@ namespace IoBuild.Api.Analytics.Interfaces.REST;
 /// <summary>
 /// Solicitud de análisis cognitivo de consumos y variaciones para el asistente AI.
 /// </summary>
-public sealed record AiExplanationRequest(int ProjectId, int? UnitId, string BillingPeriod, string? Question = null);
+public sealed record AiExplanationRequest(int ProjectId, int? UnitId, string BillingPeriod, string? Question = null, string? Language = null);
 
 /// <summary>
 /// Endpoints REST para el contexto de Analytics (métricas comunales, alertas de anomalías y diagnóstico AI).
@@ -160,7 +160,11 @@ public static class AnalyticsEndpoints
                     if (!ownsUnit) return Results.Forbid();
                 }
             }
-            var result = await cognitive.ExplainConsumptionVariationAsync(request.ProjectId, request.UnitId, request.BillingPeriod, request.Question ?? "Explicar variación mensual");
+            // Pregunta acotada: evita prompts enormes que agoten la cuota gratuita
+            var question = string.IsNullOrWhiteSpace(request.Question) ? "Explicar variación mensual" : request.Question.Trim();
+            if (question.Length > 500) question = question[..500];
+            var language = request.Language == "en" ? "en" : "es";
+            var result = await cognitive.ExplainConsumptionVariationAsync(request.ProjectId, request.UnitId, request.BillingPeriod, question, language);
             return Results.Ok(result);
         }).RequireAuthorization();
 

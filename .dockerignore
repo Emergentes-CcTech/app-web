@@ -12,3 +12,5 @@ iot-simulator
 tests
 mosquitto
 nginx
+# Secretos locales (GEMINI_API_KEY, etc.): nunca dentro de la imagen
+.env

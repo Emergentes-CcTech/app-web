@@ -29,5 +29,9 @@ export class TelemetryApi extends BaseApi {
     getDeviceConsumption(condominiumId, from, to) {
         return this.http.get(`/analytics/projects/${condominiumId}/device-consumption`, { params: { from, to } });
     }
+    // Explicación del consumo del mes: el backend la redacta con Gemini a partir de los hechos de las reglas
+    explainConsumption({ projectId, unitId, billingPeriod, question, language }) {
+        return this.http.post('/analytics/ai/explain', { projectId, unitId, billingPeriod, question, language });
+    }
     acknowledgeAlert(id) { return this.http.patch(`${alertsPath}/${id}`, { status: 'acknowledged' }); }
 }

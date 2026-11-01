@@ -116,7 +116,14 @@ builder.Services.AddHttpClient<ILiveEnergyService, LiveEnergyService>(c => c.Tim
 builder.Services.AddHttpClient<ILiveDeviceStatusService, LiveDeviceStatusService>(c => c.Timeout = TimeSpan.FromMilliseconds(500));
 builder.Services.AddScoped<IAnalyticsQueryService, AnalyticsQueryService>();
 builder.Services.AddScoped<AnalyticsProjectionImporter>();
-builder.Services.AddScoped<IAiCognitiveService, MockAiCognitiveAdapter>();
+// IA generativa solo para explicar: con Gemini:ApiKey redacta Gemini; sin clave, las reglas (también es su respaldo)
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<MockAiCognitiveAdapter>();
+builder.Services.AddHttpClient<GeminiCognitiveAdapter>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<IAiCognitiveService>(services =>
+    string.IsNullOrWhiteSpace(services.GetRequiredService<IConfiguration>()["Gemini:ApiKey"])
+        ? services.GetRequiredService<MockAiCognitiveAdapter>()
+        : services.GetRequiredService<GeminiCognitiveAdapter>());
 builder.Services.AddScoped<IAnomalyDetectionEngine, AnomalyDetectionEngine>();
 builder.Services.AddScoped<IProrationSettlementService, ProrationSettlementService>();
 builder.Services.AddScoped<DeviceCommandService>();
