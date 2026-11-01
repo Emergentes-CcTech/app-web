@@ -31,6 +31,8 @@ services:
       # IA para explicar el consumo (Google AI Studio); sin clave se usan las explicaciones de reglas
       - Gemini__ApiKey=${GEMINI_API_KEY:-}
       - Gemini__Model=${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      # Solo demostraciones: habilita la carga de noches históricas para el detector estadístico
+      - Demo__Enabled=${DEMO_ENABLED:-false}
     depends_on:
       mysql-monolith:
         condition: service_healthy

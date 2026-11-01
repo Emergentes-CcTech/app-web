@@ -110,6 +110,10 @@ public sealed class AnomalyDetectionEngine(IoBuildDbContext db) : IAnomalyDetect
 
             if (hasNeverReported || timeSinceHeartbeat > timeoutThreshold)
             {
+                // Mientras siga abierta una alerta de este gateway no se crea otra: evita llenar la lista con repetidas
+                if (await db.AnomalyAlerts.AnyAsync(a => a.DeviceId == device.Id && a.AlertType == "GatewayOfflineInBasement" && a.Status == "Active", ct))
+                    return null;
+
                 var description = hasNeverReported
                     ? "El concentrador en sótano nunca ha emitido señal de latido (heartbeat)."
                     : $"El concentrador en sótano no ha emitido señal de latido durante {timeSinceHeartbeat.TotalMinutes:F0} minutos.";
