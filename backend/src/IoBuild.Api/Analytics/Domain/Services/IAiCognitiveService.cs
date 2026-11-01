@@ -9,7 +9,9 @@ public sealed record AiExplanationDto(
     string EnergyAnalysis,
     string AliquotImpact,
     List<string> Recommendations,
-    bool HasAnomalies);
+    bool HasAnomalies,
+    // "rules" cuando lo redactan las reglas; "gemini" cuando lo redacta el modelo a partir de esos mismos hechos
+    string Source = "rules");
 
 /// <summary>
 /// Contrato del dominio para servicios cognitivos de análisis de consumo.
@@ -18,5 +20,5 @@ public sealed record AiExplanationDto(
 public interface IAiCognitiveService
 {
     // Construye un informe explicativo del comportamiento de consumo mensual y su distribución
-    Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question);
+    Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es");
 }

@@ -989,5 +989,31 @@
     "profile": "Perfil",
     "my-subscription": "Suscripción",
     "NotFound": "Página no encontrada"
+  },
+  "ai": {
+    "title": "Pregúntale a IoBuild",
+    "subtitle": "Explica el consumo del mes con lenguaje simple. Las alertas las detectan las reglas; la IA solo las explica.",
+    "placeholder": "Escribe tu pregunta sobre el consumo de este mes",
+    "ask": "Preguntar",
+    "error": "No se pudo obtener la explicación. Inténtalo de nuevo en unos segundos.",
+    "water": "Agua",
+    "energy": "Energía",
+    "aliquot": "Tu alícuota",
+    "recommendations": "Recomendaciones",
+    "sourceGemini": "Redactado con IA (Gemini) a partir de las mediciones y alertas de IoBuild.",
+    "sourceRules": "Explicación automática generada con las reglas de IoBuild.",
+    "suggestions": {
+      "admin": {
+        "1": "¿Por qué varió el consumo común este mes?",
+        "2": "¿Qué alertas están generando sobrecosto?",
+        "3": "¿Qué mantenimiento conviene programar?"
+      },
+      "resident": {
+        "1": "¿Por qué varió mi cuota este mes?",
+        "2": "¿Cómo se calcula mi parte del gasto común?",
+        "3": "¿Hubo alguna fuga en el edificio?"
+      }
+    },
+    "aliquotAdmin": "Reparto por alícuota"
   }
 }

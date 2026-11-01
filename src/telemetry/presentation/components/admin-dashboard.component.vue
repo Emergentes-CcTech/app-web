@@ -13,6 +13,7 @@ import { useSubscriptionStore } from '../../../subscriptions/application/subscri
 import { DeviceType } from '../../../devices/domain/model/device.entity.js';
 import { projectToMonthEnd } from '../../application/projection.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
+import AiExplainPanel from './ai-explain-panel.component.vue';
 import StatCard from './stat-card.component.vue';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
@@ -204,6 +205,8 @@ onUnmounted(() => telemetry.stopPolling());
         </div>
         <div class="chart"><Bar v-if="dailyChart.labels.length" :data="dailyChart" :options="chartOpts" /><p v-else class="muted empty">{{ t('dashboard.admin.noDailyData') }}</p></div>
       </section>
+
+      <ai-explain-panel :condominium-id="condominiumId" audience="admin" />
 
       <section id="alerts" class="card">
         <div class="head">

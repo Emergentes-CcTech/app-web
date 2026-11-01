@@ -10,7 +10,7 @@ namespace IoBuild.Api.Analytics.Infrastructure.Adapters;
 /// </summary>
 public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveService
 {
-    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question)
+    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es")
     {
         var project = await db.Projects.FindAsync([projectId]);
         var projectName = project?.Name ?? $"Condominio #{projectId}";
