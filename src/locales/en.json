@@ -714,7 +714,9 @@
     "alertTypes": {
       "night_leak": "Possible night leak",
       "pump_over_baseline": "Pump above baseline",
-      "no_signal": "Device without signal"
+      "no_signal": "Device without signal",
+      "unusual_night_flow": "Unusual night flow",
+      "pump_night_runtime": "Pumps running at night"
     },
     "alertStatus": {
       "open": "Open",
@@ -1016,5 +1018,24 @@
     },
     "aliquotAdmin": "Split by aliquot",
     "period": "Period explained: {period}"
+  },
+  "baselines": {
+    "title": "Statistical detection",
+    "subtitle": "Each building learns its normal night pattern (1:00 to 4:00 AM) and alerts when a night falls outside it.",
+    "empty": "This condominium has no intake water meter or pump meter to evaluate.",
+    "learning": "Learning the baseline: {n} of {total} nights",
+    "noData": "No night readings yet",
+    "lastNight": "Night of {night}: {value}",
+    "normal": "Normal: {median} · threshold {threshold} · {n} nights",
+    "metrics": {
+      "NightMinimumFlow": "Minimum night flow (cistern)",
+      "PumpNightEnergy": "Pump night energy"
+    },
+    "status": {
+      "normal": "Normal",
+      "anomaly": "Unusual",
+      "learning": "Learning",
+      "no-data": "No data"
+    }
   }
 }

@@ -714,7 +714,9 @@
     "alertTypes": {
       "night_leak": "Posible fuga nocturna",
       "pump_over_baseline": "Bomba sobre su línea base",
-      "no_signal": "Dispositivo sin señal"
+      "no_signal": "Dispositivo sin señal",
+      "unusual_night_flow": "Flujo nocturno fuera de lo normal",
+      "pump_night_runtime": "Bombas activas de madrugada"
     },
     "alertStatus": {
       "open": "Abierta",
@@ -1016,5 +1018,24 @@
     },
     "aliquotAdmin": "Reparto por alícuota",
     "period": "Periodo explicado: {period}"
+  },
+  "baselines": {
+    "title": "Detección estadística",
+    "subtitle": "Cada edificio aprende su patrón nocturno normal (01:00 a 04:00) y se alerta cuando una noche se sale de él.",
+    "empty": "Este condominio no tiene medidores de agua de ingreso ni de bombas para evaluar.",
+    "learning": "Aprendiendo la línea base: {n} de {total} noches",
+    "noData": "Sin lecturas nocturnas todavía",
+    "lastNight": "Noche del {night}: {value}",
+    "normal": "Lo normal: {median} · umbral {threshold} · {n} noches",
+    "metrics": {
+      "NightMinimumFlow": "Flujo mínimo nocturno (cisterna)",
+      "PumpNightEnergy": "Energía nocturna de bombas"
+    },
+    "status": {
+      "normal": "Normal",
+      "anomaly": "Fuera de lo normal",
+      "learning": "Aprendiendo",
+      "no-data": "Sin datos"
+    }
   }
 }

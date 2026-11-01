@@ -52,6 +52,13 @@ public static class AnalyticsEndpoints
             return Results.Ok(alerts);
         }).RequireAuthorization();
 
+        // Líneas base de la detección estadística: flujo mínimo nocturno y energía nocturna de bombas por medidor
+        group.MapGet("/projects/{projectId:int}/baselines", async (int projectId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, IoBuild.Api.Analytics.Domain.Services.StatisticalAnomalyDetector detector, CancellationToken ct) =>
+        {
+            if (!await MaySeeProjectAsync(user, db, projectId, ct)) return Results.Forbid();
+            return Results.Ok(await detector.EvaluateProjectAsync(projectId, DateTimeOffset.UtcNow, raiseAlerts: false, ct));
+        }).RequireAuthorization();
+
         // Resolución de una alerta de anomalía operativa
         group.MapPost("/projects/{projectId:int}/alerts/{alertId:int}/resolve", async (int projectId, int alertId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {

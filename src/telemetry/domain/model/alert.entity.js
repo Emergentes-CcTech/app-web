@@ -1,11 +1,17 @@
 export const AlertSeverity = Object.freeze({ CRITICAL: 'critical', WARNING: 'warning' });
-export const AlertType = Object.freeze({ NIGHT_LEAK: 'night_leak', PUMP_OVER_BASELINE: 'pump_over_baseline', NO_SIGNAL: 'no_signal' });
+export const AlertType = Object.freeze({
+    NIGHT_LEAK: 'night_leak', PUMP_OVER_BASELINE: 'pump_over_baseline', NO_SIGNAL: 'no_signal',
+    UNUSUAL_NIGHT_FLOW: 'unusual_night_flow', PUMP_NIGHT_RUNTIME: 'pump_night_runtime'
+});
 
 // Reglas del motor de anomalías del backend → tipos de alerta de la interfaz
 const TYPE_FROM_API = {
     NocturnalWaterLeak: AlertType.NIGHT_LEAK,
     PumpElectricalOverload: AlertType.PUMP_OVER_BASELINE,
     GatewayOfflineInBasement: AlertType.NO_SIGNAL,
+    // Detección estadística: noches fuera de la línea base del edificio
+    StatisticalNightFlow: AlertType.UNUSUAL_NIGHT_FLOW,
+    PumpNightRuntime: AlertType.PUMP_NIGHT_RUNTIME,
 };
 
 // El backend guarda UTC pero algunas fechas llegan sin zona; sin la "Z" el navegador las leería como hora local
