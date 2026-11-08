@@ -9,8 +9,26 @@ namespace IoBuild.Api.Devices.Application.Internal.CommandServices;
 
 public sealed class DeviceRegistryService(IoBuildDbContext db, IDeviceMqttPublisher mqtt, Microsoft.Extensions.Configuration.IConfiguration configuration)
 {
+    private static readonly TimeSpan ResyncInterval = TimeSpan.FromMinutes(1);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, DateTimeOffset> LastResync = new();
+
+    // lastCumulative permite a un medidor reiniciado retomar su contador sin retroceder
     public Task AnnounceAsync(Device device, CancellationToken cancellationToken = default) =>
-        PublishWhenEnabledAsync($"registry/{device.Id}", JsonSerializer.Serialize(new { deviceId = device.Id, type = device.Type }), cancellationToken);
+        PublishWhenEnabledAsync($"registry/{device.Id}", JsonSerializer.Serialize(new { deviceId = device.Id, type = device.Type, lastCumulative = device.LastCumulativeReading }), cancellationToken);
+
+    /// <summary>
+    /// Reanuncia un dispositivo cuya lectura se rechazó por retroceder. Como máximo una vez por minuto,
+    /// para que un medidor con un fallo persistente no inunde el broker.
+    /// </summary>
+    public async Task<bool> ResyncAsync(int deviceId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        if (LastResync.TryGetValue(deviceId, out var last) && now - last < ResyncInterval) return false;
+        var device = await db.Devices.FindAsync([deviceId], cancellationToken);
+        if (device is null) return false;
+        LastResync[deviceId] = now;
+        await AnnounceAsync(device, cancellationToken);
+        return true;
+    }
 
     public void QueueTombstone(int deviceId)
     {

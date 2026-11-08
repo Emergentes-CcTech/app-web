@@ -27,6 +27,8 @@ MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USERNAME = os.getenv("MQTT_USERNAME")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
+# Producción: un envío por minuto (lo que asumen el informe y el costo de 4G). Para demos en vivo: SIMULATOR_INTERVAL_SECONDS=5
+INTERVAL_SECONDS = max(1.0, float(os.getenv("SIMULATOR_INTERVAL_SECONDS", "60")))
 
 # Catálogo fijo de los 6 equipos IoT comunales en comodato (Condominio Residencial Los Robles)
 DEFAULT_COMMUNAL_DEVICES = {
@@ -92,15 +94,15 @@ def generate_communal_telemetry(device_id: int, info: dict, simulate_leak: bool 
         if is_nocturnal_window and simulate_leak:
             # Fuga nocturna: flujo continuo de 0.28 m3/h (> 0.15 umbral)
             flow_m3h = round(random.uniform(0.25, 0.35), 3)
-            delta_m3 = (flow_m3h / 3600.0) * 5.0  # incremento en 5 segundos
+            delta_m3 = (flow_m3h / 3600.0) * INTERVAL_SECONDS  # volumen del intervalo entre envíos
         elif is_nocturnal_window:
             # Ventana nocturna normal: consumo casi nulo (< 0.05 m3/h)
             flow_m3h = round(random.uniform(0.00, 0.04), 3)
-            delta_m3 = (flow_m3h / 3600.0) * 5.0
+            delta_m3 = (flow_m3h / 3600.0) * INTERVAL_SECONDS
         else:
             # Día: consumo regular de áreas comunes
             flow_m3h = round(random.uniform(0.80, 2.50), 3)
-            delta_m3 = (flow_m3h / 3600.0) * 5.0
+            delta_m3 = (flow_m3h / 3600.0) * INTERVAL_SECONDS
 
         with _lock:
             new_cumulative = round(prev_reading + delta_m3, 4)
@@ -141,7 +143,7 @@ def generate_communal_telemetry(device_id: int, info: dict, simulate_leak: bool 
             power_kw = round(random.uniform(0.9, 1.4), 2)
             current_a = round((power_kw * 1000.0) / 220.0, 2)
 
-        delta_kwh = (power_kw / 3600.0) * 5.0
+        delta_kwh = (power_kw / 3600.0) * INTERVAL_SECONDS
         with _lock:
             new_cumulative = round(prev_reading + delta_kwh, 4)
             _cumulative_readings[device_id] = new_cumulative
@@ -189,11 +191,15 @@ def on_message(client, userdata, message):
                 print(f"[REGISTRY] Dispositivo #{dev_id} desvinculado (tombstone)")
             else:
                 data = json.loads(message.payload.decode("utf-8"))
+                last_cumulative = float(data.get("lastCumulative") or 0.0)
                 with _lock:
                     if dev_id in _discovered_devices:
                         _discovered_devices[dev_id].update(data)
                     else:
                         _discovered_devices[dev_id] = data
+                    # Retoma el contador guardado por la plataforma: una lectura acumulada nunca retrocede
+                    if last_cumulative > _cumulative_readings.get(dev_id, 0.0):
+                        _cumulative_readings[dev_id] = last_cumulative
                 print(f"[REGISTRY] Dispositivo #{dev_id} registrado: {data.get('type')}")
     except Exception as ex:
         print(f"[ERROR] Error procesando mensaje MQTT en {topic}: {ex}")
@@ -244,7 +250,7 @@ def main():
     if args.replay:
         run_replay_simulation(client, hours=72)
 
-    print("\nIniciando bucle de telemetría IoT de áreas comunes (intervalo: 5s)...")
+    print(f"\nIniciando bucle de telemetría IoT de áreas comunes (intervalo: {INTERVAL_SECONDS:g}s)...")
     if args.leak:
         print(">> MODO ACTIVO: Simulación de Fuga Nocturna en Cisterna (--leak)")
     if args.overload:
@@ -268,7 +274,7 @@ def main():
                       f"Subsystem: {payload['subsystem']} | "
                       f"Reported: {json.dumps(payload.get('reported', {}))}")
 
-            time.sleep(5)
+            time.sleep(INTERVAL_SECONDS)
     except KeyboardInterrupt:
         print("\nDeteniendo simulador IoT.")
         client.loop_stop()
