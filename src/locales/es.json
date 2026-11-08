@@ -865,7 +865,9 @@
       "reading": "Lectura",
       "proration": "Prorrateo",
       "manual_adjustment": "Ajuste manual",
-      "participation_changed": "Cambio de participación"
+      "participation_changed": "Cambio de participación",
+      "payment": "Pago",
+      "alert": "Alerta"
     },
     "fee": {
       "selectPeriod": "Elegir mes",
@@ -930,7 +932,8 @@
       },
       "askAi": "¿Aún tienes dudas? Pregúntale a IoBuild"
     },
-    "residentSubtitle": "Te explicamos paso a paso de dónde sale lo que pagas."
+    "residentSubtitle": "Te explicamos paso a paso de dónde sale lo que pagas.",
+    "system": "Sistema"
   },
   "dashboard": {
     "admin": {
