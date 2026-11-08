@@ -1,0 +1,13 @@
+﻿numero,tipo,piso,area_m2
+101,departamento,1,85.50
+102,departamento,1,72.00
+103,departamento,1,64.25
+201,departamento,2,85.50
+202,departamento,2,72.00
+203,departamento,2,64.25
+301,departamento,3,85.50
+302,departamento,3,72.00
+303,departamento,3,64.25
+401,departamento,4,118.00
+402,departamento,4,96.75
+E-01,estacionamiento,0,12.50

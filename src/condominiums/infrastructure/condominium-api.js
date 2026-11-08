@@ -28,6 +28,8 @@ export class CondominiumApi extends BaseApi {
         return data;
     }
     createUnit(resource) { return this.http.post(unitsPath, resource); }
+    // Padrón completo en una sola operación: el backend aplica altas, cambios y bajas juntos
+    savePadron(condominiumId, units) { return this.http.put(`${condominiumsPath}/${condominiumId}/units`, { units }); }
     updateUnit(resource) { return this.http.put(`${unitsPath}/${resource.id}`, resource); }
     patchUnit(id, partial) { return this.http.patch(`${unitsPath}/${id}`, partial); }
     deleteUnit(id) { return this.http.delete(`${unitsPath}/${id}`); }

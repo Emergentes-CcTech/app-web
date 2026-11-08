@@ -1185,7 +1185,7 @@ public static class PublishingEndpoints
         units.MapPost("", async (CreateUnitResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
         {
             if (!await OwnsProjectIdAsync(user, db, resource.ProjectId, ct)) return Results.NotFound();
-            var command = new CreateUnitCommand(resource.ProjectId, resource.UnitNumber, resource.OwnerId, resource.Floor, resource.RoomNumber);
+            var command = new CreateUnitCommand(resource.ProjectId, resource.UnitNumber, resource.OwnerId, resource.Floor, resource.RoomNumber, resource.AreaM2, resource.AliquotPercentage);
             int unitId;
             try
             {
@@ -1198,6 +1198,59 @@ public static class PublishingEndpoints
             }
             var created = await queryService.Handle(new GetUnitByIdQuery(unitId), ct);
             return created is null ? Results.Problem(statusCode: 500) : Results.Created($"/api/v1/units/{unitId}", UnitResourceFromEntityAssembler.ToResourceFromEntity(created));
+        }).RequireAuthorization();
+
+        // Padrón completo del condominio en una sola operación: altas, cambios y bajas se aplican juntos o ninguno
+        app.MapPut("/api/v1/condominiums/{id:int}/units", async (int id, SavePadronResource body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await OwnsProjectIdAsync(user, db, id, ct)) return Results.NotFound();
+            var rows = body.Units ?? [];
+            var errors = UnitPadron.Validate(rows);
+            if (errors.Count > 0) return Results.UnprocessableEntity(new { error = errors[0], errors });
+
+            var existing = await db.Units.Where(u => u.ProjectId == id).ToListAsync(ct);
+            var byId = existing.ToDictionary(u => u.Id);
+            if (rows.FirstOrDefault(r => r.Id is > 0 && !byId.ContainsKey(r.Id.Value)) is { } foreign)
+                return Results.UnprocessableEntity(new { error = $"La unidad {foreign.Number} no pertenece a este condominio." });
+
+            // Una unidad con residente vinculado o con estados de cuenta no se elimina: perdería su historial
+            var keep = rows.Where(r => r.Id is > 0).Select(r => r.Id!.Value).ToHashSet();
+            var removed = existing.Where(u => !keep.Contains(u.Id)).ToList();
+            var removedIds = removed.Select(u => u.Id).ToList();
+            var withHistory = await db.StatementOfAccounts.Where(s => removedIds.Contains(s.UnitId)).Select(s => s.UnitId).Distinct().ToListAsync(ct);
+            var withOwner = await db.UnitOwnerProjections.Where(p => removedIds.Contains(p.UnitId)).Select(p => p.UnitId).Distinct().ToListAsync(ct);
+            if (removed.FirstOrDefault(u => u.OwnerId != null || withHistory.Contains(u.Id) || withOwner.Contains(u.Id)) is { } blocked)
+                return Results.Conflict(new { error = $"La unidad {blocked.UnitNumber} tiene residente o historial de cuotas y no se puede eliminar." });
+
+            db.Units.RemoveRange(removed);
+            foreach (var row in rows)
+            {
+                var number = row.Number!.Trim();
+                var unit = row.Id is > 0 ? byId[row.Id.Value] : null;
+                if (unit is null)
+                {
+                    unit = new Unit(id, number, row.Floor ?? UnitPadron.FloorFromNumber(number), row.AreaM2!.Value, 0m);
+                    db.Units.Add(unit);
+                }
+                unit.UnitNumber = number;
+                unit.RoomNumber = number;
+                if (row.Floor.HasValue) unit.Floor = row.Floor.Value;
+                unit.UnitType = UnitPadron.NormalizeType(row.Type);
+                unit.AreaM2 = row.AreaM2!.Value;
+                unit.AliquotPercentage = Math.Round(row.ParticipationPct!.Value, 4);
+            }
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                return Results.Conflict(new { error = "No se pudo guardar el padrón: revisa que no haya números de unidad repetidos." });
+            }
+
+            var saved = await db.Units.Where(u => u.ProjectId == id).OrderBy(u => u.UnitNumber).ToListAsync(ct);
+            return Results.Ok(saved.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
         }).RequireAuthorization();
 
         units.MapPatch("/{id:int}/assign-owner", async (int id, AssignUnitOwnerResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>

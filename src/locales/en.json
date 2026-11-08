@@ -459,7 +459,7 @@
       "supplyCode": "The code must have 6 to 12 digits.",
       "duplicateUnit": "A unit with that number already exists.",
       "area": "Enter a valid area.",
-      "percentage": "Enter a value between 0.01 and 100 with up to 2 decimals.",
+      "percentage": "Enter a value above 0 and up to 100 (up to 4 decimals).",
       "commonAreasRequired": "Register at least one common area.",
       "commonAreaName": "Each common area needs a name of 2 to 60 characters.",
       "floors": "Floors must be between 1 and 80."
@@ -549,6 +549,36 @@
       "unitsAndFloors": "{units} units",
       "floors": "{n} floors",
       "notRegistered": "Not registered: add it to reconcile bills"
+    },
+    "padron": {
+      "import": "Import CSV",
+      "calculate": "Calculate by area",
+      "confirmCalculate": "Current percentages will be replaced by unit area ÷ total area. Use it only if the bylaws split by area.",
+      "calculated": "Participation calculated by area",
+      "calculatedDetail": "Review the percentages and save the registry.",
+      "participationHint": "As set in the building bylaws. Leave it empty and use “Calculate by area”.",
+      "importTitle": "Import unit registry",
+      "summary": "{n} units · {area} m² in total.",
+      "willCalculate": "The file has no participation: it will be calculated by area (unit area ÷ total area) and add up to 100%.",
+      "willKeep": "The file percentages will be used. Check they add up to 100% before saving.",
+      "replace": "Replace the {n} current units",
+      "keepAssigned": "The {n} units with a linked resident are kept.",
+      "importConfirm": "Import",
+      "template": "Download template",
+      "fixErrors": "Fix the file and import it again:",
+      "format": "Columns: numero and area_m2 (required); tipo, piso and participacion (optional). Excel: Save as → CSV.",
+      "imported": "{n} units imported",
+      "importedByArea": "Participation was calculated by area. Review and save the registry.",
+      "importedReview": "Review the percentages and save the registry.",
+      "errors": {
+        "empty": "The file is empty.",
+        "headers": "The first row is missing the numero and area_m2 columns.",
+        "number": "Row {line}: unit number {number} is longer than 10 characters.",
+        "duplicate": "Row {line}: unit {number} is repeated.",
+        "area": "Row {line}: unit {number} needs an area greater than 0.",
+        "participation": "Row {line}: participation of {number} must be between 0 and 100.",
+        "type": "Row {line}: unknown type for {number} (apartment, storage or parking)."
+      }
     }
   },
   "residents": {

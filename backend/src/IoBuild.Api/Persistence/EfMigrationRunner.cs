@@ -222,12 +222,15 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
 
                 // Asegura las columnas para alícuotas y catastro en la tabla units
                 var existingUnitCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                using var unitCmd = connection.CreateCommand();
-                unitCmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'units';";
-                using var unitReader = await unitCmd.ExecuteReaderAsync(cancellationToken);
-                while (await unitReader.ReadAsync(cancellationToken))
+                // El lector se cierra antes de los ALTER: con un DataReader abierto la conexión no acepta otro comando
+                await using (var unitCmd = connection.CreateCommand())
                 {
-                    existingUnitCols.Add(unitReader.GetString(0));
+                    unitCmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'units';";
+                    await using var unitReader = await unitCmd.ExecuteReaderAsync(cancellationToken);
+                    while (await unitReader.ReadAsync(cancellationToken))
+                    {
+                        existingUnitCols.Add(unitReader.GetString(0));
+                    }
                 }
 
                 if (!existingUnitCols.Contains("AliquotPercentage"))
@@ -237,6 +240,10 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                 if (!existingUnitCols.Contains("AreaM2"))
                 {
                     await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN AreaM2 DECIMAL(10,2) NOT NULL DEFAULT 75.00;", cancellationToken);
+                }
+                if (!existingUnitCols.Contains("UnitType"))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE units ADD COLUMN UnitType VARCHAR(20) NOT NULL DEFAULT 'apartment';", cancellationToken);
                 }
                 if (!existingUnitCols.Contains("ResidentFullName"))
                 {
