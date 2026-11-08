@@ -29,7 +29,7 @@ public sealed class GeminiCognitiveAdapter(
     public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es")
     {
         var periodFacts = await facts.BuildFactsAsync(projectId, unitId, billingPeriod);
-        var baseline = MockAiCognitiveAdapter.Render(periodFacts);
+        var baseline = MockAiCognitiveAdapter.Render(periodFacts, language);
         var apiKey = configuration["Gemini:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey)) return baseline;
 
@@ -95,7 +95,7 @@ public sealed class GeminiCognitiveAdapter(
         var system =
             "Eres el asistente de IoBuild, una plataforma que mide el consumo de agua y luz de las áreas comunes de condominios en Lima " +
             "y prorratea el gasto entre los departamentos según su alícuota (Ley 27157). " +
-            $"Responde en {lang}, con frases cortas y claras para un propietario o un administrador. " +
+            $"Responde siempre en {lang}, aunque la pregunta o los datos estén en otro idioma, con frases cortas y claras para un propietario o un administrador. " +
             "Usa solo los HECHOS que se te entregan: no inventes cifras, fechas, causas ni equipos. " +
             "Si un dato no está en los hechos, dilo. No des consejos legales ni financieros. " +
             "Responde primero a la pregunta en el resumen. Compara con el periodo anterior cuando haya datos; si el periodo está en curso, aclara que es parcial. " +

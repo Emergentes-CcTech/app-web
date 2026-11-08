@@ -392,12 +392,11 @@
     "bills": "Recibos matriz",
     "settlements": "Prorrateo y liquidación",
     "delinquency": "Morosidad",
-    "audit": "Auditoría",
+    "audit": "Mi cuota actual",
     "subscription": "Suscripción",
     "profile": "Perfil",
     "myConsumption": "Mi consumo",
-    "accountStatement": "Estado de cuenta",
-    "analytics": "Analytics"
+    "accountStatement": "Estado de cuenta"
   },
   "condominiums": {
     "title": "Condominios",
@@ -853,7 +852,7 @@
   },
   "audit": {
     "title": "Historial de auditoría",
-    "residentTitle": "Sustento de mi liquidación",
+    "residentTitle": "¿Cómo se calculó mi cuota?",
     "empty": "No hay eventos.",
     "entity": "Entidad",
     "actor": "Usuario",
@@ -862,13 +861,76 @@
     "exportCsv": "Exportar CSV",
     "from": "Desde",
     "to": "Hasta",
-    "participationChanges": "Cambios de porcentaje de tu unidad",
     "types": {
       "reading": "Lectura",
       "proration": "Prorrateo",
       "manual_adjustment": "Ajuste manual",
       "participation_changed": "Cambio de participación"
-    }
+    },
+    "fee": {
+      "selectPeriod": "Elegir mes",
+      "loadError": "No se pudo cargar la explicación de tu cuota. Inténtalo de nuevo.",
+      "yourFee": "Tu cuota de {month} · Departamento {unit}",
+      "paidOn": "Pagada el {date}",
+      "dueOn": "Vence el {date}",
+      "goPay": "Ir a pagar",
+      "concepts": {
+        "water": "Agua",
+        "energy": "Luz",
+        "other": "Otros gastos comunes"
+      },
+      "step1": {
+        "title": "Lo que costó el edificio en {month}",
+        "text": "Estos son los recibos de las áreas comunes y los demás gastos que registró la administración.",
+        "total": "Gasto común total"
+      },
+      "step2": {
+        "title": "Tu parte es el {pct}%",
+        "text": "Es la alícuota de tu departamento, fijada según la Ley 27157. Significa que, de cada S/ 100 del gasto común, te corresponden {amount}."
+      },
+      "step3": {
+        "title": "Así se compone tu cuota",
+        "total": "Tu cuota"
+      },
+      "change": {
+        "title": "Comparación con {month}",
+        "none": "No hay cuota de {month} para comparar.",
+        "up": "Lo que más subió fue {concept}: {amount} más.",
+        "down": "Lo que más bajó fue {concept}: {amount} menos."
+      },
+      "alerts": {
+        "title": "Alertas con costo en {month}",
+        "none": "No se detectaron fugas ni sobreconsumos con costo en este mes.",
+        "text": "El consumo extra de estos eventos ya forma parte del recibo del edificio. El monto es una estimación de cuánto te tocó.",
+        "share": "Edificio: {building} · Tu parte: {mine}",
+        "open": "En revisión",
+        "resolved": "Resuelta"
+      },
+      "evidence": {
+        "title": "De dónde salen los datos",
+        "text": "Los montos vienen de los recibos matriz del edificio: {water} m³ de Sedapal y {energy} kWh de Luz del Sur.",
+        "water": "Ver recibo de agua",
+        "energy": "Ver recibo de luz",
+        "noReceipts": "La administración todavía no adjuntó las imágenes de los recibos de este mes."
+      },
+      "glossary": {
+        "title": "Palabras que aparecen en tu cuota",
+        "aliquot": {
+          "term": "Alícuota",
+          "text": "El porcentaje del edificio que le corresponde a tu departamento. Define qué parte de los gastos comunes pagas."
+        },
+        "commonExpense": {
+          "term": "Gasto común",
+          "text": "Lo que cuesta mantener las áreas compartidas: cisterna, bombas, ascensores e iluminación."
+        },
+        "masterBill": {
+          "term": "Recibo matriz",
+          "text": "El recibo único que Sedapal o Luz del Sur emite para todo el edificio."
+        }
+      },
+      "askAi": "¿Aún tienes dudas? Pregúntale a IoBuild"
+    },
+    "residentSubtitle": "Te explicamos paso a paso de dónde sale lo que pagas."
   },
   "dashboard": {
     "admin": {
@@ -975,7 +1037,7 @@
     "dashboard": "Panel",
     "analytics": "Áreas comunes",
     "account-statement": "Estado de cuenta",
-    "audit": "Auditoría",
+    "audit": "Mi cuota actual",
     "billing": "Facturación y cobranzas",
     "bills": "Recibos matriz",
     "settlements": "Prorrateo y liquidación",
@@ -1017,7 +1079,8 @@
       }
     },
     "aliquotAdmin": "Reparto por alícuota",
-    "period": "Periodo explicado: {period}"
+    "period": "Periodo explicado: {period}",
+    "answerLabel": "Respuesta del asistente"
   },
   "baselines": {
     "title": "Detección estadística",
@@ -1037,5 +1100,12 @@
       "learning": "Aprendiendo",
       "no-data": "Sin datos"
     }
+  },
+  "alertsBell": {
+    "open": "Ver notificaciones ({n} alertas abiertas)",
+    "count": "Sin alertas abiertas | {n} alerta abierta | {n} alertas abiertas",
+    "more": "y {n} más",
+    "viewAll": "Ver todas las alertas",
+    "error": "No se pudo reconocer la alerta. Inténtalo de nuevo."
   }
 }

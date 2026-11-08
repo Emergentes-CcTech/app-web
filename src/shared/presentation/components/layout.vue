@@ -4,6 +4,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
 import LanguageSwitcher from "./language-switcher.vue";
+import AlertsBell from "../../../telemetry/presentation/components/alerts-bell.component.vue";
 import { useProfileStore } from "../../../profiles/application/profile.store.js";
 import { useIamStore } from "../../../iam/application/iam.store.js";
 import { useSubscriptionStore } from "../../../subscriptions/application/subscription.store.js";
@@ -99,9 +100,8 @@ const items = [
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.ADMIN, icon: 'pi pi-user' },
   // Residente (Permanece intacto)
   { label: 'option.myConsumption', to: ROUTES.DASHBOARD, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-line' },
-  { label: 'option.analytics', to: ROUTES.ANALYTICS, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-bar' },
   { label: 'option.accountStatement', to: ROUTES.ACCOUNT_STATEMENT, use_role: ROLES.RESIDENT, icon: 'pi pi-wallet' },
-  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.RESIDENT, icon: 'pi pi-history' },
+  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.RESIDENT, icon: 'pi pi-receipt' },
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.RESIDENT, icon: 'pi pi-user' },
 ];
 
@@ -150,10 +150,7 @@ const filteredItems = computed(() => {
         <template #end>
           <div class="header-end">
 
-            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" :aria-label="t('header.alerts')" style="position: relative; display: inline-flex;">
-              <pv-button class="notification-button" :aria-label="t('header.notifications')" icon="pi pi-bell" text rounded severity="secondary" />
-              <span v-if="telemetryStore.openAlertsCount > 0" class="alert-badge" style="position:absolute;top:2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;">{{ telemetryStore.openAlertsCount }}</span>
-            </router-link>
+            <alerts-bell v-if="userRole === ROLES.ADMIN && hasActiveSubscription" />
 
 
             <router-link

@@ -65,6 +65,19 @@ public sealed class ConsumptionFactsTests
     }
 
     [Fact]
+    public async Task The_rules_explanation_follows_the_interface_language()
+    {
+        await using var db = await SeededAsync();
+
+        var explanation = await new MockAiCognitiveAdapter(db).ExplainConsumptionVariationAsync(10, 402, "", "Why did my fee change?", "en");
+
+        Assert.Contains("Your fee was S/ 109.36 compared with S/ 98.18 in September 2026 (+11.4%), mainly because of water (+S/ 8.85)", explanation.Summary);
+        Assert.Contains("Common-area water measured by IoBuild", explanation.WaterAnalysis);
+        Assert.Contains("With its legal aliquot of 3.8500%", explanation.AliquotImpact);
+        Assert.DoesNotContain("Departamento", explanation.Summary + explanation.AliquotImpact);
+    }
+
+    [Fact]
     public async Task The_rules_explanation_answers_why_the_fee_changed_with_real_figures()
     {
         await using var db = await SeededAsync();
