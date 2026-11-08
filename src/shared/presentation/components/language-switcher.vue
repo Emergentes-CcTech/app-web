@@ -2,6 +2,7 @@
 import {useI18n} from "vue-i18n";
 import { computed, ref, watch} from "vue";
 import { LANG_KEY } from "../../infrastructure/storage-keys.js";
+import { syncDocumentTitle } from "../../../router.js";
 
 const { t, locale, availableLocales } = useI18n();
 
@@ -15,6 +16,9 @@ const selectRef = ref(null);
 
 watch(locale, (newLang) => {
   localStorage.setItem(LANG_KEY, newLang);
+  // Lectores de pantalla y título de la pestaña siguen al idioma elegido
+  document.documentElement.lang = newLang;
+  syncDocumentTitle();
 });
 
 </script>
@@ -28,7 +32,7 @@ watch(locale, (newLang) => {
       option-label="label"
       option-value="value"
       class="language-select custom-green-select"
-      placeholder="Idioma"
+      :placeholder="t('header.language')"
       :aria-label="t('profile.appLanguage')"
     />
   </div>

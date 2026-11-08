@@ -7,3 +7,10 @@ dist
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+backend
+iot-simulator
+tests
+mosquitto
+nginx
+# Secretos locales (GEMINI_API_KEY, etc.): nunca dentro de la imagen
+.env

@@ -27,7 +27,7 @@ const initial = computed(() => (title.value || '?').charAt(0).toUpperCase());
 const editableFields = computed(() => isAdmin.value
   ? ['companyName', 'legalRepresentative', 'phoneNumber', 'address', 'secondEmail']
   : ['fullName', 'phoneNumber', 'secondEmail']);
-const readOnlyFields = computed(() => isAdmin.value ? ['ruc', 'email'] : ['dni', 'email']);
+const readOnlyFields = computed(() => isAdmin.value ? ['email'] : ['dni', 'email']);
 
 function startEdit() { Object.assign(draft, profile.value); isEditing.value = true; }
 function cancelEdit() { isEditing.value = false; Object.keys(errors).forEach(k => delete errors[k]); }
@@ -50,7 +50,7 @@ async function save() {
     isEditing.value = false;
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('profile.saveSuccess'), life: 2500 });
   } catch (_) {
-    toast.add({ severity: 'error', summary: 'Error', detail: t('profile.saveError'), life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('profile.saveError'), life: 3000 });
   } finally {
     isSaving.value = false;
   }

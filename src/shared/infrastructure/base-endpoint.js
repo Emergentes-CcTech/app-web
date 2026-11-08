@@ -1,6 +1,6 @@
 /**
  * BaseEndpoint class to handle common API endpoint operations.
- * This class provides methods for CRUD operations.
+ * This class provides methods for operations operations.
  * It can be extended by specific endpoint classes.
  *
  * @class

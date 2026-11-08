@@ -21,5 +21,21 @@ export class TelemetryApi extends BaseApi {
         return this.http.get(alertsPath, { params: { condominiumId, status, _sort: 'createdAt', _order: 'desc' } });
     }
     getOpenAlerts() { return this.http.get(alertsPath, { params: { status: 'open', _sort: 'createdAt', _order: 'desc' } }); }
+    // Consumo diario de áreas comunes calculado en el backend a partir de las lecturas acumuladas
+    getDailyConsumption(condominiumId, from, to) {
+        return this.http.get(`/analytics/projects/${condominiumId}/daily-consumption`, { params: { from, to } });
+    }
+    // Consumo del periodo por medidor (lecturas acumuladas: máximo - mínimo)
+    getDeviceConsumption(condominiumId, from, to) {
+        return this.http.get(`/analytics/projects/${condominiumId}/device-consumption`, { params: { from, to } });
+    }
+    // Línea base nocturna aprendida por medidor (detección estadística)
+    getBaselines(condominiumId) {
+        return this.http.get(`/analytics/projects/${condominiumId}/baselines`);
+    }
+    // Explicación del consumo del mes: el backend la redacta con Gemini a partir de los hechos de las reglas
+    explainConsumption({ projectId, unitId, billingPeriod, question, language }) {
+        return this.http.post('/analytics/ai/explain', { projectId, unitId, billingPeriod, question, language });
+    }
     acknowledgeAlert(id) { return this.http.patch(`${alertsPath}/${id}`, { status: 'acknowledged' }); }
 }

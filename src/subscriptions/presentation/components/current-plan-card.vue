@@ -82,8 +82,9 @@ const isNearLimit = computed(() => {
 
         <div class="hero-price-row">
           <span class="hero-price-amount">S/ {{ plan.monthlyPen.toLocaleString('es-PE') }}</span>
-          <span class="hero-price-period">/ {{ t('subscriptions.month') }}</span>
+          <span class="hero-price-period">{{ t('subscriptions.plusIgv') }} / {{ t('subscriptions.month') }}</span>
         </div>
+        <p class="hero-plan-desc">{{ t('subscriptions.withIgv', { amount: plan.monthlyPenWithIgv.toFixed(2) }) }}</p>
 
         <div class="hero-renewal">
           <i class="pi pi-calendar"></i>

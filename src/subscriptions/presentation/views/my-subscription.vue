@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -12,8 +12,8 @@ import { IamFacade } from "../../infrastructure/iam.facade.js";
 import PlanCard from "../components/plan-card.vue";
 import CurrentPlanCard from "../components/current-plan-card.vue";
 import PreviousInvoicesModal from "../components/previous-invoices-modal.vue";
-import ChangePlanModal from "../components/change-plan-modal.vue";
 import PlanComparisonModal from "../components/plan-comparison-modal.vue";
+import ActivationCard from "../components/activation-card.vue";
 import { SubscriptionApi } from "../../infrastructure/subscription-api.js";
 import {
   TOAST_SUCCESS_DURATION_MS,
@@ -39,6 +39,27 @@ const exceedsCatalog = computed(() => registeredUnits.value > MAX_PLAN_UNITS);
 const condoLabel = (c) => c.name;
 function onCondoChange(id) { selectedCondoId.value = id; store.selectCondominium(id); }
 const subscriptionApi = new SubscriptionApi();
+const selectedCondoName = computed(() => condoStore.condominiums.find(c => c.id === selectedCondoId.value)?.name || '');
+
+// Pago de activación del condominio seleccionado: el backend asigna el plan por departamentos
+const activationQuote = ref(null);
+const activationLoading = ref(false);
+async function loadActivationQuote() {
+  activationQuote.value = null;
+  if (!selectedCondoId.value || store.currentPlan) return;
+  activationLoading.value = true;
+  try {
+    const { data } = await subscriptionApi.getActivationQuote(selectedCondoId.value);
+    activationQuote.value = data;
+  } catch (_) {
+    activationQuote.value = null;
+  } finally {
+    activationLoading.value = false;
+  }
+}
+watch(() => [selectedCondoId.value, store.currentPlan?.id], loadActivationQuote);
+
+const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const isProcessing = ref(false);
 
@@ -47,10 +68,6 @@ const invoicesVisible = ref(false);
 const invoicesLoading = ref(false);
 const invoices = ref([]);
 const invoicesError = ref("");
-
-// Change plan confirmation modal
-const changePlanVisible = ref(false);
-const targetPlanForChange = ref(null);
 
 // Comparison matrix modal
 const comparisonVisible = ref(false);
@@ -101,7 +118,7 @@ const openInvoicesDialog = async () => {
       invoices.value = [{
         id: `in_sub_${store.currentSubscription.id}`,
         description: t('subscriptions.invoice-plan-description', { planName: store.currentPlan.name }),
-        amount: store.currentPlan.price,
+        amount: store.currentPlan.monthlyPenWithIgv,
         currency: 'PEN',
         status: store.currentSubscription.status === 'active' ? 'paid' : store.currentSubscription.status,
         date: formatInvoiceDate(store.currentSubscription.startDate),
@@ -124,6 +141,7 @@ onMounted(async () => {
     condosLoaded.value = true;
     selectedCondoId.value = condoStore.condominiums[0]?.id ?? null;
     store.selectCondominium(selectedCondoId.value);
+    await loadActivationQuote();
   } catch (_) {}
 
   // Check URL parameters after returning from Stripe checkout
@@ -146,6 +164,7 @@ onMounted(async () => {
       });
 
       await store.fetchCurrentSubscription();
+      store.selectCondominium(selectedCondoId.value);
     } catch (error) {
       console.error("Error confirming payment:", error);
       toast.add({
@@ -166,9 +185,24 @@ const handleRenewPlan = async () => {
   await handlePayPlan(store.currentPlan);
 };
 
-const handleCancelPlan = () => {
+const handleCancelPlan = async () => {
+  let message = t("subscriptions.confirm-cancel");
+  try {
+    const { data } = await subscriptionApi.getCancellationQuote(store.currentSubscription.id);
+    message = data.monthsRemaining > 0
+      ? t('subscriptions.cancellation.early', {
+          months: data.monthsRemaining,
+          balance: money(data.equipmentBalance),
+          guarantee: money(data.guaranteeHeld),
+          due: money(data.amountDue),
+          refund: money(data.guaranteeRefund)
+        })
+      : t('subscriptions.cancellation.completed', { refund: money(data.guaranteeRefund) });
+  } catch (_) { /* sin liquidación disponible se muestra la confirmación simple */ }
   confirm.require({
-    message: t("subscriptions.confirm-cancel"),
+    message,
+    acceptLabel: t('common.confirm'),
+    rejectLabel: t('common.back'),
     header: t("subscriptions.cancel-header"),
     icon: "pi pi-exclamation-triangle",
     acceptClass: "p-button-danger",
@@ -194,19 +228,14 @@ const handleCancelPlan = () => {
 };
 
 const handleSelectPlan = (plan) => {
-  if (store.currentPlan && store.currentPlan.id !== plan.id) {
-    targetPlanForChange.value = plan;
-    changePlanVisible.value = true;
+  // El plan no se elige: solo se paga el que corresponde a los departamentos del condominio
+  const assignedId = activationQuote.value?.planId ?? store.currentPlan?.id;
+  if (Number(plan.id) !== Number(assignedId)) {
+    toast.add({ severity: "info", summary: t("subscriptions.warning"), detail: t('subscriptions.activation.assignedOnly'), life: TOAST_ERROR_DURATION_MS });
     return;
   }
+  comparisonVisible.value = false;
   handlePayPlan(plan);
-};
-
-const confirmPlanChange = async () => {
-  if (!targetPlanForChange.value) return;
-  const plan = targetPlanForChange.value;
-  changePlanVisible.value = false;
-  await handlePayPlan(plan);
 };
 
 const handlePayPlan = async (plan) => {
@@ -328,27 +357,15 @@ const handlePayPlan = async (plan) => {
           @compare-plans="comparisonVisible = true"
         />
 
-        <!-- Banner for users without subscription -->
-        <div v-else class="empty-state-banner">
-          <div class="banner-content">
-            <div class="banner-pill">
-              <i class="pi pi-sparkles"></i>
-              <span>{{ t('subscriptions.startUsingIoBuild') }}</span>
-            </div>
-            <h2 class="banner-title">{{ t("subscriptions.no-subscription") }}</h2>
-            <p class="banner-desc">
-              {{ t('subscriptions.noSubscriptionDescription') }}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="banner-cta"
-            @click="comparisonVisible = true"
-          >
-            <span>{{ t('subscriptions.compare-plans') }}</span>
-            <i class="pi pi-arrow-right"></i>
-          </button>
-        </div>
+        <!-- Sin suscripción: activación del condominio con el plan que le corresponde -->
+        <ActivationCard
+          v-else-if="selectedCondoId"
+          :quote="activationQuote"
+          :condominiumName="selectedCondoName"
+          :loading="activationLoading"
+          :isProcessing="isProcessing"
+          @activate="(quote) => handlePayPlan({ id: quote.planId })"
+        />
 
         <!-- 2. Plans Grid Section -->
         <div class="plans-section">
@@ -372,7 +389,7 @@ const handlePayPlan = async (plan) => {
               :isPopular="plan.code === recommendedCode"
               :registeredUnits="registeredUnits"
               :isProcessing="isProcessing"
-              @select="handleSelectPlan"
+              :selectable="false"
             />
           </div>
         </div>
@@ -386,15 +403,6 @@ const handlePayPlan = async (plan) => {
       :loading="invoicesLoading"
       :error="invoicesError"
       @close="invoicesVisible = false"
-    />
-
-    <ChangePlanModal
-      :visible="changePlanVisible"
-      :targetPlan="targetPlanForChange"
-      :currentPlan="store.currentPlan"
-      :isProcessing="isProcessing"
-      @close="changePlanVisible = false"
-      @confirm="confirmPlanChange"
     />
 
     <PlanComparisonModal
@@ -494,72 +502,6 @@ const handlePayPlan = async (plan) => {
 .loading-text {
   font-size: 0.88rem;
   color: #64748b;
-}
-
-/* Empty State Banner */
-.empty-state-banner {
-  background: linear-gradient(135deg, #059669 0%, #0f766e 100%);
-  color: #ffffff;
-  border-radius: 1.25rem;
-  padding: 2.25rem 2.5rem;
-  margin-bottom: 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-  box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.25);
-}
-
-.banner-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.3rem 0.85rem;
-  border-radius: 9999px;
-  margin-bottom: 0.75rem;
-}
-
-.banner-title {
-  font-size: 1.65rem;
-  font-weight: 800;
-  margin: 0 0 0.5rem 0;
-  letter-spacing: -0.02em;
-}
-
-.banner-desc {
-  font-size: 0.88rem;
-  color: #e6fffa;
-  margin: 0;
-  max-width: 650px;
-  line-height: 1.5;
-}
-
-.banner-cta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #ffffff;
-  color: #065f46;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 800;
-  padding: 0.85rem 1.35rem;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.banner-cta:hover {
-  background: #ecfdf5;
-  transform: translateY(-2px);
 }
 
 /* Plans Section */

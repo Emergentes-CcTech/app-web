@@ -15,6 +15,7 @@ export const ROUTES = {
     CONDOMINIUMS: '/condominiums',
     RESIDENTS: '/residents',
     DEVICES: '/devices/device-management',
+    BILLING: '/billing',
     BILLING_BILLS: '/billing/bills',
     BILLING_SETTLEMENTS: '/billing/settlements',
     ACCOUNT_STATEMENT: '/payments/account-statement',

@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "openNav": "Abrir navegación",
+    "closeNav": "Cerrar navegación",
+    "alerts": "Ver alertas",
+    "notifications": "Notificaciones",
+    "user": "Usuario",
+    "language": "Idioma",
+    "criticalAlert": "Alerta crítica"
   },
   "profile": {
     "title": "Perfil",
@@ -23,7 +30,6 @@
     "administratorRole": "Administrador",
     "residentRole": "Dueño de departamento",
     "companyName": "Razón social",
-    "ruc": "RUC",
     "legalRepresentative": "Representante legal",
     "dni": "DNI",
     "notifications": {
@@ -175,14 +181,41 @@
       }
     },
     "planCatalog": {
-      "boutique": {
-        "description": "Para condominios pequeños de hasta 20 departamentos."
+      "esencial": {
+        "description": "Para condominios de hasta 40 departamentos.",
+        "features": [
+          "Hasta 40 departamentos",
+          "3 equipos IoT en comodato (1 gateway 4G, 1 punto de agua y 1 tablero de energía)",
+          "Detección de fugas nocturnas en la cisterna",
+          "Monitoreo de cisterna y tablero de bombas",
+          "Prorrateo mensual según alícuota legal (Ley 27157)",
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Instalación no invasiva: sin cortar agua ni energía"
+        ]
       },
       "urbano": {
-        "description": "Para edificios de 21 a 50 departamentos."
+        "description": "Para edificios de 41 a 80 departamentos.",
+        "features": [
+          "De 41 a 80 departamentos",
+          "5 equipos IoT en comodato (1 gateway 4G, 2 puntos de agua y 2 tableros de energía)",
+          "Monitoreo de cisterna, bombas y ascensores",
+          "Detección de fugas nocturnas y consumos fuera de horario",
+          "Conciliación mensual contra los recibos de Sedapal y Luz del Sur",
+          "Prorrateo legal al céntimo y liquidación digital por departamento",
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas"
+        ]
       },
       "gran-torre": {
-        "description": "Para torres de 51 a 80 departamentos."
+        "description": "Para torres de más de 80 departamentos.",
+        "features": [
+          "Más de 80 departamentos",
+          "7 equipos IoT en comodato (1 gateway 4G, 3 puntos de agua y 3 tableros de energía)",
+          "Monitoreo de varias cisternas, tableros y ascensores",
+          "Detección de anomalías y conciliación con los recibos matriz",
+          "Prorrateo por alícuotas con cuadre exacto al 100.0000%",
+          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Mantenimiento preventivo y calibración periódica de sensores"
+        ]
       }
     },
     "usage-units": "Departamentos registrados",
@@ -196,10 +229,35 @@
     "kit": {
       "title": "Kit de {n} equipos",
       "gateways": "{n} Gateway | {n} Gateways",
-      "flowMeters": "{n} Caudalímetro | {n} Caudalímetros",
-      "ctClamps": "{n} Pinza CT | {n} Pinzas CT"
+      "flowMeters": "{n} Punto de agua | {n} Puntos de agua",
+      "ctClamps": "{n} Tablero de energía | {n} Tableros de energía"
     },
-    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos."
+    "needsCondominium": "Primero registra un condominio: cada plan se contrata por condominio según su número de departamentos.",
+    "unitsFrom": "Más de {min} departamentos",
+    "plusIgv": "+ IGV",
+    "withIgv": "S/ {amount} con IGV",
+    "activation": {
+      "pill": "Activación del servicio",
+      "title": "Activa IoBuild en {name}",
+      "assigned": "Por sus {units} departamentos le corresponde el plan {plan}. El plan se asigna automáticamente y cambia si cambia el número de departamentos.",
+      "monthlyDetail": "{amount} al mes con IGV · {perUnit} por departamento",
+      "contract": "Contrato de {months} meses con los equipos en comodato",
+      "guaranteeTerm": "Garantía reembolsable de {months} cuotas: se devuelve al terminar el contrato",
+      "earlyExit": "Si se cancela antes, se paga el saldo pendiente de los equipos (se descuenta de la garantía)",
+      "todayTitle": "Pago de activación",
+      "firstFee": "Primera cuota (con IGV)",
+      "activationFee": "Cuota de activación: instalación (con IGV)",
+      "guarantee": "Garantía reembolsable (2 cuotas, sin IGV)",
+      "total": "Total a pagar hoy",
+      "payerHint": "El pago corresponde a la junta de propietarios del condominio; el comprobante se emite a su nombre.",
+      "cta": "Activar y pagar",
+      "unavailable": "No se pudo calcular la activación de este condominio. Revisa su número de departamentos.",
+      "assignedOnly": "El plan se asigna por el número de departamentos del condominio; solo puedes activar el que le corresponde."
+    },
+    "cancellation": {
+      "early": "Faltan {months} meses del contrato. Saldo pendiente de los equipos: {balance}. Se aplica la garantía de {guarantee}: quedan {due} por pagar y se devuelven {refund}. ¿Confirmas la cancelación?",
+      "completed": "El contrato ya se cumplió: no hay saldo de equipos y se devuelve la garantía de {refund}. ¿Confirmas la cancelación?"
+    }
   },
   "iam": {
     "logout": "Cerrar Sesión",
@@ -246,14 +304,13 @@
       "credentialsInvalid": "Correo o contraseña incorrectos.",
       "registrationDataInvalid": "Los datos de registro no son válidos. Revise el formulario e inténtelo de nuevo.",
       "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
-      "rucRequired": "El RUC es obligatorio.",
-      "rucInvalid": "El RUC debe tener 11 dígitos válidos.",
       "legalRepresentativeRequired": "El representante legal es obligatorio.",
       "nameInvalid": "Ingrese un nombre válido.",
       "activationCodeRequired": "El código de activación es obligatorio.",
       "dniRequired": "El DNI es obligatorio.",
       "dniInvalid": "El DNI debe tener 8 dígitos.",
-      "privacyRequired": "Debes aceptar las políticas de privacidad."
+      "privacyRequired": "Debes aceptar las políticas de privacidad.",
+      "addressRequired": "Ingresa la dirección de la administradora (5 a 200 caracteres)."
     },
     "registerAdministrator": {
       "title": "Registro de administrador",
@@ -275,11 +332,9 @@
       "cancelButton": "Cancelar",
       "companyName": "Razón social",
       "companyNamePlaceholder": "Administradora Vista Verde S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Representante legal",
       "legalRepresentativePlaceholder": "Nombre y apellidos",
-      "address": "Dirección fiscal (opcional)",
+      "address": "Dirección",
       "addressPlaceholder": "Av. Javier Prado 1234"
     },
     "registerResident": {
@@ -322,23 +377,26 @@
     "confirm": "Confirmar",
     "back": "Volver",
     "view": "Ver",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "error": "Error",
+    "loadError": "No se pudo cargar la información. Intenta de nuevo."
   },
   "option": {
     "dashboard": "Panel",
+    "monitoring": "Telemetría y monitoreo",
     "condominiums": "Condominios",
     "residents": "Residentes",
     "devices": "Dispositivos",
+    "billing": "Facturación y cobranzas",
     "alerts": "Alertas",
     "bills": "Recibos matriz",
     "settlements": "Prorrateo y liquidación",
     "delinquency": "Morosidad",
-    "audit": "Auditoría",
+    "audit": "Mi cuota actual",
     "subscription": "Suscripción",
     "profile": "Perfil",
     "myConsumption": "Mi consumo",
-    "accountStatement": "Estado de cuenta",
-    "analytics": "Analytics"
+    "accountStatement": "Estado de cuenta"
   },
   "condominiums": {
     "title": "Condominios",
@@ -359,7 +417,8 @@
       "district": "Distrito",
       "totalUnits": "Número de departamentos",
       "waterSupplyCode": "Código de suministro de agua",
-      "electricitySupplyCode": "Código de suministro de luz"
+      "electricitySupplyCode": "Código de suministro de luz",
+      "totalFloors": "Número de pisos"
     },
     "unitTypes": {
       "apartment": "Departamento",
@@ -378,7 +437,8 @@
       "assigned": "Asignada",
       "unassigned": "Sin asignar",
       "activationCode": "Código de activación",
-      "registry": "Padrón de unidades y alícuotas"
+      "registry": "Padrón de unidades y alícuotas",
+      "empty": "Aún no hay unidades en el padrón. Registra los {n} departamentos con su alícuota; deben sumar 100.0000 % (Ley N.° 27157)."
     },
     "stats": {
       "totalUnits": "Total de unidades",
@@ -401,7 +461,8 @@
       "area": "Ingrese un área válida.",
       "percentage": "Ingrese un valor entre 0.01 y 100 con hasta 2 decimales.",
       "commonAreasRequired": "Registra al menos un área común.",
-      "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres."
+      "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres.",
+      "floors": "El número de pisos debe estar entre 1 y 80."
     },
     "messages": {
       "saved": "Condominio guardado.",
@@ -430,12 +491,64 @@
         "event_room": "Salón de eventos",
         "garden": "Jardín",
         "parking": "Estacionamiento",
-        "elevator": "Ascensor",
+        "elevator": "Banco de ascensores",
         "pump_room": "Cuarto de bombas",
         "cistern": "Cisterna",
         "laundry": "Lavandería",
-        "other": "Otra"
+        "other": "Otra",
+        "panel": "Tablero eléctrico general"
       }
+    },
+    "form": {
+      "breadcrumb": "Ruta de navegación",
+      "subtitle": "Registra el edificio, los suministros de sus recibos matriz y las áreas comunes que IoBuild monitoreará.",
+      "building": "Datos del edificio",
+      "namePlaceholder": "Ej. Residencial Los Robles",
+      "addressPlaceholder": "Ej. Av. Arnaldo Márquez 1234",
+      "districtPlaceholder": "Selecciona o escribe el distrito",
+      "unitsHint": "Define el plan HaaS. Hasta 40: Esencial · 41 a 80: Urbano · más de 80: Gran Torre.",
+      "photo": "Foto del edificio",
+      "uploadPhoto": "Subir foto",
+      "changePhoto": "Cambiar foto",
+      "removePhoto": "Quitar foto",
+      "uploadError": "No se pudo abrir la carga de imágenes.",
+      "supplies": "Suministros de los recibos matriz",
+      "suppliesHint": "Están impresos en los recibos de Sedapal y Luz del Sur; se usan para conciliar lo facturado con lo medido por los sensores.",
+      "areas": "Áreas comunes monitoreadas",
+      "areasHint": "Son los subsistemas que mide el kit IoBuild. Puedes renombrarlos e indicar dónde están ubicados.",
+      "areaLocation": "Ubicación",
+      "areaLocationPlaceholder": "Ubicación, ej. Sótano 1",
+      "meter": {
+        "water": "Medidor de agua",
+        "energy": "Medidor de energía"
+      },
+      "create": "Crear condominio",
+      "summary": "Resumen",
+      "plan": "Plan que corresponde",
+      "perMonth": "al mes + IGV",
+      "planPending": "Ingresa el número de departamentos para ver el plan y el kit de equipos.",
+      "kit": {
+        "gateways": "Gateways",
+        "flowMeters": "Puntos de agua",
+        "ctClamps": "Tableros de energía",
+        "total": "Equipos en comodato"
+      },
+      "areasCount": "{n} áreas comunes monitoreadas",
+      "reviewTitle": "Revisa el formulario",
+      "reviewDetail": "Hay campos obligatorios sin completar o con errores.",
+      "withIgv": "S/ {amount} al mes con IGV · S/ {perUnit} por departamento"
+    },
+    "card": {
+      "units": "Departamentos",
+      "areas": "Áreas monitoreadas",
+      "registered": "Residentes en el padrón",
+      "plan": "Plan {plan}",
+      "view": "Ver detalle"
+    },
+    "details": {
+      "unitsAndFloors": "{units} departamentos",
+      "floors": "{n} pisos",
+      "notRegistered": "Sin registrar: complétalo para conciliar los recibos"
     }
   },
   "residents": {
@@ -483,7 +596,15 @@
       "personal": "Datos personales",
       "unit": "Unidad asignada",
       "account": "Estado de cuenta",
-      "noSettlements": "Aún no hay liquidaciones."
+      "noSettlements": "Aún no hay liquidaciones.",
+      "contact": "Contacto",
+      "floor": "Piso",
+      "area": "Área",
+      "aliquot": "Alícuota",
+      "pendingBalance": "Saldo pendiente",
+      "paidPeriods": "Periodos pagados",
+      "notRegistered": "No registrado",
+      "loadError": "No se pudo cargar la ficha del residente."
     },
     "validation": {
       "unitRequired": "Selecciona una unidad libre.",
@@ -494,7 +615,12 @@
       "unassigned": "Residente desvinculado.",
       "updated": "Residente actualizado.",
       "alreadyLinked": "La unidad {unit} ya tiene un residente vinculado; no requiere código."
-    }
+    },
+    "filters": {
+      "all": "Todos"
+    },
+    "subtitle": "{n} residentes en el padrón de {condominium}",
+    "searchPlaceholder": "Buscar por nombre, correo o unidad"
   },
   "devices": {
     "title": "Dispositivos IoT",
@@ -512,11 +638,13 @@
       "lastSeenAt": "Última señal",
       "status": "Estado",
       "nightFlowThresholdLpm": "Umbral de flujo nocturno",
-      "baselineAmps": "Línea base de corriente"
+      "baselineAmps": "Línea base de corriente",
+      "location": "Ubicación física",
+      "nightFlowThreshold": "Umbral de caudal nocturno"
     },
     "types": {
-      "water_pulse_meter": "Medidor de pulsos de agua",
-      "current_sensor": "Sensor de corriente",
+      "water_pulse_meter": "Caudalímetro",
+      "current_sensor": "Pinza CT",
       "gateway": "Gateway"
     },
     "points": {
@@ -550,12 +678,20 @@
       "required": "Campo obligatorio.",
       "deviceId": "El ID debe tener entre 3 y 40 caracteres.",
       "idTaken": "Ya existe un dispositivo con ese ID en el condominio.",
-      "mac": "Ingrese una dirección MAC válida."
+      "mac": "Ingrese una dirección MAC válida.",
+      "location": "Indica dónde está instalado (3 a 120 caracteres)."
     },
     "messages": {
       "saved": "Dispositivo guardado.",
       "error": "No se pudo guardar el dispositivo.",
       "unlinked": "Dispositivo desvinculado."
+    },
+    "subtitle": "Kit IoT en comodato que mide las áreas comunes del condominio.",
+    "neverSeen": "Sin latidos aún",
+    "dialog": {
+      "intro": "Registra un equipo del kit HaaS instalado en un área común. Aparecerá fuera de línea hasta su primer latido.",
+      "locationPlaceholder": "Ej. Sótano 1 - Tablero de bombas",
+      "thresholdHint": "Caudal continuo entre 01:00 y 04:00 por encima de este valor dispara una alerta de fuga nocturna."
     }
   },
   "telemetry": {
@@ -577,11 +713,14 @@
     "alertTypes": {
       "night_leak": "Posible fuga nocturna",
       "pump_over_baseline": "Bomba sobre su línea base",
-      "no_signal": "Dispositivo sin señal"
+      "no_signal": "Dispositivo sin señal",
+      "unusual_night_flow": "Flujo nocturno fuera de lo normal",
+      "pump_night_runtime": "Bombas activas de madrugada"
     },
     "alertStatus": {
       "open": "Abierta",
-      "acknowledged": "Reconocida"
+      "acknowledged": "Reconocida",
+      "resolved": "Resuelta"
     }
   },
   "billing": {
@@ -595,9 +734,13 @@
       "measuredConsumption": "Consumo medido",
       "amount": "Monto (S/)",
       "dueDate": "Vencimiento",
-      "attachment": "Comprobante (URL)",
+      "attachment": "Recibo escaneado",
       "empty": "No hay recibos registrados.",
-      "saved": "Recibo registrado."
+      "saved": "Recibo registrado.",
+      "uploadReceipt": "Subir recibo",
+      "replaceReceipt": "Reemplazar recibo",
+      "viewReceipt": "Ver recibo",
+      "uploadError": "No se pudo subir el recibo. Intenta de nuevo."
     },
     "reconciliation": {
       "title": "Conciliación: facturado vs medido",
@@ -638,6 +781,14 @@
       "error": "No se pudo completar la operación.",
       "notBalanced": "El condominio no tiene participación sumando 100 %. Corrige el padrón antes de calcular.",
       "noBill": "No hay recibo matriz registrado para ese periodo."
+    },
+    "summary": {
+      "title": "Resumen de cobranza",
+      "period": "Último periodo liquidado",
+      "commonExpense": "Gasto común",
+      "collected": "Cobrado",
+      "receivable": "Por cobrar",
+      "progress": "{paid} de {total} cuotas pagadas"
     }
   },
   "payments": {
@@ -658,7 +809,16 @@
       "empty": "Aún no tienes liquidaciones.",
       "paidToast": "Pago registrado correctamente.",
       "checkoutError": "No se pudo iniciar el pago.",
-      "receipt": "Comprobante de pago"
+      "receipt": "Comprobante de pago",
+      "subtitle": "Cuotas de mantenimiento de tu unidad y su desglose según la Ley N.° 27157.",
+      "unit": "Departamento",
+      "condominium": "Condominio",
+      "aliquot": "Alícuota",
+      "holder": "Titular",
+      "paymentProcessing": "Stripe aún no confirma el cobro. Actualiza en unos minutos.",
+      "confirmError": "No se pudo confirmar el pago con Stripe.",
+      "canceledTitle": "Pago cancelado",
+      "canceledToast": "No se realizó ningún cargo a tu tarjeta."
     },
     "status": {
       "pending": "Pendiente",
@@ -692,7 +852,7 @@
   },
   "audit": {
     "title": "Historial de auditoría",
-    "residentTitle": "Sustento de mi liquidación",
+    "residentTitle": "¿Cómo se calculó mi cuota?",
     "empty": "No hay eventos.",
     "entity": "Entidad",
     "actor": "Usuario",
@@ -701,13 +861,76 @@
     "exportCsv": "Exportar CSV",
     "from": "Desde",
     "to": "Hasta",
-    "participationChanges": "Cambios de porcentaje de tu unidad",
     "types": {
       "reading": "Lectura",
       "proration": "Prorrateo",
       "manual_adjustment": "Ajuste manual",
       "participation_changed": "Cambio de participación"
-    }
+    },
+    "fee": {
+      "selectPeriod": "Elegir mes",
+      "loadError": "No se pudo cargar la explicación de tu cuota. Inténtalo de nuevo.",
+      "yourFee": "Tu cuota de {month} · Departamento {unit}",
+      "paidOn": "Pagada el {date}",
+      "dueOn": "Vence el {date}",
+      "goPay": "Ir a pagar",
+      "concepts": {
+        "water": "Agua",
+        "energy": "Luz",
+        "other": "Otros gastos comunes"
+      },
+      "step1": {
+        "title": "Lo que costó el edificio en {month}",
+        "text": "Estos son los recibos de las áreas comunes y los demás gastos que registró la administración.",
+        "total": "Gasto común total"
+      },
+      "step2": {
+        "title": "Tu parte es el {pct}%",
+        "text": "Es la alícuota de tu departamento, fijada según la Ley 27157. Significa que, de cada S/ 100 del gasto común, te corresponden {amount}."
+      },
+      "step3": {
+        "title": "Así se compone tu cuota",
+        "total": "Tu cuota"
+      },
+      "change": {
+        "title": "Comparación con {month}",
+        "none": "No hay cuota de {month} para comparar.",
+        "up": "Lo que más subió fue {concept}: {amount} más.",
+        "down": "Lo que más bajó fue {concept}: {amount} menos."
+      },
+      "alerts": {
+        "title": "Alertas con costo en {month}",
+        "none": "No se detectaron fugas ni sobreconsumos con costo en este mes.",
+        "text": "El consumo extra de estos eventos ya forma parte del recibo del edificio. El monto es una estimación de cuánto te tocó.",
+        "share": "Edificio: {building} · Tu parte: {mine}",
+        "open": "En revisión",
+        "resolved": "Resuelta"
+      },
+      "evidence": {
+        "title": "De dónde salen los datos",
+        "text": "Los montos vienen de los recibos matriz del edificio: {water} m³ de Sedapal y {energy} kWh de Luz del Sur.",
+        "water": "Ver recibo de agua",
+        "energy": "Ver recibo de luz",
+        "noReceipts": "La administración todavía no adjuntó las imágenes de los recibos de este mes."
+      },
+      "glossary": {
+        "title": "Palabras que aparecen en tu cuota",
+        "aliquot": {
+          "term": "Alícuota",
+          "text": "El porcentaje del edificio que le corresponde a tu departamento. Define qué parte de los gastos comunes pagas."
+        },
+        "commonExpense": {
+          "term": "Gasto común",
+          "text": "Lo que cuesta mantener las áreas compartidas: cisterna, bombas, ascensores e iluminación."
+        },
+        "masterBill": {
+          "term": "Recibo matriz",
+          "text": "El recibo único que Sedapal o Luz del Sur emite para todo el edificio."
+        }
+      },
+      "askAi": "¿Aún tienes dudas? Pregúntale a IoBuild"
+    },
+    "residentSubtitle": "Te explicamos paso a paso de dónde sale lo que pagas."
   },
   "dashboard": {
     "admin": {
@@ -738,7 +961,23 @@
         "subscriptions": "Suscripciones activas",
         "plan": "Plan",
         "status": "Estado"
-      }
+      },
+      "justNow": "hace un momento",
+      "minutesAgo": "hace {n} min",
+      "plan": "Plan {plan}",
+      "updatedAt": "actualizado {time}",
+      "subscriptionInactive": "La suscripción de este condominio no está activa; el monitoreo y la facturación están limitados.",
+      "projectionTo": "Proyección al cierre: {value}",
+      "criticalCount": "{n} críticas",
+      "overdueUnits": "{n} departamentos con deuda vencida",
+      "equipmentTitle": "Equipos de áreas comunes",
+      "cumulative": "acumulado",
+      "liveTitle": "En vivo · {name}",
+      "noLiveData": "Sin lecturas en los últimos 10 minutos.",
+      "noDailyData": "Aún no hay consumo registrado este mes.",
+      "openAlerts": "Abiertas",
+      "allAlerts": "Todas",
+      "overcost": "Sobrecosto estimado: {amount}"
     },
     "resident": {
       "myStatement": "Mi liquidación de {month}",
@@ -785,5 +1024,88 @@
       "offline": "Sin señal",
       "noMeter": "Sin medidor"
     }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "text": "La dirección que buscas no existe o fue movida.",
+    "home": "Ir al inicio"
+  },
+  "pageTitles": {
+    "login": "Iniciar sesión",
+    "register-administrator": "Registro de administrador",
+    "register-resident": "Registro de residente",
+    "dashboard": "Panel",
+    "analytics": "Áreas comunes",
+    "account-statement": "Estado de cuenta",
+    "audit": "Mi cuota actual",
+    "billing": "Facturación y cobranzas",
+    "bills": "Recibos matriz",
+    "settlements": "Prorrateo y liquidación",
+    "settlement-detail": "Liquidación",
+    "delinquency": "Morosidad",
+    "condominiums": "Condominios",
+    "condominium-new": "Nuevo condominio",
+    "condominium-edit": "Editar condominio",
+    "condominium-details": "Condominio",
+    "residents": "Residentes",
+    "resident-profile": "Residente",
+    "device-management": "Dispositivos",
+    "profile": "Perfil",
+    "my-subscription": "Suscripción",
+    "NotFound": "Página no encontrada"
+  },
+  "ai": {
+    "title": "Pregúntale a IoBuild",
+    "subtitle": "Explica la última cuota o recibo emitido con lenguaje simple. Las alertas las detectan las reglas; la IA solo las explica.",
+    "placeholder": "Escribe tu pregunta sobre el consumo de este mes",
+    "ask": "Preguntar",
+    "error": "No se pudo obtener la explicación. Inténtalo de nuevo en unos segundos.",
+    "water": "Agua",
+    "energy": "Energía",
+    "aliquot": "Tu alícuota",
+    "recommendations": "Recomendaciones",
+    "sourceGemini": "Redactado con IA (Gemini) a partir de las mediciones y alertas de IoBuild.",
+    "sourceRules": "Explicación automática generada con las reglas de IoBuild.",
+    "suggestions": {
+      "admin": {
+        "1": "¿Por qué varió el consumo común este mes?",
+        "2": "¿Qué alertas están generando sobrecosto?",
+        "3": "¿Qué mantenimiento conviene programar?"
+      },
+      "resident": {
+        "1": "¿Por qué varió mi cuota este mes?",
+        "2": "¿Cómo se calcula mi parte del gasto común?",
+        "3": "¿Hubo alguna fuga en el edificio?"
+      }
+    },
+    "aliquotAdmin": "Reparto por alícuota",
+    "period": "Periodo explicado: {period}",
+    "answerLabel": "Respuesta del asistente"
+  },
+  "baselines": {
+    "title": "Detección estadística",
+    "subtitle": "Cada edificio aprende su patrón nocturno normal (01:00 a 04:00) y se alerta cuando una noche se sale de él.",
+    "empty": "Este condominio no tiene medidores de agua de ingreso ni de bombas para evaluar.",
+    "learning": "Aprendiendo la línea base: {n} de {total} noches",
+    "noData": "Sin lecturas nocturnas todavía",
+    "lastNight": "Noche del {night}: {value}",
+    "normal": "Lo normal: {median} · umbral {threshold} · {n} noches",
+    "metrics": {
+      "NightMinimumFlow": "Flujo mínimo nocturno (cisterna)",
+      "PumpNightEnergy": "Energía nocturna de bombas"
+    },
+    "status": {
+      "normal": "Normal",
+      "anomaly": "Fuera de lo normal",
+      "learning": "Aprendiendo",
+      "no-data": "Sin datos"
+    }
+  },
+  "alertsBell": {
+    "open": "Ver notificaciones ({n} alertas abiertas)",
+    "count": "Sin alertas abiertas | {n} alerta abierta | {n} alertas abiertas",
+    "more": "y {n} más",
+    "viewAll": "Ver todas las alertas",
+    "error": "No se pudo reconocer la alerta. Inténtalo de nuevo."
   }
 }

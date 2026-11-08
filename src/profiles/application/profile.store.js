@@ -58,7 +58,16 @@ export const useProfileStore = defineStore('profile', () => {
         errors.value = [];
 
         try {
-            const response = await profileApi.createProfile(profileData);
+            let response;
+            try {
+                response = await profileApi.createProfile(profileData);
+            } catch (error) {
+                // El alta de usuario ya deja un perfil provisional (409): se completa con PUT en vez de duplicarlo
+                if (error.response?.status !== 409) throw error;
+                const existing = await profileApi.getProfile(profileData.userId);
+                if (!existing?.id) throw error;
+                response = await profileApi.updateProfile(existing.id, profileData);
+            }
             const { profileEntity } = ProfileAssembler.toDomainFromResponse(response);
             profile.value = profileEntity;
             viewType.value = normalizeRole(profileEntity.role) || ROLES.RESIDENT;

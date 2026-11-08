@@ -1,6 +1,13 @@
 {
   "header": {
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "openNav": "Open navigation",
+    "closeNav": "Close navigation",
+    "alerts": "View alerts",
+    "notifications": "Notifications",
+    "user": "User",
+    "language": "Language",
+    "criticalAlert": "Critical alert"
   },
   "profile": {
     "title": "Profile",
@@ -23,7 +30,6 @@
     "administratorRole": "Administrator",
     "residentRole": "Apartment owner",
     "companyName": "Company name",
-    "ruc": "RUC",
     "legalRepresentative": "Legal representative",
     "dni": "DNI",
     "notifications": {
@@ -175,14 +181,41 @@
       }
     },
     "planCatalog": {
-      "boutique": {
-        "description": "For small condominiums with up to 20 apartments."
+      "esencial": {
+        "description": "For condominiums with up to 40 apartments.",
+        "features": [
+          "Up to 40 units",
+          "3 loaned IoT devices (1 4G gateway, 1 water point and 1 energy panel)",
+          "Night-leak detection in the cistern",
+          "Cistern and pump panel monitoring",
+          "Monthly proration by legal aliquot (Law 27157)",
+          "24-month contract with a refundable 2-fee deposit",
+          "Non-invasive installation: no water or power cuts"
+        ]
       },
       "urbano": {
-        "description": "For buildings with 21 to 50 apartments."
+        "description": "For buildings with 41 to 80 apartments.",
+        "features": [
+          "41 to 80 units",
+          "5 loaned IoT devices (1 4G gateway, 2 water points and 2 energy panels)",
+          "Cistern, pump and elevator monitoring",
+          "Night-leak and off-hours consumption detection",
+          "Monthly reconciliation against Sedapal and Luz del Sur bills",
+          "Cent-exact legal proration and digital settlement per unit",
+          "24-month contract with a refundable 2-fee deposit"
+        ]
       },
       "gran-torre": {
-        "description": "For towers with 51 to 80 apartments."
+        "description": "For towers with more than 80 apartments.",
+        "features": [
+          "More than 80 units",
+          "7 loaned IoT devices (1 4G gateway, 3 water points and 3 energy panels)",
+          "Monitoring of multiple cisterns, panels and elevators",
+          "Anomaly detection and reconciliation with master bills",
+          "Aliquot proration with an exact 100.0000% balance",
+          "24-month contract with a refundable 2-fee deposit",
+          "Preventive maintenance and periodic sensor calibration"
+        ]
       }
     },
     "usage-units": "Registered apartments",
@@ -196,10 +229,35 @@
     "kit": {
       "title": "Kit of {n} devices",
       "gateways": "{n} Gateway | {n} Gateways",
-      "flowMeters": "{n} Flow meter | {n} Flow meters",
-      "ctClamps": "{n} CT clamp | {n} CT clamps"
+      "flowMeters": "{n} Water point | {n} Water points",
+      "ctClamps": "{n} Energy panel | {n} Energy panels"
     },
-    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments."
+    "needsCondominium": "Register a condominium first: each plan is contracted per condominium based on its number of apartments.",
+    "unitsFrom": "More than {min} units",
+    "plusIgv": "+ VAT",
+    "withIgv": "S/ {amount} incl. VAT",
+    "activation": {
+      "pill": "Service activation",
+      "title": "Activate IoBuild at {name}",
+      "assigned": "With {units} units, this condominium gets the {plan} plan. The plan is assigned automatically and changes if the number of units changes.",
+      "monthlyDetail": "{amount} per month incl. VAT · {perUnit} per unit",
+      "contract": "{months}-month contract with loaned equipment",
+      "guaranteeTerm": "Refundable deposit of {months} fees: returned when the contract ends",
+      "earlyExit": "Cancelling early means paying the remaining equipment balance (deducted from the deposit)",
+      "todayTitle": "Activation payment",
+      "firstFee": "First fee (incl. VAT)",
+      "activationFee": "Activation fee: installation (incl. VAT)",
+      "guarantee": "Refundable deposit (2 fees, no VAT)",
+      "total": "Total due today",
+      "payerHint": "The payment belongs to the condominium's owners' board; the receipt is issued in its name.",
+      "cta": "Activate and pay",
+      "unavailable": "The activation for this condominium could not be calculated. Check its number of units.",
+      "assignedOnly": "The plan is assigned by the condominium's number of units; you can only activate the one that applies."
+    },
+    "cancellation": {
+      "early": "{months} months of the contract remain. Remaining equipment balance: {balance}. The {guarantee} deposit is applied: {due} remains to be paid and {refund} is refunded. Confirm the cancellation?",
+      "completed": "The contract is complete: there is no equipment balance and the {refund} deposit is refunded. Confirm the cancellation?"
+    }
   },
   "iam": {
     "logout": "Log Out",
@@ -246,14 +304,13 @@
       "credentialsInvalid": "Invalid email or password.",
       "registrationDataInvalid": "Registration details are invalid. Please review the form and try again.",
       "registrationFailed": "Registration failed. Please try again.",
-      "rucRequired": "RUC is required.",
-      "rucInvalid": "RUC must be a valid 11-digit number.",
       "legalRepresentativeRequired": "Legal representative is required.",
       "nameInvalid": "Enter a valid name.",
       "activationCodeRequired": "Activation code is required.",
       "dniRequired": "DNI is required.",
       "dniInvalid": "DNI must have 8 digits.",
-      "privacyRequired": "You must accept the privacy policies."
+      "privacyRequired": "You must accept the privacy policies.",
+      "addressRequired": "Enter the management company address (5 to 200 characters)."
     },
     "registerAdministrator": {
       "title": "Administrator sign-up",
@@ -275,11 +332,9 @@
       "cancelButton": "Cancel",
       "companyName": "Company name",
       "companyNamePlaceholder": "Vista Verde Administration S.A.C.",
-      "ruc": "RUC",
-      "rucPlaceholder": "20601234567",
       "legalRepresentative": "Legal representative",
       "legalRepresentativePlaceholder": "Full name",
-      "address": "Tax address (optional)",
+      "address": "Address",
       "addressPlaceholder": "123 Main Ave"
     },
     "registerResident": {
@@ -322,23 +377,26 @@
     "confirm": "Confirm",
     "back": "Back",
     "view": "View",
-    "actions": "Actions"
+    "actions": "Actions",
+    "error": "Error",
+    "loadError": "The information could not be loaded. Try again."
   },
   "option": {
     "dashboard": "Dashboard",
+    "monitoring": "Telemetry & monitoring",
     "condominiums": "Condominiums",
     "residents": "Residents",
     "devices": "Devices",
+    "billing": "Billing & collections",
     "alerts": "Alerts",
     "bills": "Utility bills",
     "settlements": "Proration & settlements",
     "delinquency": "Delinquency",
-    "audit": "Audit trail",
+    "audit": "My current fee",
     "subscription": "Subscription",
     "profile": "Profile",
     "myConsumption": "My consumption",
-    "accountStatement": "Account statement",
-    "analytics": "Analytics"
+    "accountStatement": "Account statement"
   },
   "condominiums": {
     "title": "Condominiums",
@@ -359,7 +417,8 @@
       "district": "District",
       "totalUnits": "Number of apartments",
       "waterSupplyCode": "Water supply code",
-      "electricitySupplyCode": "Electricity supply code"
+      "electricitySupplyCode": "Electricity supply code",
+      "totalFloors": "Number of floors"
     },
     "unitTypes": {
       "apartment": "Apartment",
@@ -378,7 +437,8 @@
       "assigned": "Assigned",
       "unassigned": "Unassigned",
       "activationCode": "Activation code",
-      "registry": "Unit registry and shares"
+      "registry": "Unit registry and shares",
+      "empty": "No units in the registry yet. Add the {n} units with their aliquot; they must add up to 100.0000% (Law No. 27157)."
     },
     "stats": {
       "totalUnits": "Total units",
@@ -401,7 +461,8 @@
       "area": "Enter a valid area.",
       "percentage": "Enter a value between 0.01 and 100 with up to 2 decimals.",
       "commonAreasRequired": "Register at least one common area.",
-      "commonAreaName": "Each common area needs a name of 2 to 60 characters."
+      "commonAreaName": "Each common area needs a name of 2 to 60 characters.",
+      "floors": "Floors must be between 1 and 80."
     },
     "messages": {
       "saved": "Condominium saved.",
@@ -430,12 +491,64 @@
         "event_room": "Event room",
         "garden": "Garden",
         "parking": "Parking",
-        "elevator": "Elevator",
+        "elevator": "Elevator bank",
         "pump_room": "Pump room",
         "cistern": "Cistern",
         "laundry": "Laundry",
-        "other": "Other"
+        "other": "Other",
+        "panel": "Main electrical panel"
       }
+    },
+    "form": {
+      "breadcrumb": "Breadcrumb",
+      "subtitle": "Register the building, the supply codes on its master bills and the common areas IoBuild will monitor.",
+      "building": "Building details",
+      "namePlaceholder": "e.g. Los Robles Residences",
+      "addressPlaceholder": "e.g. 1234 Arnaldo Márquez Ave.",
+      "districtPlaceholder": "Select or type the district",
+      "unitsHint": "Sets the HaaS plan. Up to 40: Esencial · 41 to 80: Urbano · over 80: Gran Torre.",
+      "photo": "Building photo",
+      "uploadPhoto": "Upload photo",
+      "changePhoto": "Change photo",
+      "removePhoto": "Remove photo",
+      "uploadError": "The image uploader could not be opened.",
+      "supplies": "Master bill supply codes",
+      "suppliesHint": "Printed on the Sedapal and Luz del Sur bills; used to reconcile billed vs. metered consumption.",
+      "areas": "Monitored common areas",
+      "areasHint": "These are the subsystems the IoBuild kit measures. You can rename them and set where they are.",
+      "areaLocation": "Location",
+      "areaLocationPlaceholder": "Location, e.g. Basement 1",
+      "meter": {
+        "water": "Water meter",
+        "energy": "Energy meter"
+      },
+      "create": "Create condominium",
+      "summary": "Summary",
+      "plan": "Matching plan",
+      "perMonth": "per month + VAT",
+      "planPending": "Enter the number of units to see the plan and equipment kit.",
+      "kit": {
+        "gateways": "Gateways",
+        "flowMeters": "Water points",
+        "ctClamps": "Energy panels",
+        "total": "Loaned devices"
+      },
+      "areasCount": "{n} monitored common areas",
+      "reviewTitle": "Check the form",
+      "reviewDetail": "Some required fields are missing or invalid.",
+      "withIgv": "S/ {amount} per month incl. VAT · S/ {perUnit} per unit"
+    },
+    "card": {
+      "units": "Units",
+      "areas": "Monitored areas",
+      "registered": "Residents registered",
+      "plan": "{plan} plan",
+      "view": "View details"
+    },
+    "details": {
+      "unitsAndFloors": "{units} units",
+      "floors": "{n} floors",
+      "notRegistered": "Not registered: add it to reconcile bills"
     }
   },
   "residents": {
@@ -483,7 +596,15 @@
       "personal": "Personal data",
       "unit": "Assigned unit",
       "account": "Account statement",
-      "noSettlements": "No settlements yet."
+      "noSettlements": "No settlements yet.",
+      "contact": "Contact",
+      "floor": "Floor",
+      "area": "Area",
+      "aliquot": "Aliquot",
+      "pendingBalance": "Outstanding balance",
+      "paidPeriods": "Paid periods",
+      "notRegistered": "Not registered",
+      "loadError": "The resident record could not be loaded."
     },
     "validation": {
       "unitRequired": "Select a free unit.",
@@ -494,7 +615,12 @@
       "unassigned": "Resident unlinked.",
       "updated": "Resident updated.",
       "alreadyLinked": "Unit {unit} already has a linked resident; no code needed."
-    }
+    },
+    "filters": {
+      "all": "All"
+    },
+    "subtitle": "{n} residents registered in {condominium}",
+    "searchPlaceholder": "Search by name, email or unit"
   },
   "devices": {
     "title": "IoT devices",
@@ -512,11 +638,13 @@
       "lastSeenAt": "Last signal",
       "status": "Status",
       "nightFlowThresholdLpm": "Night flow threshold",
-      "baselineAmps": "Current baseline"
+      "baselineAmps": "Current baseline",
+      "location": "Physical location",
+      "nightFlowThreshold": "Night flow threshold"
     },
     "types": {
-      "water_pulse_meter": "Water pulse meter",
-      "current_sensor": "Current sensor",
+      "water_pulse_meter": "Flow meter",
+      "current_sensor": "CT clamp",
       "gateway": "Gateway"
     },
     "points": {
@@ -550,12 +678,20 @@
       "required": "Required field.",
       "deviceId": "The ID must be 3 to 40 characters.",
       "idTaken": "A device with that ID already exists in the condominium.",
-      "mac": "Enter a valid MAC address."
+      "mac": "Enter a valid MAC address.",
+      "location": "Enter where it is installed (3 to 120 characters)."
     },
     "messages": {
       "saved": "Device saved.",
       "error": "Could not save the device.",
       "unlinked": "Device unlinked."
+    },
+    "subtitle": "Loaned IoT kit that meters the condominium common areas.",
+    "neverSeen": "No heartbeat yet",
+    "dialog": {
+      "intro": "Register an HaaS kit device installed in a common area. It shows as offline until its first heartbeat.",
+      "locationPlaceholder": "e.g. Basement 1 - Pump panel",
+      "thresholdHint": "Continuous flow between 01:00 and 04:00 above this value triggers a night-leak alert."
     }
   },
   "telemetry": {
@@ -577,11 +713,14 @@
     "alertTypes": {
       "night_leak": "Possible night leak",
       "pump_over_baseline": "Pump above baseline",
-      "no_signal": "Device without signal"
+      "no_signal": "Device without signal",
+      "unusual_night_flow": "Unusual night flow",
+      "pump_night_runtime": "Pumps running at night"
     },
     "alertStatus": {
       "open": "Open",
-      "acknowledged": "Acknowledged"
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
     }
   },
   "billing": {
@@ -595,9 +734,13 @@
       "measuredConsumption": "Measured consumption",
       "amount": "Amount (S/)",
       "dueDate": "Due date",
-      "attachment": "Attachment (URL)",
+      "attachment": "Scanned bill",
       "empty": "No bills registered.",
-      "saved": "Bill registered."
+      "saved": "Bill registered.",
+      "uploadReceipt": "Upload bill",
+      "replaceReceipt": "Replace bill",
+      "viewReceipt": "View bill",
+      "uploadError": "The bill could not be uploaded. Try again."
     },
     "reconciliation": {
       "title": "Reconciliation: billed vs measured",
@@ -638,6 +781,14 @@
       "error": "The operation could not be completed.",
       "notBalanced": "The condominium participation does not add up to 100 %. Fix the roll before calculating.",
       "noBill": "No utility bill registered for that period."
+    },
+    "summary": {
+      "title": "Collection summary",
+      "period": "Latest settled period",
+      "commonExpense": "Common expense",
+      "collected": "Collected",
+      "receivable": "Receivable",
+      "progress": "{paid} of {total} fees paid"
     }
   },
   "payments": {
@@ -658,7 +809,16 @@
       "empty": "You have no settlements yet.",
       "paidToast": "Payment recorded.",
       "checkoutError": "Could not start the payment.",
-      "receipt": "Payment receipt"
+      "receipt": "Payment receipt",
+      "subtitle": "Maintenance fees for your unit and their breakdown under Law No. 27157.",
+      "unit": "Unit",
+      "condominium": "Condominium",
+      "aliquot": "Aliquot",
+      "holder": "Holder",
+      "paymentProcessing": "Stripe has not confirmed the charge yet. Refresh in a few minutes.",
+      "confirmError": "The payment could not be confirmed with Stripe.",
+      "canceledTitle": "Payment canceled",
+      "canceledToast": "Your card was not charged."
     },
     "status": {
       "pending": "Pending",
@@ -692,7 +852,7 @@
   },
   "audit": {
     "title": "Audit trail",
-    "residentTitle": "Support for my settlement",
+    "residentTitle": "How was my fee calculated?",
     "empty": "No events.",
     "entity": "Entity",
     "actor": "User",
@@ -701,13 +861,76 @@
     "exportCsv": "Export CSV",
     "from": "From",
     "to": "To",
-    "participationChanges": "Participation changes for your unit",
     "types": {
       "reading": "Reading",
       "proration": "Proration",
       "manual_adjustment": "Manual adjustment",
       "participation_changed": "Participation change"
-    }
+    },
+    "fee": {
+      "selectPeriod": "Choose month",
+      "loadError": "Your fee explanation could not be loaded. Try again.",
+      "yourFee": "Your {month} fee · Unit {unit}",
+      "paidOn": "Paid on {date}",
+      "dueOn": "Due on {date}",
+      "goPay": "Go to payment",
+      "concepts": {
+        "water": "Water",
+        "energy": "Electricity",
+        "other": "Other common expenses"
+      },
+      "step1": {
+        "title": "What the building cost in {month}",
+        "text": "These are the common-area bills and other expenses recorded by the administration.",
+        "total": "Total common expense"
+      },
+      "step2": {
+        "title": "Your share is {pct}%",
+        "text": "This is your unit's aliquot, set under Law 27157. It means that, of every S/ 100 of common expense, {amount} is yours."
+      },
+      "step3": {
+        "title": "What your fee is made of",
+        "total": "Your fee"
+      },
+      "change": {
+        "title": "Compared with {month}",
+        "none": "There is no {month} fee to compare with.",
+        "up": "What rose the most was {concept}: {amount} more.",
+        "down": "What fell the most was {concept}: {amount} less."
+      },
+      "alerts": {
+        "title": "Alerts with a cost in {month}",
+        "none": "No leaks or overconsumption with a cost were detected this month.",
+        "text": "The extra consumption from these events is already part of the building's bill. The amount is an estimate of your share.",
+        "share": "Building: {building} · Your share: {mine}",
+        "open": "Under review",
+        "resolved": "Resolved"
+      },
+      "evidence": {
+        "title": "Where the data comes from",
+        "text": "The amounts come from the building's master bills: {water} m³ from Sedapal and {energy} kWh from Luz del Sur.",
+        "water": "View water bill",
+        "energy": "View electricity bill",
+        "noReceipts": "The administration has not attached this month's bill images yet."
+      },
+      "glossary": {
+        "title": "Words on your fee",
+        "aliquot": {
+          "term": "Aliquot",
+          "text": "The percentage of the building assigned to your unit. It sets how much of the common expenses you pay."
+        },
+        "commonExpense": {
+          "term": "Common expense",
+          "text": "What it costs to run the shared areas: cistern, pumps, elevators and lighting."
+        },
+        "masterBill": {
+          "term": "Master bill",
+          "text": "The single bill Sedapal or Luz del Sur issues for the whole building."
+        }
+      },
+      "askAi": "Still have questions? Ask IoBuild"
+    },
+    "residentSubtitle": "A step-by-step explanation of where your payment comes from."
   },
   "dashboard": {
     "admin": {
@@ -738,7 +961,23 @@
         "subscriptions": "Active subscriptions",
         "plan": "Plan",
         "status": "Status"
-      }
+      },
+      "justNow": "just now",
+      "minutesAgo": "{n} min ago",
+      "plan": "{plan} plan",
+      "updatedAt": "updated {time}",
+      "subscriptionInactive": "This condominium subscription is not active; monitoring and billing are limited.",
+      "projectionTo": "Month-end projection: {value}",
+      "criticalCount": "{n} critical",
+      "overdueUnits": "{n} units with overdue debt",
+      "equipmentTitle": "Common-area equipment",
+      "cumulative": "total",
+      "liveTitle": "Live · {name}",
+      "noLiveData": "No readings in the last 10 minutes.",
+      "noDailyData": "No consumption recorded this month yet.",
+      "openAlerts": "Open",
+      "allAlerts": "All",
+      "overcost": "Estimated overcost: {amount}"
     },
     "resident": {
       "myStatement": "My {month} settlement",
@@ -785,5 +1024,88 @@
       "offline": "No signal",
       "noMeter": "No meter"
     }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "The address you are looking for does not exist or was moved.",
+    "home": "Go to home"
+  },
+  "pageTitles": {
+    "login": "Sign in",
+    "register-administrator": "Administrator sign-up",
+    "register-resident": "Resident sign-up",
+    "dashboard": "Dashboard",
+    "analytics": "Common areas",
+    "account-statement": "Account statement",
+    "audit": "My current fee",
+    "billing": "Billing and collections",
+    "bills": "Utility bills",
+    "settlements": "Proration and settlement",
+    "settlement-detail": "Settlement",
+    "delinquency": "Delinquency",
+    "condominiums": "Condominiums",
+    "condominium-new": "New condominium",
+    "condominium-edit": "Edit condominium",
+    "condominium-details": "Condominium",
+    "residents": "Residents",
+    "resident-profile": "Resident",
+    "device-management": "Devices",
+    "profile": "Profile",
+    "my-subscription": "Subscription",
+    "NotFound": "Page not found"
+  },
+  "ai": {
+    "title": "Ask IoBuild",
+    "subtitle": "Explains the latest fee or bill issued in plain language. Alerts are detected by rules; AI only explains them.",
+    "placeholder": "Type your question about this month's consumption",
+    "ask": "Ask",
+    "error": "The explanation could not be loaded. Try again in a few seconds.",
+    "water": "Water",
+    "energy": "Energy",
+    "aliquot": "Your aliquot",
+    "recommendations": "Recommendations",
+    "sourceGemini": "Written with AI (Gemini) from IoBuild's measurements and alerts.",
+    "sourceRules": "Automatic explanation generated by IoBuild's rules.",
+    "suggestions": {
+      "admin": {
+        "1": "Why did common-area consumption change this month?",
+        "2": "Which alerts are causing extra costs?",
+        "3": "What maintenance should be scheduled?"
+      },
+      "resident": {
+        "1": "Why did my fee change this month?",
+        "2": "How is my share of common expenses calculated?",
+        "3": "Was there any leak in the building?"
+      }
+    },
+    "aliquotAdmin": "Split by aliquot",
+    "period": "Period explained: {period}",
+    "answerLabel": "Assistant answer"
+  },
+  "baselines": {
+    "title": "Statistical detection",
+    "subtitle": "Each building learns its normal night pattern (1:00 to 4:00 AM) and alerts when a night falls outside it.",
+    "empty": "This condominium has no intake water meter or pump meter to evaluate.",
+    "learning": "Learning the baseline: {n} of {total} nights",
+    "noData": "No night readings yet",
+    "lastNight": "Night of {night}: {value}",
+    "normal": "Normal: {median} · threshold {threshold} · {n} nights",
+    "metrics": {
+      "NightMinimumFlow": "Minimum night flow (cistern)",
+      "PumpNightEnergy": "Pump night energy"
+    },
+    "status": {
+      "normal": "Normal",
+      "anomaly": "Unusual",
+      "learning": "Learning",
+      "no-data": "No data"
+    }
+  },
+  "alertsBell": {
+    "open": "View notifications ({n} open alerts)",
+    "count": "No open alerts | {n} open alert | {n} open alerts",
+    "more": "and {n} more",
+    "viewAll": "View all alerts",
+    "error": "The alert could not be acknowledged. Try again."
   }
 }

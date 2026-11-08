@@ -39,9 +39,15 @@ export const useResidentStore = defineStore('resident', () => {
             const condominiums = await CondominiumsFacade.getCondominiums();
             const condominium = condominiums.find(c => c.id === Number(condominiumId));
             const raw = await api.getRawByCondominium(condominiumId);
-            if (raw.direct) { residents.value = raw.direct.map(ResidentAssembler.toEntity); return; }
             let payments = [];
             try { payments = (await paymentApi.getByCondominium(condominiumId)).data; } catch (_) { /* sin pagos */ }
+            // El padrón del backend no calcula la cobranza; se deriva de las cuotas de cada unidad
+            if (raw.direct) {
+                residents.value = raw.direct.map(r => ResidentAssembler.toEntity({
+                    ...r, collectionStatus: deriveCollectionStatus(payments.filter(p => p.unitId === r.unitId)),
+                }));
+                return;
+            }
             residents.value = raw.units
                 .filter(u => u.residentUserId)
                 .map(unit => ResidentAssembler.fromJoin({
@@ -76,6 +82,8 @@ export const useResidentStore = defineStore('resident', () => {
     async function unassign(unitId) { await api.unassign(unitId); residents.value = residents.value.filter(r => r.unitId !== unitId); }
 
     async function updateContact(resident, { phoneNumber }) {
+        // Sin userId, /profiles devolvería el perfil de quien consulta y se editaría el contacto equivocado
+        if (!resident.userId) throw new Error('user_not_found');
         const profile = await api.getProfileByUserId(resident.userId);
         if (profile) await api.updateProfile(profile.id, { phoneNumber });
     }

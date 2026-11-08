@@ -4,6 +4,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
 import LanguageSwitcher from "./language-switcher.vue";
+import AlertsBell from "../../../telemetry/presentation/components/alerts-bell.component.vue";
 import { useProfileStore } from "../../../profiles/application/profile.store.js";
 import { useIamStore } from "../../../iam/application/iam.store.js";
 import { useSubscriptionStore } from "../../../subscriptions/application/subscription.store.js";
@@ -12,7 +13,7 @@ import { isActiveStatus } from "../../../subscriptions/domain/model/subscription
 import { useTelemetryStore } from "../../../telemetry/application/telemetry.store.js";
 import { ROLES, normalizeRole, isAdmin } from "../../infrastructure/roles.js";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const drawer = ref(false);
 const profileStore = useProfileStore();
@@ -22,7 +23,7 @@ const telemetryStore = useTelemetryStore();
 const toast = useToast();
 // RF-011: toast rojo cuando llega una alerta crítica nueva
 watch(() => telemetryStore.lastCriticalNotice, (a) => {
-  if (a) toast.add({ severity: 'error', summary: a.message || 'Alerta crítica', detail: new Date(a.createdAt).toLocaleString(), life: 8000 });
+  if (a) toast.add({ severity: 'error', summary: t(`telemetry.alertTypes.${a.type}`, a.title || t('header.criticalAlert')), detail: new Date(a.createdAt).toLocaleString(locale.value), life: 8000 });
 });
 
 const toggleDrawer = () => {
@@ -69,7 +70,7 @@ watch(
 const userName = computed(() => {
   return profileStore.profile?.displayName ||
          currentUser.value?.name ||
-         'Usuario';
+         t('header.user');
 });
 
 const userPhoto = computed(() => {
@@ -77,7 +78,7 @@ const userPhoto = computed(() => {
   if (photo && photo !== 'undefined' && typeof photo === 'string' && photo.trim() !== '') {
     return photo;
   }
-  const name = userName.value && userName.value !== 'Usuario' ? userName.value.trim() : 'U';
+  const name = userName.value && userName.value !== t('header.user') ? userName.value.trim() : 'U';
   const initial = name.charAt(0).toUpperCase();
   return `data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 rx=%2220%22 fill=%22%2310B981%22/%3E%3Ctext x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22 font-family=%22sans-serif%22%3E${initial}%3C/text%3E%3C/svg%3E`;
 });
@@ -89,23 +90,18 @@ const handleLogout = async () => {
 };
 
 const items = [
-  // Administrador
+  // Administrador: el panel ya reúne monitoreo en vivo y alertas
   { label: 'option.dashboard', to: ROUTES.DASHBOARD, use_role: ROLES.ADMIN, icon: 'pi pi-home' },
   { label: 'option.condominiums', to: ROUTES.CONDOMINIUMS, use_role: ROLES.ADMIN, icon: 'pi pi-building' },
   { label: 'option.residents', to: ROUTES.RESIDENTS, use_role: ROLES.ADMIN, icon: 'pi pi-users' },
   { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
-  { label: 'option.alerts', to: ROUTES.ALERTS, use_role: ROLES.ADMIN, icon: 'pi pi-bell', requiresSubscription: true },
-  { label: 'option.bills', to: ROUTES.BILLING_BILLS, use_role: ROLES.ADMIN, icon: 'pi pi-file', requiresSubscription: true },
-  { label: 'option.settlements', to: ROUTES.BILLING_SETTLEMENTS, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
-  { label: 'option.delinquency', to: ROUTES.DELINQUENCY, use_role: ROLES.ADMIN, icon: 'pi pi-exclamation-circle', requiresSubscription: true },
-  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.ADMIN, icon: 'pi pi-history', requiresSubscription: true },
+  { label: 'option.billing', to: ROUTES.BILLING, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
   { label: 'option.subscription', to: ROUTES.SUBSCRIPTION_DETAIL, use_role: ROLES.ADMIN, icon: 'pi pi-credit-card' },
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.ADMIN, icon: 'pi pi-user' },
-  // Residente
+  // Residente (Permanece intacto)
   { label: 'option.myConsumption', to: ROUTES.DASHBOARD, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-line' },
-  { label: 'option.analytics', to: ROUTES.ANALYTICS, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-bar' },
   { label: 'option.accountStatement', to: ROUTES.ACCOUNT_STATEMENT, use_role: ROLES.RESIDENT, icon: 'pi pi-wallet' },
-  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.RESIDENT, icon: 'pi pi-history' },
+  { label: 'option.audit', to: ROUTES.AUDIT, use_role: ROLES.RESIDENT, icon: 'pi pi-receipt' },
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.RESIDENT, icon: 'pi pi-user' },
 ];
 
@@ -129,7 +125,7 @@ const filteredItems = computed(() => {
           <div class="header-start">
             <pv-button
                 class="menu-button"
-                :aria-label="drawer ? 'Close navigation' : 'Open navigation'"
+                :aria-label="drawer ? t('header.closeNav') : t('header.openNav')"
                 :aria-expanded="drawer"
                 icon="pi pi-bars"
                 text
@@ -154,10 +150,7 @@ const filteredItems = computed(() => {
         <template #end>
           <div class="header-end">
 
-            <router-link v-if="userRole === ROLES.ADMIN && hasActiveSubscription" :to="ROUTES.ALERTS" class="notification-link" aria-label="Alerts" style="position: relative; display: inline-flex;">
-              <pv-button class="notification-button" aria-label="Notifications" icon="pi pi-bell" text rounded severity="secondary" />
-              <span v-if="telemetryStore.openAlertsCount > 0" class="alert-badge" style="position:absolute;top:2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;">{{ telemetryStore.openAlertsCount }}</span>
-            </router-link>
+            <alerts-bell v-if="userRole === ROLES.ADMIN && hasActiveSubscription" />
 
 
             <router-link

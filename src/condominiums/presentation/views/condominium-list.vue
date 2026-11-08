@@ -35,7 +35,7 @@ const filtered = computed(() => {
       <pv-input-text v-model="search" :placeholder="t('condominiums.search')" class="w-full" />
     </pv-icon-field>
     <div v-if="store.isLoading" class="center"><pv-progress-spinner /></div>
-    <pv-message v-else-if="store.errors.length" severity="error">{{ store.errors[0] }}</pv-message>
+    <pv-message v-else-if="store.errors.length" severity="error">{{ t('common.loadError') }}</pv-message>
     <p v-else-if="!filtered.length" class="muted">{{ t('condominiums.empty') }}</p>
     <div v-else class="grid-cards">
       <condominium-card v-for="c in filtered" :key="c.id" :condominium="c"

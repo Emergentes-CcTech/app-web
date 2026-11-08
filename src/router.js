@@ -15,6 +15,7 @@ import { ROUTES } from "./shared/infrastructure/paths.js";
 import { RETRY_DELAY_SHORT_MS } from "./shared/infrastructure/constants.js";
 import { isActiveStatus } from "./subscriptions/domain/model/subscription-status.enum.js";
 import { normalizeRole, isAdmin, ROLES } from "./shared/infrastructure/roles.js";
+import i18n from "./i18n.js";
 
 const subscriptionApi = new SubscriptionApi();
 
@@ -43,6 +44,19 @@ const routes = [
     { path: '/payments', children: paymentsRoutes },                                    // el rol se define por hijo
     { path: '/audit', children: auditRoutes },                                          // ambos roles
     { path: '/subscriptions', meta: { requiresRole: ROLES.ADMIN }, children: subscriptionsRoutes },
+    // Route aliases and compatibility redirects matching DDD terminology
+    { path: '/cadastre/condominiums', redirect: '/condominiums', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/units', redirect: to => `/condominiums/${to.params.id}`, meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/common-areas', redirect: to => `/condominiums/${to.params.id}`, meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/equipment', redirect: '/devices/device-management', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/cadastre/condominiums/:id/residents', redirect: '/residents', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/subscriptions/plans', redirect: '/subscriptions/my-subscription', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/analytics/alerts', redirect: '/telemetry/alerts', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/utility-bills', redirect: '/billing/bills', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/settlements', redirect: '/billing/settlements', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/delinquency', redirect: '/payments/delinquency', meta: { requiresRole: ROLES.ADMIN } },
+    { path: '/proration/my-statement', redirect: '/payments/account-statement', meta: { requiresRole: ROLES.RESIDENT } },
+    { path: '/proration/payment-history', redirect: '/payments/account-statement', meta: { requiresRole: ROLES.RESIDENT } },
     { path: '/', redirect: ROUTES.IAM_LOGIN },
     { path: '/home', name: 'home', redirect: ROUTES.DASHBOARD },
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('./shared/presentation/views/page-not-found.vue') },
@@ -96,6 +110,7 @@ router.beforeEach(async (to, from, next) => {
             || to.path.startsWith(ROUTES.IAM_BASE)
             || to.path.startsWith(ROUTES.PROFILES_BASE)
             || to.path.startsWith(ROUTES.CONDOMINIUMS_BASE)
+            || to.path.startsWith('/cadastre')
             // Panel, residentes y dispositivos se muestran siempre al administrador
             || to.path === ROUTES.DASHBOARD
             || to.path.startsWith(ROUTES.RESIDENTS_BASE)
@@ -121,11 +136,15 @@ router.beforeEach(async (to, from, next) => {
     next();
 });
 
-router.afterEach((to) => {
-    // Synchronize document.title after navigation resolves
+// Título de la pestaña en el idioma activo: pageTitles.<nombre de ruta>, con meta.title como respaldo
+export function syncDocumentTitle(to = router.currentRoute.value) {
     const baseTitle = 'IoBuild';
-    const title = to.meta?.title || to.matched.slice().reverse().find(r => r.meta?.title)?.meta?.title;
+    const key = `pageTitles.${String(to.name || '')}`;
+    const title = i18n.global.te(key) ? i18n.global.t(key)
+        : (to.meta?.title || to.matched.slice().reverse().find(r => r.meta?.title)?.meta?.title);
     document.title = title ? `${baseTitle} - ${title}` : baseTitle;
-});
+}
+
+router.afterEach((to) => syncDocumentTitle(to));
 
 export default router;
