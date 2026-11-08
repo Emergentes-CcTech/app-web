@@ -37,3 +37,6 @@ __pycache__/
 
 # Teamwork Agent metadata
 .agents/
+
+# Respaldos de producción
+backups/

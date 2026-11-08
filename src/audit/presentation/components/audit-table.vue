@@ -11,7 +11,7 @@ const { t, locale } = useI18n();
     <pv-column :header="t('telemetry.date')"><template #body="{ data }">{{ new Date(data.at).toLocaleString(locale) }}</template></pv-column>
     <pv-column :header="t('telemetry.type')"><template #body="{ data }">{{ t(`audit.types.${data.type}`) }}</template></pv-column>
     <pv-column field="entity" :header="t('audit.entity')" />
-    <pv-column field="actorUserId" :header="t('audit.actor')" />
+    <pv-column :header="t('audit.actor')"><template #body="{ data }">{{ data.actorUserId ?? t('audit.system') }}</template></pv-column>
     <pv-column field="previousValue" :header="t('audit.previous')" />
     <pv-column field="newValue" :header="t('audit.new')" />
   </pv-data-table>

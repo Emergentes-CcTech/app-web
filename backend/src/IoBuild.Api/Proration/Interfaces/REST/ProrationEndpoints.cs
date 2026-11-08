@@ -158,6 +158,18 @@ public static class ProrationEndpoints
             || await db.UnitOwnerProjections.AnyAsync(p => p.UnitId == statement.UnitId && p.OwnerUserId == self, ct);
     }
 
+    // El frontend puede enviar el id como número o como texto (viene de la ruta)
+    private static bool TryReadInt(System.Text.Json.JsonElement e, out int value)
+    {
+        value = 0;
+        return e.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.Number => e.TryGetInt32(out value),
+            System.Text.Json.JsonValueKind.String => int.TryParse(e.GetString(), out value),
+            _ => false
+        };
+    }
+
     public static void MapProrationEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/v1/proration").WithTags("Proration");
@@ -396,9 +408,10 @@ public static class ProrationEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/utility_bills ──
-        app.MapGet("/api/v1/utility_bills", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? period, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/utility_bills", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? period, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var targetProjectId = condominiumId ?? projectId ?? 1;
+            if (!await MaySeeProjectAsync(user, db, targetProjectId, ct)) return Results.Forbid();
             var query = db.BillingPeriods.Where(p => p.ProjectId == targetProjectId);
             if (!string.IsNullOrWhiteSpace(period)) query = query.Where(p => p.PeriodCode == period);
             var periods = await query.OrderByDescending(p => p.PeriodCode).ToListAsync(ct);
@@ -508,9 +521,10 @@ public static class ProrationEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/settlements ──
-        app.MapGet("/api/v1/settlements", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/settlements", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var targetProjectId = condominiumId ?? projectId ?? 1;
+            if (!await MaySeeProjectAsync(user, db, targetProjectId, ct)) return Results.Forbid();
             var periods = await db.BillingPeriods
                 .Where(p => p.ProjectId == targetProjectId)
                 .OrderByDescending(p => p.PeriodCode)
@@ -561,37 +575,28 @@ public static class ProrationEndpoints
             });
         }).RequireAuthorization();
 
-        app.MapPost("/api/v1/settlements", async ([FromBody] System.Text.Json.JsonElement body, IProrationSettlementService prorationService, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapPost("/api/v1/settlements", async ([FromBody] System.Text.Json.JsonElement body, ClaimsPrincipal user, IProrationSettlementService prorationService, IoBuildDbContext db, CancellationToken ct) =>
         {
-            var condoId = body.TryGetProperty("condominiumId", out var cProp) ? cProp.GetInt32() : 1;
-            var periodCode = body.TryGetProperty("period", out var pProp) ? pProp.GetString() ?? "2026-10" : "2026-10";
+            if (body.ValueKind != System.Text.Json.JsonValueKind.Object
+                || !body.TryGetProperty("condominiumId", out var cProp) || !TryReadInt(cProp, out var condoId)
+                || !body.TryGetProperty("period", out var pProp) || pProp.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(pProp.GetString()))
+                return Results.BadRequest(new { error = "Indica el condominio y el periodo del prorrateo." });
+            if (!await MayManageProjectAsync(user, db, condoId, ct)) return Results.Forbid();
+            var periodCode = pProp.GetString()!.Trim();
 
+            // Sin los recibos de agua y luz no hay gasto común real que repartir: nunca se usan montos supuestos
             var period = await db.BillingPeriods.FirstOrDefaultAsync(p => p.ProjectId == condoId && p.PeriodCode == periodCode, ct);
-            if (period is null)
-            {
-                period = new BillingPeriod
-                {
-                    ProjectId = condoId,
-                    PeriodCode = periodCode,
-                    StartDate = DateTime.UtcNow.AddMonths(-1),
-                    EndDate = DateTime.UtcNow,
-                    DueDate = DateTime.UtcNow.AddDays(15),
-                    MacroWaterM3 = 420.0m,
-                    MacroWaterAmountSoles = 1680.00m,
-                    MacroEnergyKwh = 1450.0m,
-                    MacroEnergyAmountSoles = 1160.50m,
-                    TotalCommonExpenseSoles = 2840.50m,
-                    Status = "Draft"
-                };
-                db.BillingPeriods.Add(period);
-                await db.SaveChangesAsync(ct);
-            }
+            if (period is null || period.MacroWaterAmountSoles <= 0 || period.MacroEnergyAmountSoles <= 0)
+                return Results.UnprocessableEntity(new { error = "Registra los recibos de agua y luz del periodo antes de generar el prorrateo." });
 
             try
             {
                 await prorationService.GenerateSettlementAsync(period.Id, ct);
             }
-            catch { }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or KeyNotFoundException)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
 
             return Results.Created($"/api/v1/settlements/{period.Id}", new
             {
@@ -603,10 +608,10 @@ public static class ProrationEndpoints
             });
         }).RequireAuthorization();
 
-        app.MapPatch("/api/v1/settlements/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapPatch("/api/v1/settlements/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var period = await db.BillingPeriods.FindAsync([id], ct);
-            if (period is null) return Results.NotFound();
+            if (period is null || !await MayManageProjectAsync(user, db, period.ProjectId, ct)) return Results.NotFound();
             period.Status = "Settled";
             period.SettledAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
@@ -1049,46 +1054,61 @@ public static class ProrationEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/audit_events ──
-        app.MapGet("/api/v1/audit_events", ([FromQuery] int? condominiumId, [FromQuery] int? projectId, IoBuildDbContext db) =>
+        app.MapGet("/api/v1/audit_events", async (
+            [FromQuery] int? condominiumId,
+            [FromQuery] int? projectId,
+            [FromQuery] string? type,
+            [FromQuery(Name = "at_gte")] DateTime? from,
+            [FromQuery(Name = "at_lte")] DateTime? to,
+            ClaimsPrincipal user,
+            IoBuildDbContext db,
+            CancellationToken ct) =>
         {
-            var targetProjectId = condominiumId ?? projectId ?? 1;
-            var events = new List<object>
+            var targetProjectId = condominiumId ?? projectId;
+            if (!targetProjectId.HasValue) return Results.BadRequest(new { error = "Indica el condominio." });
+            if (!await MayManageProjectAsync(user, db, targetProjectId.Value, ct)) return Results.Forbid();
+            var project = targetProjectId.Value;
+
+            // Historial reconstruido con los registros reales: conciliación y emisión de cada periodo, pagos y alertas
+            var rows = new List<(string Type, string Entity, string? Previous, string? New, DateTime At)>();
+            var periods = await db.BillingPeriods.Where(p => p.ProjectId == project).ToListAsync(ct);
+            foreach (var p in periods)
             {
-                new
+                if (p.ReconciledAtUtc is { } reconciled)
+                    rows.Add(("proration", $"Periodo {p.PeriodCode}", "Recibos registrados", $"Conciliado · S/ {p.TotalCommonExpenseSoles:N2}", reconciled));
+                if (p.SettledAtUtc is { } settled)
+                    rows.Add(("proration", $"Periodo {p.PeriodCode}", "Conciliado", "Liquidación emitida", settled));
+            }
+            var periodCodes = periods.ToDictionary(p => p.Id, p => p.PeriodCode);
+            var paid = await db.StatementOfAccounts.Where(s => s.ProjectId == project && s.PaidAtUtc != null).ToListAsync(ct);
+            foreach (var s in paid)
+                rows.Add(("payment", $"Departamento {s.UnitNumber} · {periodCodes.GetValueOrDefault(s.BillingPeriodId, "?")}",
+                    $"Pendiente · S/ {s.IndividualAmountSoles:N2}", string.IsNullOrWhiteSpace(s.PaymentMethod) ? "Pagado" : $"Pagado ({s.PaymentMethod})", s.PaidAtUtc!.Value));
+            var alerts = await db.AnomalyAlerts.Where(a => a.ProjectId == project).ToListAsync(ct);
+            foreach (var a in alerts)
+            {
+                rows.Add(("alert", a.Title, null, "Abierta", a.DetectedAtUtc));
+                if (a.ResolvedAtUtc is { } resolved) rows.Add(("alert", a.Title, "Abierta", "Resuelta", resolved));
+            }
+
+            var filtered = rows
+                .Where(r => string.IsNullOrWhiteSpace(type) || r.Type == type)
+                .Where(r => !from.HasValue || r.At >= from.Value.ToUniversalTime())
+                .Where(r => !to.HasValue || r.At <= to.Value.ToUniversalTime())
+                .OrderByDescending(r => r.At)
+                .Take(500)
+                .Select((r, i) => new
                 {
-                    id = 1,
-                    condominiumId = targetProjectId,
-                    type = "proration",
-                    entity = "BillingPeriod",
-                    actorUserId = 1,
-                    at = DateTime.UtcNow.AddDays(-2).ToString("o"),
-                    previousValue = "Draft",
-                    newValue = "Settled"
-                },
-                new
-                {
-                    id = 2,
-                    condominiumId = targetProjectId,
-                    type = "reading",
-                    entity = "DeviceTelemetry",
-                    actorUserId = 1,
-                    at = DateTime.UtcNow.AddDays(-1).ToString("o"),
-                    previousValue = "0.15 m3/h",
-                    newValue = "0.42 m3/h"
-                },
-                new
-                {
-                    id = 3,
-                    condominiumId = targetProjectId,
-                    type = "participation_changed",
-                    entity = "Unit 402",
-                    actorUserId = 1,
-                    at = DateTime.UtcNow.AddDays(-5).ToString("o"),
-                    previousValue = "3.8500%",
-                    newValue = "3.8500%"
-                }
-            };
-            return Results.Ok(events);
+                    id = i + 1,
+                    condominiumId = project,
+                    type = r.Type,
+                    entity = r.Entity,
+                    actorUserId = (int?)null,
+                    at = DateTime.SpecifyKind(r.At, DateTimeKind.Utc).ToString("o"),
+                    previousValue = r.Previous,
+                    newValue = r.New
+                });
+            return Results.Ok(filtered);
         }).RequireAuthorization();
     }
 }

@@ -16,6 +16,7 @@ import { RETRY_DELAY_SHORT_MS } from "./shared/infrastructure/constants.js";
 import { isActiveStatus } from "./subscriptions/domain/model/subscription-status.enum.js";
 import { normalizeRole, isAdmin, ROLES } from "./shared/infrastructure/roles.js";
 import i18n from "./i18n.js";
+import { getSessionUser } from "./shared/infrastructure/session.js";
 
 const subscriptionApi = new SubscriptionApi();
 
@@ -139,7 +140,9 @@ router.beforeEach(async (to, from, next) => {
 // Título de la pestaña en el idioma activo: pageTitles.<nombre de ruta>, con meta.title como respaldo
 export function syncDocumentTitle(to = router.currentRoute.value) {
     const baseTitle = 'IoBuild';
-    const key = `pageTitles.${String(to.name || '')}`;
+    // La misma ruta de auditoría es "Mi cuota actual" para el residente e historial para el administrador
+    const adminAudit = to.name === 'audit' && isAdmin(getSessionUser()?.role);
+    const key = adminAudit ? 'audit.title' : `pageTitles.${String(to.name || '')}`;
     const title = i18n.global.te(key) ? i18n.global.t(key)
         : (to.meta?.title || to.matched.slice().reverse().find(r => r.meta?.title)?.meta?.title);
     document.title = title ? `${baseTitle} - ${title}` : baseTitle;

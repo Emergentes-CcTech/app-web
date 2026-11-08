@@ -865,7 +865,9 @@
       "reading": "Reading",
       "proration": "Proration",
       "manual_adjustment": "Manual adjustment",
-      "participation_changed": "Participation change"
+      "participation_changed": "Participation change",
+      "payment": "Payment",
+      "alert": "Alert"
     },
     "fee": {
       "selectPeriod": "Choose month",
@@ -930,7 +932,8 @@
       },
       "askAi": "Still have questions? Ask IoBuild"
     },
-    "residentSubtitle": "A step-by-step explanation of where your payment comes from."
+    "residentSubtitle": "A step-by-step explanation of where your payment comes from.",
+    "system": "System"
   },
   "dashboard": {
     "admin": {

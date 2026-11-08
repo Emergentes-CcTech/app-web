@@ -1,0 +1,144 @@
+# IoBuild — Producción (servidor Debian con Tailscale Funnel)
+# Uso:  docker compose -f docker-compose.prod.yml up -d --build
+# Lee los secretos de .env (copiar deploy/.env.prod.example). Si falta uno obligatorio, compose se detiene.
+#
+# Diferencias con docker-compose.yml (desarrollo):
+#  - Solo nginx publica un puerto y únicamente en 127.0.0.1: Tailscale Funnel lo expone por HTTPS.
+#  - MySQL, InfluxDB, MQTT y la API no son accesibles desde fuera de la red interna de Docker.
+#  - Sin contraseñas por defecto; la API usa un usuario de MySQL propio, no root.
+#  - CORS limitado al dominio público (*.ts.net) y clave de ingesta para la telemetría por HTTP.
+name: iobuild
+
+services:
+  iobuild-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__IoBuild=Server=mysql-monolith;Port=3306;Database=iobuild;User=iobuild;Password=${DB_PASSWORD:?Falta DB_PASSWORD}
+      - Migrations__ApplyOnStartup=true
+      - Mqtt__Enabled=true
+      - Mqtt__Host=mosquitto
+      - Mqtt__Port=1883
+      - Influx__Url=http://influxdb:8086
+      - Influx__Org=iobuild
+      - Influx__Bucket=iobuild-telemetry
+      - Influx__Token=${INFLUX_TOKEN:?Falta INFLUX_TOKEN}
+      - Jwt__Secret=${JWT_SECRET:?Falta JWT_SECRET (mínimo 32 caracteres)}
+      - Cors__AllowedOrigins=${PUBLIC_URL:?Falta PUBLIC_URL (https://<equipo>.<tailnet>.ts.net)}
+      - Devices__IngestKey=${DEVICE_INGEST_KEY:?Falta DEVICE_INGEST_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_RESTRICTED_API_KEY=${STRIPE_RESTRICTED_API_KEY:-}
+      - STRIPE_USE_SIMULATED_PAYMENTS=${STRIPE_USE_SIMULATED_PAYMENTS:-true}
+      - Stripe__RestrictedApiKey=${STRIPE_RESTRICTED_API_KEY:-}
+      - Stripe__UseSimulatedPayments=${STRIPE_USE_SIMULATED_PAYMENTS:-true}
+      - Gemini__ApiKey=${GEMINI_API_KEY:-}
+      - Gemini__Model=${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      - Demo__Enabled=${DEMO_ENABLED:-false}
+    depends_on:
+      mysql-monolith:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      influxdb:
+        condition: service_started
+    networks: [iobuild-network]
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  mysql-monolith:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:?Falta DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=iobuild
+      # Usuario de la aplicación: todos los permisos solo sobre la base iobuild
+      - MYSQL_USER=iobuild
+      - MYSQL_PASSWORD=${DB_PASSWORD:?Falta DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [iobuild-network]
+    logging: *logging
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api/v1
+        - VITE_CLOUDINARY_CLOUD_NAME=${VITE_CLOUDINARY_CLOUD_NAME:-}
+        - VITE_CLOUDINARY_UPLOAD_PRESET=${VITE_CLOUDINARY_UPLOAD_PRESET:-}
+        - VITE_STRIPE_PUBLISHABLE_KEY=${VITE_STRIPE_PUBLISHABLE_KEY:-}
+    restart: unless-stopped
+    depends_on: [iobuild-api]
+    networks: [iobuild-network]
+    logging: *logging
+
+  # Único punto de entrada. Solo escucha en la propia laptop; Tailscale Funnel publica este puerto con HTTPS.
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [iobuild-api, frontend]
+    networks: [iobuild-network]
+    logging: *logging
+
+  # Broker MQTT solo dentro de la red de Docker (simulador → API); no se publica ningún puerto
+  mosquitto:
+    image: eclipse-mosquitto:2-openssl
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    networks: [iobuild-network]
+    logging: *logging
+
+  # Simulador de los sensores de áreas comunes (se mantiene para la demo)
+  simulator:
+    build:
+      context: ./iot-simulator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - SIMULATOR_INTERVAL_SECONDS=${SIMULATOR_INTERVAL_SECONDS:-60}
+    depends_on: [mosquitto]
+    networks: [iobuild-network]
+    logging: *logging
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASSWORD:?Falta INFLUX_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=iobuild
+      - DOCKER_INFLUXDB_INIT_BUCKET=iobuild-telemetry
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:?Falta INFLUX_TOKEN}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks: [iobuild-network]
+    logging: *logging
+
+networks:
+  iobuild-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  mosquitto_data:
+  influxdb_data:
