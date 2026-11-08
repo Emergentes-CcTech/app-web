@@ -27,6 +27,13 @@ public sealed record TelemetryMessage(
 public interface IInfluxTelemetrySink { Task WriteAsync(TelemetryMessage message, CancellationToken cancellationToken = default); }
 public interface IDeviceMqttPublisher { Task PublishAsync(string topic, string payload, bool qos1, bool retain, CancellationToken cancellationToken = default); }
 
+/// <summary>Lectura acumulada menor que la última guardada; quien ingesta puede resincronizar el dispositivo.</summary>
+public sealed class NonMonotonicReadingException(int deviceId, double received, double stored)
+    : InvalidOperationException($"Lectura no monotónica rechazada para dispositivo {deviceId}: lectura recibida {received} < acumulada {stored}.")
+{
+    public int DeviceId { get; } = deviceId;
+}
+
 public sealed class DisabledInfluxTelemetrySink : IInfluxTelemetrySink
 {
     public Task WriteAsync(TelemetryMessage message, CancellationToken cancellationToken = default) => throw new HttpRequestException("InfluxDB is not configured.");
@@ -99,7 +106,7 @@ public sealed class DeviceTelemetryService(IoBuildDbContext db, IInfluxTelemetry
                 if (device.LastCumulativeReading > 0.0 && incomingCumulative.Value < device.LastCumulativeReading)
                 {
                     // Rechaza paquetes corruptos con lecturas acumuladas decrecientes
-                    throw new InvalidOperationException($"Lectura no monotónica rechazada para dispositivo {device.Id}: lectura recibida {incomingCumulative.Value} < acumulada {device.LastCumulativeReading}.");
+                    throw new NonMonotonicReadingException(device.Id, incomingCumulative.Value, device.LastCumulativeReading);
                 }
                 device.LastCumulativeReading = incomingCumulative.Value;
             }

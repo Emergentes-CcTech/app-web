@@ -4,7 +4,8 @@
  */
 
 // RNF-012: una lectura debe reflejarse en < 5 s y una alerta crítica notificarse en < 60 s.
-export const LIVE_POLLING_MS = Number(import.meta.env.VITE_POLLING_INTERVAL_MS) || 5000;
+// Los sensores envían una lectura por minuto: consultar cada 15 s basta para ver la última sin cargar la API
+export const LIVE_POLLING_MS = Number(import.meta.env.VITE_POLLING_INTERVAL_MS) || 15000;
 
 export const ALERT_POLLING_MS = 15000;
 

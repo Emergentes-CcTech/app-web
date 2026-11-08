@@ -392,12 +392,11 @@
     "bills": "Utility bills",
     "settlements": "Proration & settlements",
     "delinquency": "Delinquency",
-    "audit": "Audit trail",
+    "audit": "My current fee",
     "subscription": "Subscription",
     "profile": "Profile",
     "myConsumption": "My consumption",
-    "accountStatement": "Account statement",
-    "analytics": "Analytics"
+    "accountStatement": "Account statement"
   },
   "condominiums": {
     "title": "Condominiums",
@@ -853,7 +852,7 @@
   },
   "audit": {
     "title": "Audit trail",
-    "residentTitle": "Support for my settlement",
+    "residentTitle": "How was my fee calculated?",
     "empty": "No events.",
     "entity": "Entity",
     "actor": "User",
@@ -862,13 +861,76 @@
     "exportCsv": "Export CSV",
     "from": "From",
     "to": "To",
-    "participationChanges": "Participation changes for your unit",
     "types": {
       "reading": "Reading",
       "proration": "Proration",
       "manual_adjustment": "Manual adjustment",
       "participation_changed": "Participation change"
-    }
+    },
+    "fee": {
+      "selectPeriod": "Choose month",
+      "loadError": "Your fee explanation could not be loaded. Try again.",
+      "yourFee": "Your {month} fee · Unit {unit}",
+      "paidOn": "Paid on {date}",
+      "dueOn": "Due on {date}",
+      "goPay": "Go to payment",
+      "concepts": {
+        "water": "Water",
+        "energy": "Electricity",
+        "other": "Other common expenses"
+      },
+      "step1": {
+        "title": "What the building cost in {month}",
+        "text": "These are the common-area bills and other expenses recorded by the administration.",
+        "total": "Total common expense"
+      },
+      "step2": {
+        "title": "Your share is {pct}%",
+        "text": "This is your unit's aliquot, set under Law 27157. It means that, of every S/ 100 of common expense, {amount} is yours."
+      },
+      "step3": {
+        "title": "What your fee is made of",
+        "total": "Your fee"
+      },
+      "change": {
+        "title": "Compared with {month}",
+        "none": "There is no {month} fee to compare with.",
+        "up": "What rose the most was {concept}: {amount} more.",
+        "down": "What fell the most was {concept}: {amount} less."
+      },
+      "alerts": {
+        "title": "Alerts with a cost in {month}",
+        "none": "No leaks or overconsumption with a cost were detected this month.",
+        "text": "The extra consumption from these events is already part of the building's bill. The amount is an estimate of your share.",
+        "share": "Building: {building} · Your share: {mine}",
+        "open": "Under review",
+        "resolved": "Resolved"
+      },
+      "evidence": {
+        "title": "Where the data comes from",
+        "text": "The amounts come from the building's master bills: {water} m³ from Sedapal and {energy} kWh from Luz del Sur.",
+        "water": "View water bill",
+        "energy": "View electricity bill",
+        "noReceipts": "The administration has not attached this month's bill images yet."
+      },
+      "glossary": {
+        "title": "Words on your fee",
+        "aliquot": {
+          "term": "Aliquot",
+          "text": "The percentage of the building assigned to your unit. It sets how much of the common expenses you pay."
+        },
+        "commonExpense": {
+          "term": "Common expense",
+          "text": "What it costs to run the shared areas: cistern, pumps, elevators and lighting."
+        },
+        "masterBill": {
+          "term": "Master bill",
+          "text": "The single bill Sedapal or Luz del Sur issues for the whole building."
+        }
+      },
+      "askAi": "Still have questions? Ask IoBuild"
+    },
+    "residentSubtitle": "A step-by-step explanation of where your payment comes from."
   },
   "dashboard": {
     "admin": {
@@ -975,7 +1037,7 @@
     "dashboard": "Dashboard",
     "analytics": "Common areas",
     "account-statement": "Account statement",
-    "audit": "Audit trail",
+    "audit": "My current fee",
     "billing": "Billing and collections",
     "bills": "Utility bills",
     "settlements": "Proration and settlement",
@@ -1017,7 +1079,8 @@
       }
     },
     "aliquotAdmin": "Split by aliquot",
-    "period": "Period explained: {period}"
+    "period": "Period explained: {period}",
+    "answerLabel": "Assistant answer"
   },
   "baselines": {
     "title": "Statistical detection",
@@ -1037,5 +1100,12 @@
       "learning": "Learning",
       "no-data": "No data"
     }
+  },
+  "alertsBell": {
+    "open": "View notifications ({n} open alerts)",
+    "count": "No open alerts | {n} open alert | {n} open alerts",
+    "more": "and {n} more",
+    "viewAll": "View all alerts",
+    "error": "The alert could not be acknowledged. Try again."
   }
 }

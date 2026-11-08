@@ -269,7 +269,8 @@ onUnmounted(() => telemetry.stopPolling());
 .live { border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; flex-direction: column; gap: .75rem; }
 .chart { height: 240px; position: relative; }
 
-.split { display: grid; grid-template-columns: 3fr 2fr; gap: 1rem; align-items: start; }
+.split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1rem; align-items: start; }
+.split > * { min-width: 0; }
 @media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
 
 .alerts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }

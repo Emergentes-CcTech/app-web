@@ -212,13 +212,21 @@ public static class AnalyticsEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/alerts ──
-        app.MapGet("/api/v1/alerts", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? status, [FromQuery] string? _sort, [FromQuery] string? _order, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/alerts", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? status, [FromQuery] string? _sort, [FromQuery] string? _order, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var targetProjectId = condominiumId ?? projectId;
             var query = db.AnomalyAlerts.AsQueryable();
             if (targetProjectId.HasValue)
             {
+                if (!await MaySeeProjectAsync(user, db, targetProjectId.Value, ct)) return Results.Forbid();
                 query = query.Where(a => a.ProjectId == targetProjectId.Value);
+            }
+            else
+            {
+                // Sin condominio (campana del encabezado): solo los condominios que administra el usuario
+                var self = SelfId(user);
+                var ownProjects = await db.Projects.Where(p => p.BuilderId == self).Select(p => p.Id).ToListAsync(ct);
+                query = query.Where(a => ownProjects.Contains(a.ProjectId));
             }
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -261,10 +269,12 @@ public static class AnalyticsEndpoints
             return Results.Ok(result);
         }).RequireAuthorization();
 
-        app.MapPatch("/api/v1/alerts/{id:int}", async (int id, [FromBody] System.Text.Json.JsonElement body, IoBuildDbContext db, CancellationToken ct) =>
+        app.MapPatch("/api/v1/alerts/{id:int}", async (int id, [FromBody] System.Text.Json.JsonElement body, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var alert = await db.AnomalyAlerts.FindAsync([id], ct);
-            if (alert is null) return Results.NotFound();
+            // Solo el administrador del condominio cierra sus alertas; las ajenas se responden como inexistentes
+            var self = SelfId(user);
+            if (alert is null || !await db.Projects.AnyAsync(p => p.Id == alert.ProjectId && p.BuilderId == self, ct)) return Results.NotFound();
             alert.Resolve();
             await db.SaveChangesAsync(ct);
             return Results.Ok(new

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using IoBuild.Api.Analytics.Application.Internal.QueryServices;
 using IoBuild.Api.Persistence;
 using IoBuild.Api.Proration.Domain.Model.Aggregates;
 using IoBuild.Api.Proration.Domain.Services;
@@ -71,6 +72,27 @@ public static class ProrationEndpoints
 
         return unitIds.Union(projectedIds).Distinct().ToList();
     }
+
+    // Línea de liquidación con los datos del periodo que sustentan su cálculo
+    private static object ToLineResource(StatementOfAccount s, BillingPeriod? period) => new
+    {
+        id = s.Id,
+        settlementId = s.BillingPeriodId,
+        unitId = s.UnitId,
+        period = period?.PeriodCode,
+        participationPct = s.AliquotPercentage,
+        amount = s.IndividualAmountSoles,
+        breakdown = new
+        {
+            water = s.IndividualWaterSoles,
+            energy = s.IndividualEnergySoles,
+            other = s.IndividualOtherExpensesSoles,
+            commonAreaAmount = period?.TotalCommonExpenseSoles ?? 0m,
+            participationPct = s.AliquotPercentage,
+            readingsFrom = period?.StartDate.ToString("yyyy-MM-dd"),
+            readingsTo = period?.EndDate.ToString("yyyy-MM-dd")
+        }
+    };
 
     // Resuelve el modo de pago y la clave de Stripe desde appsettings, .env o variables de entorno
     private static (bool IsSimulated, string? ApiKey) ResolveStripeSettings(IConfiguration configuration)
@@ -523,20 +545,7 @@ public static class ProrationEndpoints
                 .OrderBy(s => s.UnitNumber)
                 .ToListAsync(ct);
 
-            var lines = statements.Select(s => new
-            {
-                id = s.Id,
-                settlementId = s.BillingPeriodId,
-                unitId = s.UnitId,
-                participationPct = s.AliquotPercentage,
-                amount = s.IndividualAmountSoles,
-                breakdown = new
-                {
-                    water = s.IndividualWaterSoles,
-                    energy = s.IndividualEnergySoles,
-                    other = s.IndividualOtherExpensesSoles
-                }
-            });
+            var lines = statements.Select(s => ToLineResource(s, p));
 
             return Results.Ok(new
             {
@@ -654,21 +663,9 @@ public static class ProrationEndpoints
             if (settlementId.HasValue) query = query.Where(s => s.BillingPeriodId == settlementId.Value);
 
             var statements = await query.OrderBy(s => s.UnitNumber).ToListAsync(ct);
-            var lines = statements.Select(s => new
-            {
-                id = s.Id,
-                settlementId = s.BillingPeriodId,
-                unitId = s.UnitId,
-                participationPct = s.AliquotPercentage,
-                amount = s.IndividualAmountSoles,
-                breakdown = new
-                {
-                    water = s.IndividualWaterSoles,
-                    energy = s.IndividualEnergySoles,
-                    other = s.IndividualOtherExpensesSoles
-                }
-            });
-            return Results.Ok(lines);
+            var periodIds = statements.Select(s => s.BillingPeriodId).Distinct().ToList();
+            var periods = await db.BillingPeriods.Where(p => periodIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
+            return Results.Ok(statements.Select(s => ToLineResource(s, periods.GetValueOrDefault(s.BillingPeriodId))));
         }).RequireAuthorization();
 
         app.MapGet("/api/v1/settlement_lines/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
@@ -685,19 +682,61 @@ public static class ProrationEndpoints
                 }
             }
 
+            return Results.Ok(ToLineResource(s, await db.BillingPeriods.FindAsync([s.BillingPeriodId], ct)));
+        }).RequireAuthorization();
+
+        // Explicación de una cuota para su residente: recibos del edificio, alícuota, desglose, mes anterior y alertas del periodo
+        app.MapGet("/api/v1/settlement_lines/{id:int}/explanation", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var s = await db.StatementOfAccounts.FindAsync([id], ct);
+            if (s is null) return Results.NotFound();
+            var allowed = IsAdministrator(user)
+                ? await MayManageProjectAsync(user, db, s.ProjectId, ct)
+                : (await GetResidentUnitIdsAsync(user, db, ct)).Contains(s.UnitId);
+            if (!allowed) return Results.Forbid();
+            var period = await db.BillingPeriods.FindAsync([s.BillingPeriodId], ct);
+            if (period is null) return Results.NotFound();
+
+            var facts = await new ConsumptionFactsBuilder(db).BuildAsync(s.ProjectId, s.UnitId, period.PeriodCode, ct);
             return Results.Ok(new
             {
-                id = s.Id,
-                settlementId = s.BillingPeriodId,
-                unitId = s.UnitId,
-                participationPct = s.AliquotPercentage,
-                amount = s.IndividualAmountSoles,
-                breakdown = new
+                lineId = s.Id,
+                unitNumber = s.UnitNumber,
+                period = period.PeriodCode,
+                previousPeriod = facts.PreviousPeriod,
+                status = s.Status,
+                dueDate = period.DueDate,
+                paidAt = s.PaidAtUtc,
+                balance = s.BalanceSoles,
+                aliquot = s.AliquotPercentage,
+                common = new
+                {
+                    water = period.MacroWaterAmountSoles,
+                    energy = period.MacroEnergyAmountSoles,
+                    other = period.OtherCommonExpensesSoles,
+                    total = period.TotalCommonExpenseSoles,
+                    waterM3 = period.MacroWaterM3,
+                    energyKwh = period.MacroEnergyKwh,
+                    waterReceiptUrl = period.WaterReceiptImageUrl,
+                    energyReceiptUrl = period.EnergyReceiptImageUrl
+                },
+                mine = new
                 {
                     water = s.IndividualWaterSoles,
                     energy = s.IndividualEnergySoles,
-                    other = s.IndividualOtherExpensesSoles
-                }
+                    other = s.IndividualOtherExpensesSoles,
+                    total = s.IndividualAmountSoles
+                },
+                previous = facts.PreviousStatement is { } last ? new { last.WaterSoles, last.EnergySoles, last.OtherSoles, last.TotalSoles } : null,
+                // Solo lo que tuvo costo: una alerta sin sobrecosto no explica la cuota
+                alerts = facts.Alerts.Where(a => a.EstimatedOvercostSoles > 0).Select(a => new
+                {
+                    alertType = a.Type,
+                    detectedAt = a.DetectedAtUtc,
+                    isOpen = a.Status == "Active",
+                    overcost = a.EstimatedOvercostSoles,
+                    myShare = Math.Round(a.EstimatedOvercostSoles * s.AliquotPercentage / 100m, 2)
+                })
             });
         }).RequireAuthorization();
 

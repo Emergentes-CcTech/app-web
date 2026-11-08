@@ -6,14 +6,14 @@ import { useAuditStore } from '../../application/audit.store.js';
 import { useCondominiumStore } from '../../../condominiums/application/condominium.store.js';
 import { useIamStore } from '../../../iam/application/iam.store.js';
 import { isAdmin } from '../../../shared/infrastructure/roles.js';
-import { getSessionUserId } from '../../../shared/infrastructure/session.js';
+import { getSessionUserId, formatPeriod, formatPen } from '../../../shared/infrastructure/session.js';
 import { BillingApi } from '../../../billing/infrastructure/billing-api.js';
 import { BillingAssembler } from '../../../billing/infrastructure/billing.assembler.js';
 import { CondominiumApi } from '../../../condominiums/infrastructure/condominium-api.js';
-import LineBreakdown from '../../../billing/presentation/components/line-breakdown.vue';
 import AuditTable from '../components/audit-table.vue';
+import FeeExplanation from '../components/fee-explanation.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const store = useAuditStore();
 const condoStore = useCondominiumStore();
@@ -30,18 +30,27 @@ const to = ref('');
 const typeOptions = computed(() => ['reading', 'proration', 'manual_adjustment', 'participation_changed'].map(v => ({ value: v, label: t(`audit.types.${v}`) })));
 // residente
 const lines = ref([]);
-const selectedLine = ref(null);
-const bills = ref([]);
-const myUnits = ref([]);
+const selectedLineId = ref(null);
+const explanation = ref(null);
+const explanationLoading = ref(false);
+const explanationFailed = ref(false);
+const residentLoading = ref(true);
+const lineOptions = computed(() => lines.value.map(l => ({ value: l.id, label: `${formatPeriod(l.period, locale.value)} · ${formatPen(l.amount)}` })));
 
 async function loadAdmin() { if (condominiumId.value) await store.fetchEvents(condominiumId.value, { type: type.value, from: from.value && new Date(from.value).toISOString(), to: to.value && new Date(`${to.value}T23:59:59`).toISOString() }); }
 
-async function selectLine(line) {
-  selectedLine.value = line;
-  const settlement = (await billingApi.getSettlement(line.settlementId)).data;
-  bills.value = BillingAssembler.toBills((await billingApi.getBills(settlement.condominiumId, settlement.period)).data);
-  // cambios de porcentaje de su unidad
-  await store.fetchEvents(settlement.condominiumId, { entity: `unit:${line.unitId}` });
+async function loadExplanation(lineId) {
+  if (!lineId) return;
+  explanationLoading.value = true;
+  explanationFailed.value = false;
+  try {
+    explanation.value = (await billingApi.getLineExplanation(lineId)).data;
+  } catch (_) {
+    explanation.value = null;
+    explanationFailed.value = true;
+  } finally {
+    explanationLoading.value = false;
+  }
 }
 
 onMounted(async () => {
@@ -49,15 +58,22 @@ onMounted(async () => {
     if (!condoStore.condominiums.length) await condoStore.fetchAll().catch(() => {});
     condominiumId.value = condoStore.activeCondominiums[0]?.id ?? null;
   } else {
-    myUnits.value = await condoApi.getUnitsByResident(getSessionUserId());
-    const all = await Promise.all(myUnits.value.map(u => billingApi.getLinesByUnit(u.id).then(r => r.data.map(BillingAssembler.toLine))));
-    lines.value = all.flat();
-    const wanted = Number(route.query.line);   // ?line=ID abre un desglose directamente
-    const initial = lines.value.find(l => l.id === wanted) || lines.value[0];
-    if (initial) await selectLine(initial);
+    try {
+      const units = await condoApi.getUnitsByResident(getSessionUserId());
+      const all = await Promise.all(units.map(u => billingApi.getLinesByUnit(u.id).then(r => r.data.map(BillingAssembler.toLine))));
+      // La cuota más reciente primero
+      lines.value = all.flat().sort((a, b) => String(b.period).localeCompare(String(a.period)));
+      const wanted = Number(route.query.line);   // ?line=ID abre un desglose directamente
+      selectedLineId.value = (lines.value.find(l => l.id === wanted) || lines.value[0])?.id ?? null;
+    } catch (_) {
+      explanationFailed.value = true;
+    } finally {
+      residentLoading.value = false;
+    }
   }
 });
 watch([condominiumId, type, from, to], () => { if (admin.value) loadAdmin(); });
+watch(selectedLineId, loadExplanation);
 
 function exportCsv() {
   const rows = [['fecha', 'tipo', 'entidad', 'usuario', 'anterior', 'nuevo'], ...store.events.map(e => [e.at, e.type, e.entity, e.actorUserId, e.previousValue, e.newValue])];
@@ -79,19 +95,18 @@ function exportCsv() {
       <audit-table :events="store.events" :loading="store.isLoading" />
     </template>
     <template v-else>
-      <h1>{{ t('audit.residentTitle') }}</h1>
-      <p v-if="!lines.length" class="muted">{{ t('payments.statement.empty') }}</p>
-      <div v-else class="split">
-        <ul class="lines">
-          <li v-for="l in lines" :key="l.id" :class="{ active: selectedLine?.id === l.id }" tabindex="0" @click="selectLine(l)" @keyup.enter="selectLine(l)">
-            #{{ l.id }} · {{ l.breakdown?.readingsFrom?.slice(0, 7) }} · S/ {{ l.amount.toFixed(2) }}</li>
-        </ul>
-        <div v-if="selectedLine">
-          <line-breakdown :line="selectedLine" :bills="bills" />
-          <h3>{{ t('audit.participationChanges') }}</h3>
-          <audit-table :events="store.events" :loading="store.isLoading" />
+      <div class="head wrap">
+        <div>
+          <h1>{{ t('audit.residentTitle') }}</h1>
+          <p class="muted subtitle">{{ t('audit.residentSubtitle') }}</p>
         </div>
+        <pv-select v-if="lines.length > 1" v-model="selectedLineId" :options="lineOptions" optionLabel="label" optionValue="value"
+                   :aria-label="t('audit.fee.selectPeriod')" class="filter" />
       </div>
+      <div v-if="residentLoading || explanationLoading" class="center"><pv-progress-spinner /></div>
+      <pv-message v-else-if="explanationFailed" severity="error" :closable="false">{{ t('audit.fee.loadError') }}</pv-message>
+      <p v-else-if="!lines.length" class="muted">{{ t('payments.statement.empty') }}</p>
+      <fee-explanation v-else-if="explanation" :explanation="explanation" />
     </template>
   </div>
 </template>
@@ -101,10 +116,9 @@ function exportCsv() {
 .head { display: flex; justify-content: space-between; align-items: center; }
 .filters { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .filter { min-width: 14rem; }
-.split { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
-@media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
-.lines { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
-.lines li { padding: .75rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; }
-.lines li.active { border-color: #10B981; background: #ECFDF5; }
+.wrap { flex-wrap: wrap; gap: .75rem 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.head h1 { margin: 0; }
+.subtitle { margin: .25rem 0 0; }
+.center { text-align: center; padding: 2rem; }
 .muted { color: #6B7280; }
 </style>

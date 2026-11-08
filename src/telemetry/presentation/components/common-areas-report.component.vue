@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Bar, Line } from 'vue-chartjs';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
@@ -9,12 +9,13 @@ import { useCondominiumStore } from '../../../condominiums/application/condomini
 import { buildCommonAreaReport, dailySeries, sumTotals, changePct } from '../../application/common-area-report.js';
 import { projectToMonthEnd } from '../../application/projection.js';
 import { commonAreaIcon } from '../../../condominiums/domain/model/common-area.entity.js';
-import { getSessionUserId } from '../../../shared/infrastructure/session.js';
-import StatCard from '../components/stat-card.component.vue';
+import StatCard from './stat-card.component.vue';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
-// Analytics del dueño de departamento: reporte de consumo de las áreas comunes de su condominio
+// Reporte de consumo de las áreas comunes del condominio del residente (parte de Mi consumo)
+const props = defineProps({ condominiumId: { type: Number, default: null } });
+
 const { t, locale } = useI18n();
 const telemetry = useTelemetryStore();
 const devices = useDeviceStore();
@@ -23,7 +24,6 @@ const condoStore = useCondominiumStore();
 const loading = ref(true);
 const failed = ref(false);
 const condominium = ref(null);
-const unitNumber = ref('');
 const currentTotals = ref([]);   // consumo por medidor del mes en curso
 const previousTotals = ref([]);  // mismo tramo del mes anterior
 const metric = ref('water');
@@ -64,13 +64,11 @@ function meterStatus(row) {
 }
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString(locale.value === 'en' ? 'en-US' : 'es-PE') : '—';
 
-onMounted(async () => {
+async function load() {
+  if (!props.condominiumId) { loading.value = false; return; }
+  loading.value = true;
+  failed.value = false;
   try {
-    const units = await condoStore.fetchUnitsByResident(getSessionUserId());
-    const unit = units[0];
-    if (!unit) return;
-    unitNumber.value = unit.number;
-    const condominiumId = unit.condominiumId;
     // Mismo tramo del mes anterior (del día 1 al día de hoy) para comparar periodos equivalentes
     const now = new Date();
     const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -79,11 +77,11 @@ onMounted(async () => {
       now.getHours(), now.getMinutes(), now.getSeconds());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const [condo, , current, prev] = await Promise.all([
-      condoStore.fetchById(condominiumId),
-      devices.fetchByCondominium(condominiumId),
-      telemetry.fetchDeviceConsumption(condominiumId, monthStart, now),
-      telemetry.fetchDeviceConsumption(condominiumId, prevFrom, prevTo),
-      telemetry.fetchDailyConsumption(condominiumId),
+      condoStore.fetchById(props.condominiumId),
+      devices.fetchByCondominium(props.condominiumId),
+      telemetry.fetchDeviceConsumption(props.condominiumId, monthStart, now),
+      telemetry.fetchDeviceConsumption(props.condominiumId, prevFrom, prevTo),
+      telemetry.fetchDailyConsumption(props.condominiumId),
     ]);
     condominium.value = condo;
     currentTotals.value = current;
@@ -93,18 +91,16 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+watch(() => props.condominiumId, load, { immediate: true });
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-head">
+  <div class="report">
+    <div class="report-head">
       <div>
-        <h1>{{ t('analytics.title') }}</h1>
-        <p v-if="condominium" class="muted">
-          {{ t('analytics.subtitle', { condominium: condominium.name, month: monthLabel }) }}
-          <span v-if="unitNumber"> · {{ t('analytics.myUnit', { unit: unitNumber }) }}</span>
-        </p>
+        <h2>{{ t('dashboard.resident.commonConsumption') }}</h2>
+        <p v-if="condominium" class="muted">{{ t('analytics.subtitle', { condominium: condominium.name, month: monthLabel }) }}</p>
       </div>
       <pv-select-button v-if="condominium" v-model="metric" :options="metricOptions" optionLabel="label" optionValue="value" :allowEmpty="false" />
     </div>
@@ -139,6 +135,8 @@ onMounted(async () => {
           </section>
         </div>
 
+        <slot name="insights" />
+
         <section class="card">
           <h3>{{ t('analytics.table.title') }}</h3>
           <pv-data-table :value="report.rows" dataKey="id" stripedRows size="small" class="report-table">
@@ -166,14 +164,15 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page { padding: 1.5rem; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; }
-.page-head h1 { margin: 0; }
+.report { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.report-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; }
+.report-head h2 { margin: 0; font-size: 1.25rem; }
+.report-head p { margin: .2rem 0 0; }
 .muted { color: #6B7280; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-@media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
-.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .75rem; }
+.charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+@media (max-width: 900px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
 .card h3 { margin: 0; font-size: 1rem; }
 .chart { height: 260px; position: relative; }
 .empty { text-align: center; padding-top: 6rem; }

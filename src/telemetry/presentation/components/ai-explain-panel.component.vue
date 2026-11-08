@@ -16,13 +16,18 @@ const question = ref('');
 const answer = ref(null);
 const loading = ref(false);
 const failed = ref(false);
+// Índice de la sugerencia usada: permite volver a preguntarla traducida si cambia el idioma
+const suggestionIndex = ref(null);
+let lastRequest = 0;
 
 const suggestions = computed(() => [1, 2, 3].map(i => t(`ai.suggestions.${props.audience}.${i}`)));
 
-async function ask(text = question.value) {
+async function ask(text = question.value, index = null) {
   const q = String(text || '').trim() || suggestions.value[0];
   if (!props.condominiumId) return;
   question.value = q;
+  suggestionIndex.value = index;
+  const request = ++lastRequest;
   loading.value = true;
   failed.value = false;
   try {
@@ -34,11 +39,12 @@ async function ask(text = question.value) {
       question: q,
       language: locale.value === 'en' ? 'en' : 'es'
     });
-    answer.value = data;
+    // Una respuesta que llega tarde (otro idioma u otro condominio) ya no se muestra
+    if (request === lastRequest) answer.value = data;
   } catch (_) {
-    failed.value = true;
+    if (request === lastRequest) failed.value = true;
   } finally {
-    loading.value = false;
+    if (request === lastRequest) loading.value = false;
   }
 }
 
@@ -47,7 +53,13 @@ const periodLabel = computed(() => {
   return y && m ? new Date(y, m - 1, 1).toLocaleDateString(locale.value === 'en' ? 'en-US' : 'es-PE', { month: 'long', year: 'numeric' }) : '';
 });
 
-watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; question.value = ''; });
+watch(() => [props.condominiumId, props.unitId], () => { lastRequest++; loading.value = false; answer.value = null; question.value = ''; });
+// La respuesta viene del servidor en un idioma: al cambiar el de la interfaz se pide de nuevo
+watch(locale, () => {
+  if (!answer.value && !loading.value) return;
+  const index = suggestionIndex.value;
+  ask(index === null ? question.value : suggestions.value[index], index);
+});
 </script>
 
 <template>
@@ -64,12 +76,12 @@ watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; qu
     </form>
 
     <div v-if="!answer && !loading" class="chips">
-      <button v-for="s in suggestions" :key="s" type="button" class="chip" :disabled="!condominiumId" @click="ask(s)">{{ s }}</button>
+      <button v-for="(s, i) in suggestions" :key="s" type="button" class="chip" :disabled="!condominiumId" @click="ask(s, i)">{{ s }}</button>
     </div>
 
     <pv-message v-if="failed" severity="warn" :closable="false">{{ t('ai.error') }}</pv-message>
 
-    <div v-if="answer" class="ai-answer" aria-live="polite">
+    <div v-if="answer" class="ai-answer" tabindex="0" :aria-label="t('ai.answerLabel')" :aria-busy="loading" aria-live="polite">
       <span v-if="periodLabel" class="period"><i class="pi pi-calendar" aria-hidden="true" /> {{ t('ai.period', { period: periodLabel }) }}</span>
       <p class="summary">{{ answer.summary }}</p>
       <dl>
@@ -89,7 +101,7 @@ watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; qu
 </template>
 
 <style scoped>
-.ai-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
+.ai-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; min-width: 0; }
 .ai-head h2 { font-size: 1.1rem; margin: 0 0 .15rem; display: flex; align-items: center; gap: .5rem; }
 .ai-head h2 i { color: #10B981; }
 .muted { color: #6B7280; }
@@ -99,7 +111,10 @@ watch(() => [props.condominiumId, props.unitId], () => { answer.value = null; qu
 .chip { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; border-radius: 999px; padding: .35rem .8rem; font: inherit; font-size: .82rem; cursor: pointer; }
 .chip:hover:not(:disabled) { background: #D1FAE5; }
 .chip:disabled { opacity: .6; cursor: not-allowed; }
-.ai-answer { display: flex; flex-direction: column; gap: .75rem; border-top: 1px solid #f1f5f9; padding-top: .9rem; }
+/* La respuesta se desplaza dentro del panel: así no estira el panel ni descuadra la grilla */
+.ai-answer { display: flex; flex-direction: column; gap: .75rem; border-top: 1px solid #f1f5f9; padding: .9rem .5rem 0 0; max-height: min(20rem, 55vh); overflow-y: auto; overflow-wrap: anywhere; }
+.ai-answer[aria-busy="true"] { opacity: .55; }
+.ai-answer:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; }
 .period { font-size: .78rem; color: #047857; font-weight: 600; display: inline-flex; gap: .35rem; align-items: center; }
 .summary { margin: 0; font-weight: 600; color: #0f172a; line-height: 1.5; }
 dl { margin: 0; display: grid; gap: .6rem; }

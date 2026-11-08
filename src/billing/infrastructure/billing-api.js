@@ -22,4 +22,5 @@ export class BillingApi extends BaseApi {
     issue(id) { return this.http.patch(`${settlementsPath}/${id}`, { status: 'issued', issuedAt: new Date().toISOString() }); }
     getLinesByUnit(unitId) { return this.http.get(linesPath, { params: { unitId } }); }
     getLineById(id) { return this.http.get(`${linesPath}/${id}`); }
+    getLineExplanation(id) { return this.http.get(`${linesPath}/${id}/explanation`); }
 }

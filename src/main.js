@@ -13,7 +13,7 @@ import {
     Column,
     ConfirmationService,
     ConfirmDialog, DataTable, Dialog,
-    DialogService, Divider, Drawer, Fieldset, FileUpload, FloatLabel, IconField, InputIcon, InputNumber, InputText, Menu,
+    DialogService, Divider, Drawer, Fieldset, FileUpload, FloatLabel, IconField, InputIcon, InputNumber, InputText, Menu, Popover,
     Message, MultiSelect, Password, ProgressSpinner,
     Rating, Row, Select, SelectButton, Stepper, Step, StepList, StepPanel, StepPanels,
     Tabs, TabList, Tab, TabPanels, TabPanel,
@@ -44,6 +44,7 @@ createApp(App)
     .component('pv-checkbox', Checkbox)
     .component('pv-data-table', DataTable)
     .component('pv-dialog', Dialog)
+    .component('pv-popover', Popover)
     .component('pv-divider', Divider)
     .component('pv-drawer', Drawer)
     .component('pv-fieldset', Fieldset)

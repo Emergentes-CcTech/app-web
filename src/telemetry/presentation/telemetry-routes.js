@@ -4,6 +4,6 @@ export default [
     // Monitoreo y alertas se integraron en el panel del administrador; las rutas antiguas siguen funcionando
     { path: 'monitoring', name: 'monitoring', redirect: '/telemetry/dashboard', meta: { requiresRole: 'administrator' } },
     { path: 'alerts', name: 'alerts', redirect: { path: '/telemetry/dashboard', query: { focus: 'alerts' } }, meta: { requiresRole: 'administrator' } },
-    { path: 'analytics', name: 'analytics', component: () => import('./views/common-areas-report.view.vue'),
-      meta: { title: 'Analytics', requiresRole: 'resident' } }, // reporte de áreas comunes del dueño de departamento
+    // El reporte de áreas comunes del residente se integró en Mi consumo; la ruta antigua sigue funcionando
+    { path: 'analytics', name: 'analytics', redirect: '/telemetry/dashboard', meta: { requiresRole: 'resident' } },
 ];

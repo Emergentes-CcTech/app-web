@@ -122,6 +122,8 @@ services:
     environment:
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
+      # Un envío por minuto; para mostrar el panel en vivo en una demo: SIMULATOR_INTERVAL_SECONDS=5
+      - SIMULATOR_INTERVAL_SECONDS=${SIMULATOR_INTERVAL_SECONDS:-60}
     depends_on:
       - mosquitto
     networks:
