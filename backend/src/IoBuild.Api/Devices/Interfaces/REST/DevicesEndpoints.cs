@@ -24,6 +24,23 @@ public static class DevicesEndpoints
         return project is not null && (string.Equals(role, "Builder", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "PropertyManager", StringComparison.OrdinalIgnoreCase)) && project.BuilderId == id;
     }
 
+    // Lectura: el administrador del condominio, el dueño del equipo o un residente del mismo edificio (los equipos son comunales)
+    private static async Task<List<int>> VisibleProjectIdsAsync(System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct)
+    {
+        if (!int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id)) return [];
+        var managed = await db.Projects.Where(p => p.BuilderId == id).Select(p => p.Id).ToListAsync(ct);
+        var owned = await db.Units.Where(u => u.OwnerId == id).Select(u => u.ProjectId).ToListAsync(ct);
+        var projected = await db.UnitOwnerProjections.Where(p => p.OwnerUserId == id)
+            .Join(db.Units, p => p.UnitId, u => u.Id, (p, u) => u.ProjectId).ToListAsync(ct);
+        return managed.Concat(owned).Concat(projected).Distinct().ToList();
+    }
+
+    private static async Task<bool> MaySeeDeviceAsync(System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, Device device, CancellationToken ct)
+    {
+        if (int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) && device.OwnerId == id) return true;
+        return (await VisibleProjectIdsAsync(user, db, ct)).Contains(device.ProjectId) || await ManagesDeviceAsync(user, db, device, ct);
+    }
+
     public static void MapDevicesEndpoints(this WebApplication app)
     {
         // Catálogo de tipos de hardware IoT comunal
@@ -47,16 +64,19 @@ public static class DevicesEndpoints
 
         group.MapGet("/devices/types", () => Results.Ok(deviceTypesResult)).AllowAnonymous();
         group.MapGet("/custom-device-types", () => Results.Ok(deviceTypesResult)).AllowAnonymous();
-        group.MapGet("/devices", async ([FromQuery] int? unitId, [FromQuery] int? projectId, [FromQuery] int? condominiumId, IoBuildDbContext db, CancellationToken ct) =>
+        group.MapGet("/devices", async ([FromQuery] int? unitId, [FromQuery] int? projectId, [FromQuery] int? condominiumId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var targetProjectId = projectId ?? condominiumId;
+            var visible = await VisibleProjectIdsAsync(user, db, ct);
+            var self = int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var sid) ? sid : 0;
             // Los equipos desvinculados se conservan para auditoría pero ya no forman parte del kit activo
-            var query = db.Devices.Where(d => d.Status != "Unlinked");
+            var query = db.Devices.Where(d => d.Status != "Unlinked" && (visible.Contains(d.ProjectId) || d.OwnerId == self));
             if (unitId.HasValue) query = query.Where(d => d.UnitId == unitId.Value);
             if (targetProjectId.HasValue) query = query.Where(d => d.ProjectId == targetProjectId.Value);
             return Results.Ok((await query.OrderBy(device => device.Id).ToListAsync(ct)).Select(DeviceResponse.From));
         }).RequireAuthorization();
-        group.MapGet("/devices/{id:int}", async (int id, IoBuildDbContext db, CancellationToken ct) => await db.Devices.FindAsync([id], ct) is { } device ? Results.Ok(DeviceResponse.From(device)) : Results.NotFound()).RequireAuthorization();
+        group.MapGet("/devices/{id:int}", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+            await db.Devices.FindAsync([id], ct) is { } device && await MaySeeDeviceAsync(user, db, device, ct) ? Results.Ok(DeviceResponse.From(device)) : Results.NotFound()).RequireAuthorization();
         group.MapPost("/devices", async (CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) =>
         {
             var ownerId = int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
@@ -142,8 +162,17 @@ public static class DevicesEndpoints
         }).RequireAuthorization();
         group.MapDelete("/devices/{id:int}", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) => { var device = await db.Devices.FindAsync([id], ct); if (device is null || !await ManagesDeviceAsync(user, db, device, ct)) return Results.NotFound(); registry.QueueTombstone(id); var devProj = await db.DeviceProjections.FindAsync([id], ct); if (devProj is not null) db.DeviceProjections.Remove(devProj); db.Devices.Remove(device); await db.SaveChangesAsync(ct); try { await registry.ReconcileAsync(ct); } catch (HttpRequestException) { } return Results.NoContent(); }).RequireAuthorization();
         group.MapPost("/devices/{id:int}/commands", async (int id, DeviceCommandRequest request, System.Security.Claims.ClaimsPrincipal user, DeviceCommandService commands, CancellationToken ct) => { var ownerId = int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var value) ? value : 0; var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value; try { var command = await commands.SendAuthorizedAsync(id, ownerId, role, request.Attribute, request.Value, ct); return Results.Ok(new { deviceId = id, attribute = request.Attribute, value = request.Value, acceptedAt = command.IssuedAt }); } catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); } catch (UnauthorizedAccessException exception) { return Results.Json(new { error = exception.Message }, statusCode: 403); } catch (KeyNotFoundException exception) { return Results.NotFound(new { error = exception.Message }); } catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); } catch (HttpRequestException exception) { return Results.Json(new { error = exception.Message }, statusCode: 503); } }).RequireAuthorization();
-        group.MapPost("/devices/telemetry", async (TelemetryMessage request, DeviceTelemetryService telemetry, CancellationToken ct) =>
+        group.MapPost("/devices/telemetry", async (TelemetryMessage request, HttpRequest http, IConfiguration configuration, DeviceTelemetryService telemetry, CancellationToken ct) =>
         {
+            // En producción los equipos envían por MQTT; por HTTP solo con la clave de ingesta (Devices:IngestKey)
+            var ingestKey = configuration["Devices:IngestKey"];
+            if (!string.IsNullOrEmpty(ingestKey))
+            {
+                var provided = http.Headers["X-Device-Key"].ToString();
+                if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                        System.Text.Encoding.UTF8.GetBytes(provided), System.Text.Encoding.UTF8.GetBytes(ingestKey)))
+                    return Results.Unauthorized();
+            }
             if (request.DeviceId <= 0 || string.IsNullOrWhiteSpace(request.EventId) || request.Status is null || request.ReportedJson is null)
                 return Results.BadRequest(new { error = "Telemetry requires deviceId, eventId, status, and reportedJson." });
             try
@@ -158,17 +187,17 @@ public static class DevicesEndpoints
             }
         }).AllowAnonymous();
         group.MapPost("/devices/telemetry/replay", async (DeviceTelemetryService telemetry, CancellationToken ct) => Results.Ok(new { replayed = await telemetry.ReplayInfluxAsync(ct) })).RequireAuthorization();
-        group.MapPost("/devices/reconcile", async (DeviceRegistryService registry, CancellationToken ct) => { await registry.ReconcileAsync(ct); return Results.Ok(new { reconciled = true }); }).AllowAnonymous();
-        group.MapGet("/devices/{id:int}/energy", async (int id, DateTimeOffset? from, DateTimeOffset? to, IoBuildDbContext db, CancellationToken ct) =>
+        group.MapPost("/devices/reconcile", async (DeviceRegistryService registry, CancellationToken ct) => { await registry.ReconcileAsync(ct); return Results.Ok(new { reconciled = true }); }).RequireAuthorization();
+        group.MapGet("/devices/{id:int}/energy", async (int id, DateTimeOffset? from, DateTimeOffset? to, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
-            if (await db.Devices.FindAsync([id], ct) is null) return Results.NotFound(new { message = $"Device with ID {id} not found" });
+            if (await db.Devices.FindAsync([id], ct) is not { } found || !await MaySeeDeviceAsync(user, db, found, ct)) return Results.NotFound(new { message = $"Device with ID {id} not found" });
             var start = from ?? DateTimeOffset.UtcNow.AddDays(-1); var end = to ?? DateTimeOffset.UtcNow;
             return Results.Ok(await db.DeviceTelemetry.Where(item => item.DeviceId == id && item.OccurredAt >= start && item.OccurredAt <= end).OrderBy(item => item.OccurredAt).Select(item => new { timestamp = item.OccurredAt, energyKwh = item.EnergyKwh, temperatureC = item.TemperatureC, voltageV = item.VoltageV }).ToListAsync(ct));
         }).RequireAuthorization();
-        group.MapGet("/devices/{id:int}/status", async (int id, IoBuildDbContext db, CancellationToken ct) =>
+        group.MapGet("/devices/{id:int}/status", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var device = await db.Devices.FindAsync([id], ct);
-            if (device is null) return Results.NotFound(new { message = $"Device with ID {id} not found" });
+            if (device is null || !await MaySeeDeviceAsync(user, db, device, ct)) return Results.NotFound(new { message = $"Device with ID {id} not found" });
             var telemetry = await db.DeviceTelemetry.Where(item => item.DeviceId == id).OrderByDescending(item => item.OccurredAt).FirstOrDefaultAsync(ct);
             var shadow = await db.DeviceShadows.FindAsync([id], ct);
             object? desired = null;

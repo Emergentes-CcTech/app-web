@@ -27,7 +27,7 @@ const condominiumId = ref(null);
 const type = ref(null);
 const from = ref('');
 const to = ref('');
-const typeOptions = computed(() => ['reading', 'proration', 'manual_adjustment', 'participation_changed'].map(v => ({ value: v, label: t(`audit.types.${v}`) })));
+const typeOptions = computed(() => ['proration', 'payment', 'alert'].map(v => ({ value: v, label: t(`audit.types.${v}`) })));
 // residente
 const lines = ref([]);
 const selectedLineId = ref(null);
