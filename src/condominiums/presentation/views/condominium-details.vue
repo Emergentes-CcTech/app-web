@@ -10,7 +10,8 @@ import { commonAreaIcon } from '../../domain/model/common-area.entity.js';
 import { kitSummary } from '../../../subscriptions/presentation/plan-copy.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import { Unit } from '../../domain/model/unit.entity.js';
-import { sumParticipation, isParticipationBalanced, isValidPercentage, isValidPositiveInteger, isValidName } from '../../../shared/presentation/validators.js';
+import { sumParticipation, isParticipationBalanced, isValidPercentage, isValidName } from '../../../shared/presentation/validators.js';
+import { participationFromArea, parsePadronCsv } from '../../domain/padron.js';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -31,6 +32,13 @@ const dialog = ref(false);
 const newUnit = reactive({ number: '', type: 'apartment', areaM2: null, participationPct: null });
 const unitErrors = reactive({});
 let tempId = -1;
+// Importación del padrón desde CSV (Excel → Guardar como CSV). Se lee en el navegador: no sale a ningún servicio
+const fileInput = ref(null);
+const importDialog = ref(false);
+const importRows = ref([]);
+const importErrors = ref([]);
+const importFile = ref('');
+const replaceExisting = ref(true);
 
 async function load() {
   loading.value = true;
@@ -75,11 +83,70 @@ function addUnit() {
   Object.keys(unitErrors).forEach(k => delete unitErrors[k]);
   if (!isValidName(newUnit.number, 1, 10)) unitErrors.number = t('condominiums.validation.required');
   else if (visible.value.some(r => String(r.number) === String(newUnit.number).trim())) unitErrors.number = t('condominiums.validation.duplicateUnit');
-  if (!isValidPositiveInteger(Math.round(newUnit.areaM2 || 0), 1, 100000)) unitErrors.areaM2 = t('condominiums.validation.area');
-  if (!isValidPercentage(newUnit.participationPct)) unitErrors.participationPct = t('condominiums.validation.percentage');
+  if (!(Number(newUnit.areaM2) > 0 && Number(newUnit.areaM2) <= 100000)) unitErrors.areaM2 = t('condominiums.validation.area');
+  // La participación es opcional: si se deja vacía se completa con "Calcular por área"
+  if (newUnit.participationPct !== null && newUnit.participationPct !== '' && !isValidPercentage(newUnit.participationPct)) unitErrors.participationPct = t('condominiums.validation.percentage');
   if (Object.keys(unitErrors).length) return;
-  rows.value.push({ ...new Unit({ ...newUnit, id: tempId--, condominiumId: id.value, number: String(newUnit.number).trim() }), _new: true });
+  rows.value.push({ ...new Unit({ ...newUnit, participationPct: newUnit.participationPct || 0, id: tempId--, condominiumId: id.value, number: String(newUnit.number).trim() }), _new: true });
   dialog.value = false;
+}
+
+// Participación = área de la unidad ÷ área total del padrón (criterio usual del Reglamento Interno)
+function applyAreaParticipation(list) {
+  const pct = participationFromArea(list.map(r => r.areaM2));
+  list.forEach((r, i) => { r.participationPct = pct[i]; r._dirty = true; });
+}
+const canCalculate = computed(() => visible.value.length > 0 && visible.value.every(r => Number(r.areaM2) > 0));
+function calculateByArea() {
+  const run = () => {
+    applyAreaParticipation(visible.value);
+    toast.add({ severity: 'info', summary: t('condominiums.padron.calculated'), detail: t('condominiums.padron.calculatedDetail'), life: 3500 });
+  };
+  // Si ya hay porcentajes cargados (por ejemplo, del Reglamento Interno) se pide confirmación antes de reemplazarlos
+  if (!visible.value.some(r => Number(r.participationPct) > 0)) return run();
+  confirm.require({
+    header: t('condominiums.padron.calculate'),
+    message: t('condominiums.padron.confirmCalculate'),
+    icon: 'pi pi-calculator',
+    acceptLabel: t('condominiums.padron.calculate'),
+    rejectLabel: t('common.cancel'),
+    accept: run,
+  });
+}
+
+function pickFile() { fileInput.value?.click(); }
+async function onFile(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const { rows: parsed, errors } = parsePadronCsv(await file.text());
+  importFile.value = file.name;
+  importRows.value = parsed;
+  importErrors.value = errors;
+  replaceExisting.value = true;
+  importDialog.value = true;
+}
+const importMissingPct = computed(() => importRows.value.some(r => r.participationPct === null));
+const blockedOnReplace = computed(() => visible.value.filter(r => r.residentUserId).length);
+const importTotalArea = computed(() => Math.round(importRows.value.reduce((s, r) => s + (Number(r.areaM2) || 0), 0) * 100) / 100);
+const errorText = (e) => t(`condominiums.padron.errors.${e.key}`, { line: e.line, ...(e.params || {}) });
+
+function confirmImport() {
+  if (importErrors.value.length || !importRows.value.length) return;
+  const key = (n) => String(n).trim().toLowerCase();
+  const incoming = new Set(importRows.value.map(r => key(r.number)));
+  // Al reemplazar se quitan las unidades que no vienen en el archivo (menos las que tienen residente)
+  if (replaceExisting.value) visible.value.filter(r => !r.residentUserId && !incoming.has(key(r.number))).forEach(removeUnit);
+  // Una unidad que ya existe con el mismo número se actualiza en lugar de duplicarse
+  for (const r of importRows.value) {
+    const same = rows.value.find(x => !x._deleted && key(x.number) === key(r.number));
+    if (same) Object.assign(same, { type: r.type, areaM2: r.areaM2, floor: r.floor ?? same.floor, participationPct: r.participationPct ?? same.participationPct, _dirty: true });
+    else rows.value.push({ ...new Unit({ ...r, participationPct: r.participationPct ?? 0, id: tempId--, condominiumId: id.value }), _new: true });
+  }
+  if (importMissingPct.value) applyAreaParticipation(visible.value);
+  importDialog.value = false;
+  toast.add({ severity: 'success', summary: t('condominiums.padron.imported', { n: importRows.value.length }),
+    detail: t(importMissingPct.value ? 'condominiums.padron.importedByArea' : 'condominiums.padron.importedReview'), life: 4000 });
 }
 function removeUnit(row) {
   if (row._new) rows.value = rows.value.filter(r => r !== row);
@@ -94,7 +161,8 @@ async function savePadron() {
     rows.value = store.units.map(u => ({ ...u }));
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('condominiums.messages.padronSaved'), life: 2500 });
   } catch (e) {
-    toast.add({ severity: 'error', summary: t('common.error'), detail: t('condominiums.messages.saveError'), life: 3000 });
+    // El backend explica qué falló (unidad repetida, suma distinta de 100 %, unidad con historial)
+    toast.add({ severity: 'error', summary: t('common.error'), detail: e?.response?.data?.error || t('condominiums.messages.saveError'), life: 5000 });
   } finally { saving.value = false; }
 }
 
@@ -188,6 +256,9 @@ function deactivate() {
     <div class="toolbar">
       <pv-icon-field><pv-input-icon class="pi pi-search" /><pv-input-text v-model="search" :placeholder="t('condominiums.search')" /></pv-icon-field>
       <div class="flex gap-2">
+        <input ref="fileInput" type="file" accept=".csv,text/csv" class="sr-only" :aria-label="t('condominiums.padron.import')" @change="onFile" />
+        <pv-button :label="t('condominiums.padron.import')" icon="pi pi-upload" severity="secondary" outlined @click="pickFile" />
+        <pv-button :label="t('condominiums.padron.calculate')" icon="pi pi-calculator" severity="secondary" outlined :disabled="!canCalculate" @click="calculateByArea" />
         <pv-button :label="t('condominiums.units.add')" icon="pi pi-plus" severity="secondary" @click="openDialog" />
         <pv-button :label="t('condominiums.units.save')" icon="pi pi-save" :disabled="!balanced || !dirty" :loading="saving" @click="savePadron" />
       </div>
@@ -226,10 +297,36 @@ function deactivate() {
       <div class="field"><label>{{ t('condominiums.units.number') }} *</label><pv-input-text v-model="newUnit.number" :invalid="!!unitErrors.number" class="w-full" /><small v-if="unitErrors.number" class="p-error">{{ unitErrors.number }}</small></div>
       <div class="field"><label>{{ t('condominiums.units.type') }}</label><pv-select v-model="newUnit.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" /></div>
       <div class="field"><label>{{ t('condominiums.units.area') }} *</label><pv-input-number v-model="newUnit.areaM2" :min="1" :maxFractionDigits="2" :invalid="!!unitErrors.areaM2" class="w-full" /><small v-if="unitErrors.areaM2" class="p-error">{{ unitErrors.areaM2 }}</small></div>
-      <div class="field"><label>{{ t('condominiums.units.participation') }} *</label><pv-input-number v-model="newUnit.participationPct" :min="0.0001" :max="100" :minFractionDigits="0" :maxFractionDigits="4" suffix=" %" :invalid="!!unitErrors.participationPct" class="w-full" /><small v-if="unitErrors.participationPct" class="p-error">{{ unitErrors.participationPct }}</small></div>
+      <div class="field"><label>{{ t('condominiums.units.participation') }}</label><pv-input-number v-model="newUnit.participationPct" :min="0.0001" :max="100" :minFractionDigits="0" :maxFractionDigits="4" suffix=" %" :invalid="!!unitErrors.participationPct" class="w-full" />
+        <small v-if="unitErrors.participationPct" class="p-error">{{ unitErrors.participationPct }}</small><small v-else class="muted hint">{{ t('condominiums.padron.participationHint') }}</small></div>
       <template #footer>
         <pv-button :label="t('common.cancel')" severity="secondary" @click="dialog = false" />
         <pv-button :label="t('common.add')" icon="pi pi-check" @click="addUnit" />
+      </template>
+    </pv-dialog>
+
+    <pv-dialog v-model:visible="importDialog" modal :header="t('condominiums.padron.importTitle')" :style="{ width: '34rem' }" :breakpoints="{ '640px': '95vw' }">
+      <p class="muted file-name"><i class="pi pi-file" aria-hidden="true" /> {{ importFile }}</p>
+      <template v-if="importErrors.length">
+        <pv-message severity="error" :closable="false">{{ t('condominiums.padron.fixErrors') }}</pv-message>
+        <ul class="import-errors"><li v-for="(e, i) in importErrors.slice(0, 8)" :key="i">{{ errorText(e) }}</li></ul>
+        <small class="muted">{{ t('condominiums.padron.format') }}</small>
+      </template>
+      <template v-else>
+        <p>{{ t('condominiums.padron.summary', { n: importRows.length, area: importTotalArea }) }}</p>
+        <pv-message :severity="importMissingPct ? 'info' : 'secondary'" :closable="false">
+          {{ t(importMissingPct ? 'condominiums.padron.willCalculate' : 'condominiums.padron.willKeep') }}
+        </pv-message>
+        <div v-if="visible.length" class="field-check">
+          <pv-checkbox v-model="replaceExisting" inputId="replace" binary />
+          <label for="replace">{{ t('condominiums.padron.replace', { n: visible.length }) }}</label>
+        </div>
+        <small v-if="replaceExisting && blockedOnReplace" class="muted">{{ t('condominiums.padron.keepAssigned', { n: blockedOnReplace }) }}</small>
+      </template>
+      <template #footer>
+        <a class="template-link" href="/demo/padron-plantilla.csv" download>{{ t('condominiums.padron.template') }}</a>
+        <pv-button :label="t('common.cancel')" severity="secondary" @click="importDialog = false" />
+        <pv-button :label="t('condominiums.padron.importConfirm')" icon="pi pi-check" :disabled="!!importErrors.length || !importRows.length" @click="confirmImport" />
       </template>
     </pv-dialog>
   </div>
@@ -280,4 +377,10 @@ function deactivate() {
 .field label { display: block; margin-bottom: 4px; font-weight: 500; }
 .center { text-align: center; padding: 3rem; }
 :deep(.pct-input) { width: 7rem; }
+.hint { display: block; margin-top: 4px; font-size: .8rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.file-name { display: flex; align-items: center; gap: .4rem; margin-top: 0; overflow-wrap: anywhere; }
+.import-errors { margin: .5rem 0; padding-left: 1.2rem; color: #b91c1c; font-size: .9rem; }
+.field-check { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; }
+.template-link { margin-right: auto; align-self: center; font-size: .85rem; color: #047857; }
 </style>

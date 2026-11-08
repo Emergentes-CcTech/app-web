@@ -23,6 +23,7 @@ public static class UnitConfiguration
             entity.Property(unit => unit.ResidentFullName).HasMaxLength(255);
             entity.Property(unit => unit.AccountStatus).HasMaxLength(50).HasDefaultValue("Al día");
             entity.Property(unit => unit.AreaM2).HasPrecision(10, 2).HasDefaultValue(75.0m);
+            entity.Property(unit => unit.UnitType).HasMaxLength(20).HasDefaultValue("apartment");
             entity.Property(unit => unit.AliquotPercentage).HasPrecision(7, 4).HasDefaultValue(0.0000m);
 
             // Propiedades calculadas o alias que mapean a columnas físicas

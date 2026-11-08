@@ -41,6 +41,9 @@ public sealed class Unit
     // Porcentaje de participación legal en áreas comunes (Ley N.° 27157). Debe sumar 100.0000% en el edificio.
     public decimal AliquotPercentage { get; set; } = 0.0000m;
 
+    // Tipo de unidad: apartment | storage | parking
+    public string UnitType { get; set; } = "apartment";
+
     // Correo electrónico del residente registrado (utilizado para la auto-vinculación en IAM)
     public string? ResidentEmail { get; set; }
 

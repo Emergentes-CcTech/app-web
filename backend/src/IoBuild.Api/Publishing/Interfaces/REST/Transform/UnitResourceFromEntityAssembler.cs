@@ -31,7 +31,7 @@ public static class UnitResourceFromEntityAssembler
             entity.AliquotPercentage,
             entity.OwnerId,
             entity.OwnerId,
-            "apartment"
+            entity.UnitType
         );
     }
 }

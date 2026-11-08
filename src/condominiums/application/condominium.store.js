@@ -78,15 +78,13 @@ export const useCondominiumStore = defineStore('condominium', () => {
         if (!isParticipationBalanced(rows.filter(r => !r._deleted))) {
             throw new Error('La suma de participaciones debe ser 100 %');
         }
-        for (const r of rows) {
-            const { _new, _deleted, _dirty, ...clean } = r;
-            const resource = CondominiumAssembler.toUnitResource({ ...clean, condominiumId });
-            if (_deleted && !_new) await api.deleteUnit(r.id);
-            else if (_deleted) continue;
-            else if (_new) { delete resource.id; await api.createUnit(resource); }
-            else if (_dirty) await api.updateUnit(resource);
-        }
-        await fetchUnits(condominiumId);
+        const padron = rows.filter(r => !r._deleted).map(r => ({
+            id: r._new ? null : r.id, number: String(r.number).trim(), type: r.type,
+            floor: r.floor ?? null, areaM2: Number(r.areaM2), participationPct: Number(r.participationPct),
+        }));
+        const { data } = await api.savePadron(condominiumId, padron);
+        units.value = CondominiumAssembler.toUnitEntities(data);
+        return units.value;
     }
 
     function clearUserSession() {
