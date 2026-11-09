@@ -1652,7 +1652,7 @@ public static class PublishingEndpoints
         }).RequireAuthorization();
 
         // Alta de condominio: datos del edificio, suministros de los recibos matriz y subsistemas de áreas comunes monitoreados
-        condos.MapPost("", async (CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        condos.MapPost("", async (CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, IoBuild.Api.Devices.Application.Internal.CommandServices.KitProvisioningService kit, CancellationToken ct) =>
         {
             if (!IsAdministrator(user)) return Results.Forbid();
             var error = ValidateCondominium(request);
@@ -1665,10 +1665,12 @@ public static class PublishingEndpoints
 
             db.CommonAreas.AddRange(ToCommonAreas(project.Id, request));
             await db.SaveChangesAsync(ct);
+            // Demo sin equipos físicos: el kit del plan queda registrado al crear el condominio y empieza a reportar
+            await kit.ProvisionAsync(project.Id, ct);
             return Results.Created($"/api/v1/condominiums/{project.Id}", new { project.Id, project.Name });
         }).RequireAuthorization();
 
-        condos.MapPut("/{id:int}", async (int id, CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        condos.MapPut("/{id:int}", async (int id, CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, IoBuild.Api.Devices.Application.Internal.CommandServices.KitProvisioningService kit, CancellationToken ct) =>
         {
             var item = await db.Projects.FindAsync([id], ct);
             if (item is null || !OwnsProject(user, item)) return Results.NotFound();
@@ -1680,6 +1682,8 @@ public static class PublishingEndpoints
             db.CommonAreas.RemoveRange(await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct));
             db.CommonAreas.AddRange(ToCommonAreas(id, request));
             await db.SaveChangesAsync(ct);
+            // Si el condominio pasó a un plan con más equipos (o aún no tenía kit), se agregan los que faltan
+            await kit.ProvisionAsync(id, ct);
             return Results.Ok(new { item.Id, item.Name });
         }).RequireAuthorization();
 

@@ -12,9 +12,18 @@ public sealed class DeviceRegistryService(IoBuildDbContext db, IDeviceMqttPublis
     private static readonly TimeSpan ResyncInterval = TimeSpan.FromMinutes(1);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, DateTimeOffset> LastResync = new();
 
-    // lastCumulative permite a un medidor reiniciado retomar su contador sin retroceder
+    // lastCumulative permite a un medidor reiniciado retomar su contador sin retroceder;
+    // el subsistema define el perfil de consumo que simula el equipo y el área a la que se atribuye
     public Task AnnounceAsync(Device device, CancellationToken cancellationToken = default) =>
-        PublishWhenEnabledAsync($"registry/{device.Id}", JsonSerializer.Serialize(new { deviceId = device.Id, type = device.Type, lastCumulative = device.LastCumulativeReading }), cancellationToken);
+        PublishWhenEnabledAsync($"registry/{device.Id}", JsonSerializer.Serialize(new
+        {
+            deviceId = device.Id,
+            type = device.Type,
+            name = device.Name,
+            subsystem = device.Subsystem,
+            location = device.Location,
+            lastCumulative = device.LastCumulativeReading
+        }), cancellationToken);
 
     /// <summary>
     /// Reanuncia un dispositivo cuya lectura se rechazó por retroceder. Como máximo una vez por minuto,

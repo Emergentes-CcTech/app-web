@@ -133,6 +133,7 @@ builder.Services.AddScoped<IProrationSettlementService, ProrationSettlementServi
 builder.Services.AddScoped<DeviceCommandService>();
 builder.Services.AddScoped<DeviceTelemetryService>();
 builder.Services.AddScoped<DeviceRegistryService>();
+builder.Services.AddScoped<KitProvisioningService>();
 builder.Services.AddHostedService<DeviceRegistryAnnouncer>();
 builder.Services.AddHttpClient<ICloudinaryUploader, CloudinaryHttpUploader>();
 builder.Services.AddHttpClient<IPaymentProvider, StripeHttpPaymentProvider>();
