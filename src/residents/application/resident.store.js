@@ -17,15 +17,6 @@ export function deriveCollectionStatus(payments) {
     return 'current';
 }
 
-/** Genera un código de activación legible, p. ej. LA-201-7K3Q */
-export function generateActivationCode(condominiumName, unitNumber) {
-    const initials = (condominiumName || 'CO').split(/\s+/).filter(w => w.length > 2).map(w => w[0]).join('').slice(0, 3).toUpperCase() || 'CO';
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let tail = '';
-    for (let i = 0; i < 4; i++) tail += alphabet[Math.floor(Math.random() * alphabet.length)];
-    return `${initials}-${unitNumber}-${tail}`;
-}
-
 export const useResidentStore = defineStore('resident', () => {
     const residents = ref([]);
     const freeUnits = ref([]);
@@ -66,17 +57,14 @@ export const useResidentStore = defineStore('resident', () => {
         return freeUnits.value;
     }
 
-    /** Genera (o reenvía) el código de activación de una unidad libre. */
-    async function issueActivationCode(unit, condominiumName) {
-        const code = unit.activationCode || generateActivationCode(condominiumName, unit.number);
-        await api.setActivationCode(unit.id, code);
-        return code;
+    /** Registra (o corrige) al propietario de una unidad; queda pendiente hasta que cree su cuenta con ese correo. */
+    async function inviteOwner(unitId, owner) {
+        return api.inviteOwner(unitId, owner);
     }
 
-    async function assignExistingUser(unitId, email) {
-        const user = await api.getUserByEmail(String(email).trim().toLowerCase());
-        if (!user) throw new Error('user_not_found');
-        await api.assignToUnit(unitId, user.id);
+    async function cancelInvitation(unitId) {
+        await api.cancelInvitation(unitId);
+        residents.value = residents.value.filter(r => r.unitId !== unitId);
     }
 
     async function unassign(unitId) { await api.unassign(unitId); residents.value = residents.value.filter(r => r.unitId !== unitId); }
@@ -90,6 +78,6 @@ export const useResidentStore = defineStore('resident', () => {
 
     function clearUserSession() { residents.value = []; freeUnits.value = []; errors.value = []; }
 
-    return { residents, freeUnits, isLoading, errors, fetchByCondominium, fetchFreeUnits, issueActivationCode,
-        assignExistingUser, unassign, updateContact, clearUserSession };
+    return { residents, freeUnits, isLoading, errors, fetchByCondominium, fetchFreeUnits, inviteOwner,
+        cancelInvitation, unassign, updateContact, clearUserSession };
 });

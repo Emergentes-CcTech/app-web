@@ -59,14 +59,16 @@ export const useProfileStore = defineStore('profile', () => {
 
         try {
             let response;
+            // El backend espera "name": el formulario envía fullName (residente) o companyName (administración)
+            const resource = ProfileAssembler.toResource(profileData);
             try {
-                response = await profileApi.createProfile(profileData);
+                response = await profileApi.createProfile(resource);
             } catch (error) {
                 // El alta de usuario ya deja un perfil provisional (409): se completa con PUT en vez de duplicarlo
                 if (error.response?.status !== 409) throw error;
                 const existing = await profileApi.getProfile(profileData.userId);
                 if (!existing?.id) throw error;
-                response = await profileApi.updateProfile(existing.id, profileData);
+                response = await profileApi.updateProfile(existing.id, resource);
             }
             const { profileEntity } = ProfileAssembler.toDomainFromResponse(response);
             profile.value = profileEntity;

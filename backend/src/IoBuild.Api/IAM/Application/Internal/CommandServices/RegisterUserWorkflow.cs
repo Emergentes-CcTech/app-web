@@ -218,11 +218,13 @@ public sealed class RegisterUserWorkflow(
             if (!await dbContext.Profiles.AnyAsync(p => p.UserId == newUser.Id, cancellationToken))
             {
                 var primaryUnit = matchingUnits.FirstOrDefault();
+                var invitedPhone = matchingClients.Select(c => c.PhoneNumber).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p));
                 dbContext.Profiles.Add(new Profiles.Domain.Model.Aggregates.Profile
                 {
                     UserId = newUser.Id,
                     Name = primaryUnit?.ResidentFullName ?? email.Split('@')[0],
                     Username = email.Split('@')[0],
+                    PhoneNumber = invitedPhone,
                     Address = primaryUnit != null ? $"Dpto {primaryUnit.UnitNumber}" : null
                 });
             }

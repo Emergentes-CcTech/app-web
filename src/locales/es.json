@@ -306,7 +306,6 @@
       "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
       "legalRepresentativeRequired": "El representante legal es obligatorio.",
       "nameInvalid": "Ingrese un nombre válido.",
-      "activationCodeRequired": "El código de activación es obligatorio.",
       "dniRequired": "El DNI es obligatorio.",
       "dniInvalid": "El DNI debe tener 8 dígitos.",
       "privacyRequired": "Debes aceptar las políticas de privacidad.",
@@ -339,7 +338,7 @@
     },
     "registerResident": {
       "title": "Registro de dueño de departamento",
-      "subtitle": "Completa tu registro con el código que te entregó la administración.",
+      "subtitle": "Regístrate con el correo que te registró la administración de tu condominio.",
       "userInfoSection": "Información de Cuenta",
       "profileInfoSection": "Información Personal",
       "email": "Correo Electrónico",
@@ -355,15 +354,14 @@
       "phoneNumberPlaceholder": "+51 987 654 321",
       "submitButton": "Registrarse",
       "cancelButton": "Cancelar",
-      "activationCode": "Código de activación del departamento",
-      "activationCodePlaceholder": "LA-201-7K3Q",
-      "activationCodeHint": "Lo entregó la administración junto con las llaves.",
-      "invalidCode": "El código no es válido o ya fue utilizado.",
       "fullName": "Nombre completo",
       "fullNamePlaceholder": "Nombre y apellidos",
       "dni": "DNI",
       "dniPlaceholder": "12345678",
-      "acceptPrivacy": "Acepto las políticas de privacidad y de datos de telemetría"
+      "acceptPrivacy": "Acepto las políticas de privacidad y de datos de telemetría",
+      "notInvited": "Este correo no está registrado en ningún condominio. Pide a tu administración que te registre como propietario.",
+      "invitedUnits": "Tu administración te asignó: {units}.",
+      "invitedUnit": "Dpto. {unit} · {condominium}"
     }
   },
   "common": {
@@ -436,9 +434,9 @@
       "resident": "Propietario / residente",
       "assigned": "Asignada",
       "unassigned": "Sin asignar",
-      "activationCode": "Código de activación",
       "registry": "Padrón de unidades y alícuotas",
-      "empty": "Aún no hay unidades en el padrón. Registra los {n} departamentos con su alícuota; deben sumar 100.0000 % (Ley N.° 27157)."
+      "empty": "Aún no hay unidades en el padrón. Registra los {n} departamentos con su alícuota; deben sumar 100.0000 % (Ley N.° 27157).",
+      "registerOwner": "Registrar propietario"
     },
     "stats": {
       "totalUnits": "Total de unidades",
@@ -583,17 +581,12 @@
   },
   "residents": {
     "title": "Residentes",
-    "add": "Asignar residente",
-    "addDialogTitle": "Asignar residente a una unidad",
+    "add": "Registrar propietario",
+    "addDialogTitle": "Registrar propietario",
     "editDialogTitle": "Editar residente",
     "search": "Buscar",
     "empty": "No hay residentes.",
     "freeUnit": "Unidad libre",
-    "generateCode": "Generar código de activación",
-    "codeHint": "Entrega este código al residente para que complete su registro.",
-    "or": "o",
-    "assignByEmail": "Asignar a un usuario ya registrado (correo)",
-    "assign": "Asignar",
     "confirmUnassign": "¿Desvincular a {name} de la unidad {unit}? Se conserva su historial.",
     "fields": {
       "fullName": "Nombre",
@@ -605,7 +598,8 @@
       "unit": "Unidad",
       "relation": "Relación",
       "collectionStatus": "Estado de cobranza",
-      "activationCode": "Código"
+      "firstName": "Nombre",
+      "lastName": "Apellido"
     },
     "relation": {
       "owner": "Propietario",
@@ -619,8 +613,9 @@
     "actions": {
       "view": "Ver perfil",
       "edit": "Editar",
-      "resendCode": "Reenviar código de activación",
-      "unassign": "Desvincular de la unidad"
+      "unassign": "Desvincular de la unidad",
+      "editInvite": "Editar datos",
+      "cancelInvite": "Retirar invitación"
     },
     "profile": {
       "personal": "Datos personales",
@@ -638,19 +633,34 @@
     },
     "validation": {
       "unitRequired": "Selecciona una unidad libre.",
-      "userNotFound": "No existe un usuario con ese correo."
+      "firstName": "Ingresa el nombre (2 a 60 caracteres).",
+      "lastName": "Ingresa el apellido (2 a 60 caracteres).",
+      "accountExists": "Ese correo ya tiene una cuenta en IoBuild.",
+      "unitHasOwner": "La unidad ya tiene un propietario con cuenta activa."
     },
     "messages": {
       "error": "No se pudo completar la acción.",
       "unassigned": "Residente desvinculado.",
       "updated": "Residente actualizado.",
-      "alreadyLinked": "La unidad {unit} ya tiene un residente vinculado; no requiere código."
+      "inviteCancelled": "Invitación retirada."
     },
     "filters": {
       "all": "Todos"
     },
     "subtitle": "{n} residentes en el padrón de {condominium}",
-    "searchPlaceholder": "Buscar por nombre, correo o unidad"
+    "searchPlaceholder": "Buscar por nombre, correo o unidad",
+    "confirmCancelInvite": "¿Retirar la invitación de {name} para la unidad {unit}? Ya no podrá registrarse con ese correo.",
+    "invite": {
+      "title": "Registrar propietario",
+      "editTitle": "Editar datos del propietario",
+      "lead": "Registra al propietario de la unidad. Cuando cree su cuenta en IoBuild con este correo, verá su departamento al ingresar.",
+      "hint": "El correo debe ser el que usará para registrarse. No se envía ningún mensaje: avísale tú que ya puede crear su cuenta.",
+      "submit": "Registrar propietario",
+      "pending": "Pendiente de registro",
+      "noFreeUnits": "No hay unidades libres en este condominio.",
+      "savedTitle": "{name} quedó registrado en la unidad {unit}.",
+      "savedBody": "Cuando cree su cuenta en IoBuild con {email}, entrará directamente con su departamento asignado."
+    }
   },
   "devices": {
     "title": "Dispositivos IoT",

@@ -34,10 +34,4 @@ export class CondominiumApi extends BaseApi {
     patchUnit(id, partial) { return this.http.patch(`${unitsPath}/${id}`, partial); }
     deleteUnit(id) { return this.http.delete(`${unitsPath}/${id}`); }
 
-    findByActivationCode(code) {
-        return this.http.get(unitsPath, { params: { activationCode: code } }).then(r => r.data[0] ?? null);
-    }
-    linkResident(unitId, userId) {
-        return this.http.patch(`${unitsPath}/${unitId}`, { residentUserId: userId, activationCode: null });
-    }
 }

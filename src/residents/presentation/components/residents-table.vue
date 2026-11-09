@@ -4,7 +4,7 @@ import { collectionSeverity } from '../../domain/model/collection-status.enum.js
 import ResidentActionsMenu from './resident-actions-menu.vue';
 
 defineProps({ residents: Array, loading: Boolean });
-defineEmits(['view', 'edit', 'resend', 'unassign']);
+defineEmits(['view', 'edit', 'edit-invite', 'cancel-invite', 'unassign']);
 const { t } = useI18n();
 const initials = (n) => (n || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 </script>
@@ -22,7 +22,10 @@ const initials = (n) => (n || '?').split(' ').filter(Boolean).map(w => w[0]).sli
           <div class="who">
             <img v-if="data.photoUrl" :src="data.photoUrl" :alt="data.fullName" class="avatar" />
             <span v-else class="avatar" aria-hidden="true">{{ initials(data.fullName) }}</span>
-            <span class="who-text"><strong>{{ data.fullName }}</strong><small>{{ data.email }}</small></span>
+            <span class="who-text">
+              <strong>{{ data.fullName }}</strong><small>{{ data.email }}</small>
+              <pv-tag v-if="data.isPending" severity="warn" :value="t('residents.invite.pending')" class="pending" />
+            </span>
           </div>
         </template>
       </pv-column>
@@ -34,12 +37,16 @@ const initials = (n) => (n || '?').split(' ').filter(Boolean).map(w => w[0]).sli
       </pv-column>
       <pv-column :header="t('residents.fields.relation')"><template #body="{ data }">{{ t(`residents.relation.${data.relation}`) }}</template></pv-column>
       <pv-column field="collectionStatus" :header="t('residents.fields.collectionStatus')" sortable>
-        <template #body="{ data }"><pv-tag :severity="collectionSeverity(data.collectionStatus)" :value="t(`residents.status.${data.collectionStatus}`)" /></template>
+        <template #body="{ data }">
+          <span v-if="data.isPending" class="muted">—</span>
+          <pv-tag v-else :severity="collectionSeverity(data.collectionStatus)" :value="t(`residents.status.${data.collectionStatus}`)" />
+        </template>
       </pv-column>
       <pv-column style="width: 4rem">
         <template #body="{ data }">
           <span @click.stop>
-            <resident-actions-menu :resident="data" @view="$emit('view', $event)" @edit="$emit('edit', $event)" @resend="$emit('resend', $event)" @unassign="$emit('unassign', $event)" />
+            <resident-actions-menu :resident="data" @view="$emit('view', $event)" @edit="$emit('edit', $event)" @edit-invite="$emit('edit-invite', $event)"
+                                   @cancel-invite="$emit('cancel-invite', $event)" @unassign="$emit('unassign', $event)" />
           </span>
         </template>
       </pv-column>
@@ -55,6 +62,7 @@ const initials = (n) => (n || '?').split(' ').filter(Boolean).map(w => w[0]).sli
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 600; object-fit: cover; flex-shrink: 0; }
 .who-text { display: flex; flex-direction: column; min-width: 0; }
 .who-text small { color: #6B7280; overflow: hidden; text-overflow: ellipsis; }
+.pending { align-self: flex-start; margin-top: .2rem; font-size: .7rem; }
 .num { font-variant-numeric: tabular-nums; }
 .muted { color: #9ca3af; }
 .empty { text-align: center; color: #6B7280; padding: 1.5rem 0; margin: 0; }
