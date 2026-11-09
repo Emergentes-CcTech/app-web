@@ -121,7 +121,14 @@ internal static class CoreBusinessTestSupport
     private sealed class FakePaymentProvider : IPaymentProvider
     {
         public Task<PaymentCheckoutSession?> CreateCheckoutSessionAsync(PaymentCheckoutRequest request, StripeIntegrationOptions options, CancellationToken cancellationToken = default) => Task.FromResult<PaymentCheckoutSession?>(new("cs_fake", "https://checkout.example/cs_fake", 1200));
-        public Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default) => Task.FromResult<PaymentSessionConfirmation?>(new(sessionId, "paid", 7, 3));
+        // Como el proveedor real: una sesión simulada cs_sim_{condominio}_{plan}_… confirma ese condominio y plan
+        public Task<PaymentSessionConfirmation?> ConfirmSessionAsync(string sessionId, CancellationToken cancellationToken = default)
+        {
+            var parts = sessionId.Split('_');
+            if (sessionId.StartsWith("cs_sim_", StringComparison.Ordinal) && parts.Length > 3 && int.TryParse(parts[2], out var builderId) && int.TryParse(parts[3], out var planId))
+                return Task.FromResult<PaymentSessionConfirmation?>(new(sessionId, "paid", builderId, planId));
+            return Task.FromResult<PaymentSessionConfirmation?>(new(sessionId, "paid", 7, 3));
+        }
         public Task<IReadOnlyList<PaymentInvoice>?> GetInvoicesAsync(int builderId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PaymentInvoice>?>([new PaymentInvoice("in_fake", "paid", 1200)]);
     }
 }

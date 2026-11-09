@@ -410,7 +410,8 @@
     "empty": "You have no condominiums yet.",
     "status": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pending": "Payment pending"
     },
     "fields": {
       "name": "Name",
@@ -580,6 +581,13 @@
         "participation": "Row {line}: participation of {number} must be between 0 and 100.",
         "type": "Row {line}: unknown type for {number} (apartment, storage or parking)."
       }
+    },
+    "activation": {
+      "title": "Activation pending",
+      "body": "The condominium activates when the subscription is paid: its plan's devices are installed then and it starts measuring.",
+      "pay": "Activate and pay",
+      "checkoutFailed": "The activation payment could not be opened. The condominium is pending: you can pay from its page.",
+      "canceled": "Payment cancelled: the condominium stays pending activation. You can pay any time from its page."
     }
   },
   "residents": {

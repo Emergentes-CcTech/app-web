@@ -18,6 +18,8 @@ export class Condominium {
 
     // RF-005: estados válidos active / inactive (baja lógica; el histórico se conserva)
     get isActive() { return this.status === 'active'; }
+    // Creado y a la espera del pago de activación: con el pago pasa a activo y recibe su kit de equipos
+    get isPending() { return this.status === 'pending'; }
     get commonAreasCount() { return this.commonAreas.length; }
     get occupancyRate() { return this.totalUnits ? Math.round((this.occupiedUnits / this.totalUnits) * 100) : 0; }
     get locationLabel() { return [this.address, this.district].filter(v => v && String(v).trim()).join(', '); }

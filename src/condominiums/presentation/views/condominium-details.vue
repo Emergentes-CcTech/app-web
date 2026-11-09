@@ -13,6 +13,7 @@ import { Unit } from '../../domain/model/unit.entity.js';
 import { sumParticipation, isParticipationBalanced, isValidPercentage, isValidName } from '../../../shared/presentation/validators.js';
 import { participationFromArea, parsePadronCsv } from '../../domain/padron.js';
 import ResidentAddDialog from '../../../residents/presentation/components/resident-add-dialog.vue';
+import { startActivationCheckout } from '../../../subscriptions/application/activation-checkout.js';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -44,6 +45,17 @@ const replaceExisting = ref(true);
 const ownerDialog = ref(false);
 const ownerUnit = ref(null);
 function openOwner(row) { ownerUnit.value = row; ownerDialog.value = true; }
+// Pago de activación pendiente: al pagar, el condominio pasa a activo y recibe su kit de equipos
+const paying = ref(false);
+async function payActivation() {
+  paying.value = true;
+  try {
+    window.location.href = await startActivationCheckout(id.value);
+  } catch (_) {
+    toast.add({ severity: 'error', summary: t('condominiums.activation.title'), detail: t('condominiums.activation.checkoutFailed'), life: 5000 });
+    paying.value = false;
+  }
+}
 function onOwnerSaved(result) {
   const row = rows.value.find(r => r.id === result.unitId);
   if (row) Object.assign(row, { ownerEmail: result.email, residentFullName: result.fullName });
@@ -201,6 +213,13 @@ function deactivate() {
       <span class="current">{{ store.current.name }}</span>
     </nav>
 
+    <pv-message v-if="store.current.isPending" severity="warn" :closable="false" class="activation-banner">
+      <div class="activation-row">
+        <span><strong>{{ t('condominiums.activation.title') }}.</strong> {{ t('condominiums.activation.body') }}</span>
+        <pv-button :label="t('condominiums.activation.pay')" icon="pi pi-credit-card" :loading="paying" @click="payActivation" />
+      </div>
+    </pv-message>
+
     <header class="hero">
       <div class="hero-media">
         <img v-if="store.current.imageUrl" :src="store.current.imageUrl" :alt="store.current.name" />
@@ -209,7 +228,7 @@ function deactivate() {
       <div class="hero-text">
         <div class="hero-title">
           <h1>{{ store.current.name }}</h1>
-          <pv-tag :severity="store.current.isActive ? 'success' : 'secondary'" :value="t(`condominiums.status.${store.current.status}`)" />
+          <pv-tag :severity="store.current.isActive ? 'success' : store.current.isPending ? 'warn' : 'secondary'" :value="t(`condominiums.status.${store.current.status}`)" />
         </div>
         <p v-if="store.current.locationLabel" class="muted"><i class="pi pi-map-marker" aria-hidden="true" /> {{ store.current.locationLabel }}</p>
         <p class="muted">{{ t('condominiums.details.unitsAndFloors', { units: store.current.totalUnits }) }}<template v-if="store.current.totalFloors"> · {{ t('condominiums.details.floors', { n: store.current.totalFloors }) }}</template></p>
@@ -398,4 +417,6 @@ function deactivate() {
 .import-errors { margin: .5rem 0; padding-left: 1.2rem; color: #b91c1c; font-size: .9rem; }
 .field-check { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; }
 .template-link { margin-right: auto; align-self: center; font-size: .85rem; color: #047857; }
+.activation-banner { margin-bottom: 1rem; }
+.activation-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem 1rem; flex-wrap: wrap; width: 100%; }
 </style>

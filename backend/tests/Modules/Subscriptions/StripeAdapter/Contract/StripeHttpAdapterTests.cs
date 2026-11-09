@@ -39,6 +39,20 @@ public sealed class StripeHttpAdapterTests
 
     [Fact]
     [Trait("Category", "CoreBusiness")]
+    public async Task Activation_checkout_keeps_the_return_parameters_and_adds_the_session_id()
+    {
+        // Al volver de Stripe, la app necesita saber qué condominio se pagó para abrir su ficha ya activa
+        var handler = new RecordingHandler(HttpStatusCode.OK, "{\"id\":\"cs_456\",\"url\":\"https://checkout.example/cs_456\",\"amount_total\":99120}");
+        var provider = new StripeHttpPaymentProvider(new HttpClient(handler), Configuration("Stripe:ProviderBaseUrl", "https://payments.example"));
+
+        await provider.CreateCheckoutSessionAsync(new PaymentCheckoutRequest(9, 2, "https://app.example/subscriptions/my-subscription?success=true&condominium=9", "https://cancel"), StripeIntegrationOptions.Create("rk_test_minimum"));
+
+        var successUrl = Uri.UnescapeDataString(handler.Body.Split('&').First(f => f.StartsWith("success_url=", StringComparison.Ordinal))["success_url=".Length..]);
+        Assert.Equal("https://app.example/subscriptions/my-subscription?success=true&condominium=9&session_id={CHECKOUT_SESSION_ID}", successUrl);
+    }
+
+    [Fact]
+    [Trait("Category", "CoreBusiness")]
     public async Task Stripe_provider_uses_real_session_and_invoice_retrieval_contracts()
     {
         var handler = new SequenceHandler(

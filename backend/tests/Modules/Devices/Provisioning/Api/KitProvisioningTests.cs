@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using IoBuild.Api.Persistence;
+using IoBuild.Api.Subscriptions.Domain.Model.Aggregates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static IoBuild.Modules.Tests.TestSupport.CoreBusinessTestSupport;
@@ -8,8 +9,8 @@ using static IoBuild.Modules.Tests.TestSupport.CoreBusinessTestSupport;
 namespace IoBuild.Modules.Tests.Devices.Provisioning.Api;
 
 /// <summary>
-/// En la demo no hay equipos físicos: al crear el condominio queda registrado el kit del plan que le corresponde
-/// por su número de departamentos, instalado en las áreas comunes que registró.
+/// El condominio se crea pendiente; al confirmarse el pago de activación pasa a activo y recibe el kit del plan
+/// que le corresponde por su número de departamentos, instalado en las áreas comunes que registró.
 /// </summary>
 [Trait("Context", "Devices")]
 public sealed class KitProvisioningTests
@@ -33,13 +34,43 @@ public sealed class KitProvisioningTests
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("id").GetInt32();
     }
 
+    // Confirma un pago simulado de Stripe (sesión cs_sim_{condominio}_{plan}) del plan que le corresponde
+    private static async Task PayActivationAsync(CoreBusinessApiFactory factory, HttpClient client, int condominiumId, string planName)
+    {
+        int planId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
+            var plan = await db.Plans.FirstOrDefaultAsync(p => p.Name == planName);
+            if (plan is null)
+            {
+                plan = new Plan(planName, "", 420m);
+                db.Plans.Add(plan);
+                await db.SaveChangesAsync();
+            }
+            planId = plan.Id;
+        }
+        var confirm = await client.PatchAsync($"/api/v1/subscriptions/payments/sessions/cs_sim_{condominiumId}_{planId}_test", null);
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+    }
+
+    private static async Task<string> StatusAsync(HttpClient client, int id) =>
+        JsonDocument.Parse(await (await SendAuthorizedAsync(client, HttpMethod.Get, $"/api/v1/condominiums/{id}", Admin)).Content.ReadAsStringAsync())
+            .RootElement.GetProperty("status").GetString()!;
+
     [Fact]
-    public async Task Creating_a_condominium_registers_the_kit_of_its_plan_in_its_common_areas()
+    public async Task A_new_condominium_waits_for_payment_and_paying_activates_it_with_the_kit_of_its_plan()
     {
         await using var factory = new CoreBusinessApiFactory();
         using var client = factory.CreateClient();
         // 65 departamentos → plan Urbano: 1 gateway, 2 puntos de agua y 2 tableros de energía
         var id = await CreateAsync(client, Condominium(65, ("Cisterna", "MainCistern"), ("Cuarto de bombas", "PressurePumpsRoom"), ("Ascensores", "ElevatorsBank")));
+        Assert.Equal("pending", await StatusAsync(client, id));
+        using (var before = factory.Services.CreateScope())
+            Assert.False(await before.ServiceProvider.GetRequiredService<IoBuildDbContext>().Devices.AnyAsync(d => d.ProjectId == id));
+
+        await PayActivationAsync(factory, client, id, "Urbano");
+        Assert.Equal("active", await StatusAsync(client, id));
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
@@ -57,12 +88,13 @@ public sealed class KitProvisioningTests
     }
 
     [Fact]
-    public async Task Editing_adds_only_the_devices_a_bigger_plan_is_missing_and_never_removes_any()
+    public async Task Editing_an_active_condominium_adds_only_what_a_bigger_plan_is_missing_and_never_removes_devices()
     {
         await using var factory = new CoreBusinessApiFactory();
         using var client = factory.CreateClient();
         // 30 departamentos → Esencial: 3 equipos
         var id = await CreateAsync(client, Condominium(30, ("Cisterna", "MainCistern")));
+        await PayActivationAsync(factory, client, id, "Esencial");
 
         async Task<int> CountAsync()
         {
