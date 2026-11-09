@@ -12,6 +12,7 @@ import { loadCloudinaryWidget } from '../../../shared/infrastructure/cloudinary-
 import { getProjectImageUploadConfig } from '../../../shared/infrastructure/cloudinary-config.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import { unitsRangeText } from '../../../subscriptions/presentation/plan-copy.js';
+import { startActivationCheckout } from '../../../subscriptions/application/activation-checkout.js';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -91,6 +92,17 @@ async function save() {
   try {
     const payload = { ...form, commonAreas: form.commonAreas.map(a => ({ ...a })) };
     const saved = isEdit.value ? await store.update(payload) : await store.create(payload);
+    if (!isEdit.value) {
+      // El condominio queda pendiente hasta pagar la activación: se abre la pasarela de pago de una vez
+      try {
+        window.location.href = await startActivationCheckout(saved.id);
+        return;
+      } catch (_) {
+        toast.add({ severity: 'warn', summary: t('condominiums.activation.title'), detail: t('condominiums.activation.checkoutFailed'), life: 5000 });
+        router.push({ name: 'condominium-details', params: { id: saved.id } });
+        return;
+      }
+    }
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('condominiums.messages.saved'), life: 2500 });
     router.push({ name: 'condominium-details', params: { id: saved.id } });
   } catch (e) {

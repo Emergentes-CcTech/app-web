@@ -325,7 +325,7 @@ public static class SubscriptionsEndpoints
         }).RequireAuthorization();
 
         // Confirmar sesión de pago y activar la suscripción del condominio
-        subs.MapPatch("/subscriptions/payments/sessions/{sessionId}", async (string sessionId, IPaymentProvider provider, IoBuildDbContext db, CancellationToken ct) =>
+        subs.MapPatch("/subscriptions/payments/sessions/{sessionId}", async (string sessionId, IPaymentProvider provider, IoBuildDbContext db, IoBuild.Api.Devices.Application.Internal.CommandServices.KitProvisioningService kit, CancellationToken ct) =>
         {
             var confirmation = await provider.ConfirmSessionAsync(sessionId, ct);
             if (confirmation is null) return Results.Problem(statusCode: 503);
@@ -358,6 +358,15 @@ public static class SubscriptionsEndpoints
             catch (DbUpdateException ex) when (ex.InnerException is MySqlConnector.MySqlException mysql && mysql.Number == 1062)
             {
                 return Results.Conflict(new { error = "Subscription already active; refresh to see current state." });
+            }
+
+            // Pago confirmado: el condominio pasa a activo y recibe el kit de equipos de su plan (no duplica si ya lo tiene)
+            var project = await db.Projects.FindAsync([confirmation.BuilderId], ct);
+            if (project is not null)
+            {
+                if (string.Equals(project.Status, "Pendiente", StringComparison.OrdinalIgnoreCase)) project.Status = "Activo";
+                await db.SaveChangesAsync(ct);
+                await kit.ProvisionAsync(project.Id, ct);
             }
 
             return Results.Ok(confirmation);

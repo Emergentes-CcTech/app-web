@@ -83,9 +83,13 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
 
             // El catálogo está en soles: se cobra siempre en PEN, aunque la configuración diga otra moneda
             const string currency = "pen";
-            var successUrl = request.SuccessUrl.Contains("{CHECKOUT_SESSION_ID}")
-                ? request.SuccessUrl
-                : $"{request.SuccessUrl.Split('?')[0]}?success=true&session_id={{CHECKOUT_SESSION_ID}}";
+            // Conserva los parámetros de la URL de retorno (p. ej. el condominio pagado) y agrega el id de la sesión
+            var successUrl = request.SuccessUrl;
+            if (!successUrl.Contains("{CHECKOUT_SESSION_ID}"))
+            {
+                if (!successUrl.Contains("success=true")) successUrl += (successUrl.Contains('?') ? "&" : "?") + "success=true";
+                successUrl += "&session_id={CHECKOUT_SESSION_ID}";
+            }
 
             formFields = new Dictionary<string, string>
             {

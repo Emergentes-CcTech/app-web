@@ -109,6 +109,12 @@ public static class PublishingEndpoints
         return null;
     }
 
+    // Activo → active; Pendiente (creado, a la espera del pago de activación) → pending; otros estados en minúsculas
+    private static string CondominiumStatus(string status) =>
+        string.Equals(status, "Activo", StringComparison.OrdinalIgnoreCase) ? "active"
+        : string.Equals(status, "Pendiente", StringComparison.OrdinalIgnoreCase) ? "pending"
+        : status.ToLowerInvariant();
+
     private static void ApplyCondominium(IoBuild.Api.Publishing.Domain.Model.Aggregates.Project p, CondominiumRequest r)
     {
         p.Name = r.Name.Trim();
@@ -1597,7 +1603,7 @@ public static class PublishingEndpoints
                 ElectricitySupplyCode = p.LuzDelSurSupplyCode,
                 p.SedapalSupplyCode,
                 p.LuzDelSurSupplyCode,
-                Status = string.Equals(p.Status, "Activo", StringComparison.OrdinalIgnoreCase) ? "active" : p.Status.ToLowerInvariant(),
+                Status = CondominiumStatus(p.Status),
                 p.ImageUrl,
                 p.StructureDefined,
                 p.CreatedAt,
@@ -1636,7 +1642,7 @@ public static class PublishingEndpoints
                 ElectricitySupplyCode = p.LuzDelSurSupplyCode,
                 p.SedapalSupplyCode,
                 p.LuzDelSurSupplyCode,
-                Status = string.Equals(p.Status, "Activo", StringComparison.OrdinalIgnoreCase) ? "active" : p.Status.ToLowerInvariant(),
+                Status = CondominiumStatus(p.Status),
                 p.ImageUrl,
                 p.StructureDefined,
                 p.CreatedAt,
@@ -1652,21 +1658,20 @@ public static class PublishingEndpoints
         }).RequireAuthorization();
 
         // Alta de condominio: datos del edificio, suministros de los recibos matriz y subsistemas de áreas comunes monitoreados
-        condos.MapPost("", async (CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, IoBuild.Api.Devices.Application.Internal.CommandServices.KitProvisioningService kit, CancellationToken ct) =>
+        condos.MapPost("", async (CondominiumRequest request, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             if (!IsAdministrator(user)) return Results.Forbid();
             var error = ValidateCondominium(request);
             if (error is not null) return Results.BadRequest(new { message = error });
 
-            var project = new Project { AdministratorId = SelfId(user), Status = "Activo", CreatedAt = DateTimeOffset.UtcNow };
+            // Queda pendiente hasta pagar la activación: con el pago se activa y recibe el kit de su plan
+            var project = new Project { AdministratorId = SelfId(user), Status = "Pendiente", CreatedAt = DateTimeOffset.UtcNow };
             ApplyCondominium(project, request);
             db.Projects.Add(project);
             await db.SaveChangesAsync(ct);
 
             db.CommonAreas.AddRange(ToCommonAreas(project.Id, request));
             await db.SaveChangesAsync(ct);
-            // Demo sin equipos físicos: el kit del plan queda registrado al crear el condominio y empieza a reportar
-            await kit.ProvisionAsync(project.Id, ct);
             return Results.Created($"/api/v1/condominiums/{project.Id}", new { project.Id, project.Name });
         }).RequireAuthorization();
 
@@ -1682,8 +1687,9 @@ public static class PublishingEndpoints
             db.CommonAreas.RemoveRange(await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct));
             db.CommonAreas.AddRange(ToCommonAreas(id, request));
             await db.SaveChangesAsync(ct);
-            // Si el condominio pasó a un plan con más equipos (o aún no tenía kit), se agregan los que faltan
-            await kit.ProvisionAsync(id, ct);
+            // Con el servicio activo, si el condominio pasó a un plan con más equipos se agregan los que faltan
+            if (await db.Subscriptions.AnyAsync(s => s.ProjectId == id && s.Status == "active", ct))
+                await kit.ProvisionAsync(id, ct);
             return Results.Ok(new { item.Id, item.Name });
         }).RequireAuthorization();
 

@@ -40,8 +40,8 @@ export class SubscriptionApi extends BaseApi {
     createCheckoutSession({ administratorId, condominiumId, planId }) {
         // El backend espera las URLs de success y cancel; Stripe agrega session_id como query parameter
         const baseUrl = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : APP_URL;
-        const successUrl = `${baseUrl}/subscriptions/my-subscription?success=true`;
-        const cancelUrl = `${baseUrl}/subscriptions/my-subscription?canceled=true`;
+        const successUrl = `${baseUrl}/subscriptions/my-subscription?success=true&condominium=${condominiumId}`;
+        const cancelUrl = `${baseUrl}/subscriptions/my-subscription?canceled=true&condominium=${condominiumId}`;
         // builderId es el condominio en el contrato del backend
         return this.http.post(`${subscriptionsEndpointPath}/payments/sessions`, { administratorId, condominiumId, builderId: condominiumId, planId, successUrl, cancelUrl });
     }

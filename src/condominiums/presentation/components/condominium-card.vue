@@ -18,8 +18,8 @@ const imageBroken = ref(false);
     <div class="media">
       <img v-if="condominium.imageUrl && !imageBroken" :src="condominium.imageUrl" :alt="condominium.name" loading="lazy" @error="imageBroken = true" />
       <div v-else class="media-empty"><i class="pi pi-building" aria-hidden="true" /></div>
-      <pv-tag class="status" :severity="condominium.isActive ? 'success' : 'secondary'"
-              :value="condominium.isActive ? t('condominiums.status.active') : t('condominiums.status.inactive')" />
+      <pv-tag class="status" :severity="condominium.isActive ? 'success' : condominium.isPending ? 'warn' : 'secondary'"
+              :value="t(`condominiums.status.${condominium.isActive ? 'active' : condominium.isPending ? 'pending' : 'inactive'}`)" />
     </div>
 
     <div class="body">
