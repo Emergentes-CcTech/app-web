@@ -1223,6 +1223,8 @@ public static class PublishingEndpoints
                 return Results.Conflict(new { error = $"La unidad {blocked.UnitNumber} tiene residente o historial de cuotas y no se puede eliminar." });
 
             db.Units.RemoveRange(removed);
+            // Una invitación pendiente no sobrevive a su unidad
+            db.Clients.RemoveRange(await db.Clients.Where(c => c.UnitId != null && removedIds.Contains(c.UnitId.Value)).ToListAsync(ct));
             foreach (var row in rows)
             {
                 var number = row.Number!.Trim();
@@ -1251,6 +1253,60 @@ public static class PublishingEndpoints
 
             var saved = await db.Units.Where(u => u.ProjectId == id).OrderBy(u => u.UnitNumber).ToListAsync(ct);
             return Results.Ok(saved.Select(UnitResourceFromEntityAssembler.ToResourceFromEntity));
+        }).RequireAuthorization();
+
+        // Propietario pre-registrado por la administración: queda pendiente hasta que cree su cuenta con ese correo
+        units.MapPut("/{id:int}/owner-invitation", async (int id, OwnerInvitationResource body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await OwnsUnitIdAsync(user, db, id, ct)) return Results.NotFound();
+            var unit = await db.Units.FirstAsync(u => u.Id == id, ct);
+            if (unit.OwnerId.HasValue)
+                return Results.Conflict(new { code = "unit_has_owner", error = "La unidad ya tiene un propietario con cuenta activa." });
+
+            var errors = OwnerInvitation.Validate(body);
+            if (errors.Count > 0) return Results.UnprocessableEntity(new { code = "invalid_owner", error = errors[0], errors });
+
+            var email = body.Email!.Trim().ToLowerInvariant();
+            if (await db.IamUsers.AnyAsync(u => u.Email == email, ct))
+                return Results.Conflict(new { code = "account_exists", error = "Ese correo ya tiene una cuenta en IoBuild." });
+
+            var fullName = OwnerInvitation.FullName(body);
+            var phone = body.PhoneNumber!.Trim();
+            unit.OwnerEmail = email;
+            unit.ResidentFullName = fullName;
+
+            var project = await db.Projects.FirstAsync(p => p.Id == unit.ProjectId, ct);
+            var client = await db.Clients.FirstOrDefaultAsync(c => c.UnitId == id, ct);
+            if (client is null)
+            {
+                client = new Client(fullName, project.Name, "Pending", project.BuilderId, project.Id, email, phone, "", id, unit.UnitNumber);
+                db.Clients.Add(client);
+            }
+            else
+            {
+                client.FullName = fullName;
+                client.Email = email;
+                client.PhoneNumber = phone;
+                client.UnitNumber = unit.UnitNumber;
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { unitId = unit.Id, unitNumber = unit.UnitNumber, fullName, email, phoneNumber = phone, status = "pending" });
+        }).RequireAuthorization();
+
+        // Retira la invitación mientras el propietario no haya creado su cuenta
+        units.MapDelete("/{id:int}/owner-invitation", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await OwnsUnitIdAsync(user, db, id, ct)) return Results.NotFound();
+            var unit = await db.Units.FirstAsync(u => u.Id == id, ct);
+            if (unit.OwnerId.HasValue)
+                return Results.Conflict(new { code = "unit_has_owner", error = "La unidad ya tiene un propietario con cuenta activa." });
+
+            unit.OwnerEmail = null;
+            unit.ResidentFullName = null;
+            db.Clients.RemoveRange(await db.Clients.Where(c => c.UnitId == id).ToListAsync(ct));
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
         }).RequireAuthorization();
 
         units.MapPatch("/{id:int}/assign-owner", async (int id, AssignUnitOwnerResource resource, ClaimsPrincipal user, IUnitCommandService commandService, IUnitQueryService queryService, IoBuildDbContext db, CancellationToken ct) =>
@@ -1688,6 +1744,9 @@ public static class PublishingEndpoints
             var units = await db.Units.Where(u => u.ProjectId == targetProjectId && (!string.IsNullOrEmpty(u.ResidentFullName) || u.OwnerId.HasValue)).ToListAsync(ct);
             var ownerIds = units.Where(u => u.OwnerId.HasValue).Select(u => u.OwnerId!.Value).ToList();
             var profilesByUserId = await db.Profiles.Where(p => ownerIds.Contains(p.UserId)).ToDictionaryAsync(p => p.UserId, ct);
+            var unitIds = units.Select(u => u.Id).ToList();
+            var phoneByUnit = (await db.Clients.Where(c => c.UnitId != null && unitIds.Contains(c.UnitId.Value)).ToListAsync(ct))
+                .GroupBy(c => c.UnitId!.Value).ToDictionary(g => g.Key, g => g.First().PhoneNumber);
 
             // Sin datos de relleno: un campo ausente viaja como null y la interfaz lo muestra como no registrado
             var residents = units.Select(u =>
@@ -1700,7 +1759,8 @@ public static class PublishingEndpoints
                     fullName = u.ResidentFullName ?? profile?.Name ?? $"Residente Dpto. {u.UnitNumber}",
                     dni = (string?)null,
                     email = u.ResidentEmail ?? u.OwnerEmail,
-                    phoneNumber = profile?.PhoneNumber,
+                    phoneNumber = string.IsNullOrWhiteSpace(profile?.PhoneNumber) ? phoneByUnit.GetValueOrDefault(u.Id) : profile.PhoneNumber,
+                    accountStatus = u.OwnerId.HasValue ? "active" : "pending",
                     photoUrl = profile?.PhotoUrl,
                     condominiumId = u.ProjectId,
                     condominiumName = project.Name,

@@ -12,6 +12,7 @@ import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import { Unit } from '../../domain/model/unit.entity.js';
 import { sumParticipation, isParticipationBalanced, isValidPercentage, isValidName } from '../../../shared/presentation/validators.js';
 import { participationFromArea, parsePadronCsv } from '../../domain/padron.js';
+import ResidentAddDialog from '../../../residents/presentation/components/resident-add-dialog.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -39,6 +40,14 @@ const importRows = ref([]);
 const importErrors = ref([]);
 const importFile = ref('');
 const replaceExisting = ref(true);
+// Registro del propietario desde la fila del padrón (la unidad ya debe estar guardada)
+const ownerDialog = ref(false);
+const ownerUnit = ref(null);
+function openOwner(row) { ownerUnit.value = row; ownerDialog.value = true; }
+function onOwnerSaved(result) {
+  const row = rows.value.find(r => r.id === result.unitId);
+  if (row) Object.assign(row, { ownerEmail: result.email, residentFullName: result.fullName });
+}
 
 async function load() {
   loading.value = true;
@@ -283,15 +292,21 @@ function deactivate() {
       </pv-column>
       <pv-column :header="t('condominiums.units.resident')">
         <template #body="{ data }">
-          <pv-tag v-if="data.residentUserId" severity="success" :value="t('condominiums.units.assigned')" />
+          <div v-if="data.residentUserId || data.ownerEmail" class="owner-cell">
+            <span class="owner-name">{{ data.residentFullName || data.ownerEmail }}</span>
+            <pv-tag v-if="data.residentUserId" severity="success" :value="t('condominiums.units.assigned')" />
+            <pv-tag v-else severity="warn" :value="t('residents.invite.pending')" />
+          </div>
+          <pv-button v-else-if="data.id > 0 && !data._new" :label="t('condominiums.units.registerOwner')" icon="pi pi-user-plus" text size="small" @click="openOwner(data)" />
           <pv-tag v-else severity="secondary" :value="t('condominiums.units.unassigned')" />
         </template>
       </pv-column>
-      <pv-column :header="t('condominiums.units.activationCode')"><template #body="{ data }"><code v-if="data.activationCode">{{ data.activationCode }}</code><span v-else>—</span></template></pv-column>
       <pv-column :header="t('common.actions')">
         <template #body="{ data }"><pv-button icon="pi pi-trash" text rounded severity="danger" :disabled="!!data.residentUserId" :aria-label="t('common.delete')" @click="removeUnit(data)" /></template>
       </pv-column>
     </pv-data-table>
+
+    <resident-add-dialog v-model:visible="ownerDialog" :condominiums="store.current ? [store.current] : []" :defaultCondominiumId="id" :unit="ownerUnit" @done="onOwnerSaved" />
 
     <pv-dialog v-model:visible="dialog" modal :header="t('condominiums.units.add')" :style="{ width: '28rem' }">
       <div class="field"><label>{{ t('condominiums.units.number') }} *</label><pv-input-text v-model="newUnit.number" :invalid="!!unitErrors.number" class="w-full" /><small v-if="unitErrors.number" class="p-error">{{ unitErrors.number }}</small></div>

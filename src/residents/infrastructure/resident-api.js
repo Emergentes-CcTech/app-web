@@ -22,13 +22,13 @@ export class ResidentApi extends BaseApi {
     }
 
     getById(unitId) { return this.http.get(`${unitsPath}/${unitId}`); }
-    getUserByEmail(email) { return this.http.get(usersPath, { params: { email } }).then(r => r.data[0] ?? null); }
+    // Libre = sin cuenta vinculada ni propietario pendiente de registro
     getFreeUnits(condominiumId) {
-        return this.http.get(unitsPath, { params: { condominiumId } }).then(r => r.data.filter(u => !u.residentUserId));
+        return this.http.get(unitsPath, { params: { condominiumId } }).then(r => r.data.filter(u => !u.residentUserId && !u.ownerEmail));
     }
-    assignToUnit(unitId, userId) { return this.http.patch(`${unitsPath}/${unitId}`, { residentUserId: userId, activationCode: null }); }
+    inviteOwner(unitId, owner) { return this.http.put(`${unitsPath}/${unitId}/owner-invitation`, owner).then(r => r.data); }
+    cancelInvitation(unitId) { return this.http.delete(`${unitsPath}/${unitId}/owner-invitation`); }
     unassign(unitId) { return this.http.patch(`${unitsPath}/${unitId}`, { residentUserId: null }); }
-    setActivationCode(unitId, code) { return this.http.patch(`${unitsPath}/${unitId}`, { activationCode: code }); }
     updateProfile(profileId, partial) { return this.http.patch(`${profilesPath}/${profileId}`, partial); }
     getProfileByUserId(userId) { return this.http.get(profilesPath, { params: { userId } }).then(r => r.data[0] ?? null); }
 }

@@ -3,15 +3,19 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const props = defineProps({ resident: { type: Object, required: true } });
-const emit = defineEmits(['view', 'edit', 'resend', 'unassign']);
+const emit = defineEmits(['view', 'edit', 'edit-invite', 'cancel-invite', 'unassign']);
 const { t } = useI18n();
 const menu = ref(null);
-const items = computed(() => [
-  { label: t('residents.actions.view'), icon: 'pi pi-user', command: () => emit('view', props.resident) },
-  { label: t('residents.actions.edit'), icon: 'pi pi-pencil', command: () => emit('edit', props.resident) },
-  { label: t('residents.actions.resendCode'), icon: 'pi pi-send', command: () => emit('resend', props.resident) },
-  { label: t('residents.actions.unassign'), icon: 'pi pi-user-minus', command: () => emit('unassign', props.resident) },
-]);
+const items = computed(() => props.resident.isPending
+  ? [
+    { label: t('residents.actions.editInvite'), icon: 'pi pi-pencil', command: () => emit('edit-invite', props.resident) },
+    { label: t('residents.actions.cancelInvite'), icon: 'pi pi-times', command: () => emit('cancel-invite', props.resident) },
+  ]
+  : [
+    { label: t('residents.actions.view'), icon: 'pi pi-user', command: () => emit('view', props.resident) },
+    { label: t('residents.actions.edit'), icon: 'pi pi-pencil', command: () => emit('edit', props.resident) },
+    { label: t('residents.actions.unassign'), icon: 'pi pi-user-minus', command: () => emit('unassign', props.resident) },
+  ]);
 </script>
 
 <template>
