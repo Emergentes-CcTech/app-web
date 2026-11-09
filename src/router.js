@@ -20,14 +20,22 @@ import { getSessionUser } from "./shared/infrastructure/session.js";
 
 const subscriptionApi = new SubscriptionApi();
 
+// Una suscripción activa ya verificada se recuerda unos minutos: sin esto, cada cambio de pantalla
+// esperaba una consulta al servidor antes de empezar a cargar la vista
+const ACTIVE_SUBSCRIPTION_TTL_MS = 5 * 60 * 1000;
+let verifiedActive = { userId: null, at: 0 };
+
 // An administrator may only use the platform once they hold at least one active
 // subscription (one per condominium). Fail-closed on error so paid features stay gated.
 async function administratorHasActiveSubscription() {
     try {
         const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY) || 'null');
         if (!currentUser?.id) return false;
+        if (verifiedActive.userId === currentUser.id && Date.now() - verifiedActive.at < ACTIVE_SUBSCRIPTION_TTL_MS) return true;
         const subs = await subscriptionApi.getSubscriptionsByAdministratorId(currentUser.id);
-        return subs.some((sub) => isActiveStatus(sub.status, sub.endDate));
+        const active = subs.some((sub) => isActiveStatus(sub.status, sub.endDate));
+        verifiedActive = active ? { userId: currentUser.id, at: Date.now() } : { userId: null, at: 0 };
+        return active;
     } catch (error) {
         console.error('[subscription-gate] check failed:', error);
         return false;
