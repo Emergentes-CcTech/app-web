@@ -16,9 +16,7 @@ public static class PlanResourceFromEntityAssembler
             entity.FeaturesJson)
         {
             PriceWithIgv = entity.PriceWithIgv,
-            ActivationFee = entity.ActivationFee,
-            ActivationFeeWithIgv = entity.ActivationFeeWithIgv,
-            Guarantee = entity.Guarantee,
+            PrepaidLastMonthWithIgv = entity.PrepaidLastMonthWithIgv,
             ActivationTotal = entity.ActivationTotal,
             ContractMonths = entity.ContractMonths,
             MinUnits = entity.MinUnits,

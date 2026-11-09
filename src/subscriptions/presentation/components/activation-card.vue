@@ -40,7 +40,7 @@ const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { mini
 
         <ul class="activation-terms">
           <li><i class="pi pi-calendar" aria-hidden="true"></i> {{ t('subscriptions.activation.contract', { months: props.quote.contractMonths }) }}</li>
-          <li><i class="pi pi-shield" aria-hidden="true"></i> {{ t('subscriptions.activation.guaranteeTerm', { months: props.quote.guaranteeMonths }) }}</li>
+          <li><i class="pi pi-wrench" aria-hidden="true"></i> {{ t('subscriptions.activation.prepaidTerm', { months: props.quote.contractMonths }) }}</li>
           <li><i class="pi pi-sign-out" aria-hidden="true"></i> {{ t('subscriptions.activation.earlyExit') }}</li>
         </ul>
       </div>
@@ -53,12 +53,12 @@ const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { mini
             <dd>{{ money(props.quote.monthlyPriceWithIgv) }}</dd>
           </div>
           <div>
-            <dt>{{ t('subscriptions.activation.activationFee') }}</dt>
-            <dd>{{ money(props.quote.activationFeeWithIgv) }}</dd>
+            <dt>{{ t('subscriptions.activation.lastFee', { month: props.quote.contractMonths }) }}</dt>
+            <dd>{{ money(props.quote.prepaidLastMonthWithIgv) }}</dd>
           </div>
           <div>
-            <dt>{{ t('subscriptions.activation.guarantee') }}</dt>
-            <dd>{{ money(props.quote.guarantee) }}</dd>
+            <dt>{{ t('subscriptions.activation.installation') }}</dt>
+            <dd class="included">{{ t('subscriptions.activation.included') }}</dd>
           </div>
           <div class="breakdown-total">
             <dt>{{ t('subscriptions.activation.total') }}</dt>
@@ -194,6 +194,10 @@ const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { mini
   margin: 0;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.breakdown-list dd.included {
+  color: #059669;
 }
 
 .breakdown-total {

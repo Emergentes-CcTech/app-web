@@ -189,7 +189,7 @@
           "Detección de fugas nocturnas en la cisterna",
           "Monitoreo de cisterna y tablero de bombas",
           "Prorrateo mensual según alícuota legal (Ley 27157)",
-          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida",
           "Instalación no invasiva: sin cortar agua ni energía"
         ]
       },
@@ -202,7 +202,7 @@
           "Detección de fugas nocturnas y consumos fuera de horario",
           "Conciliación mensual contra los recibos de Sedapal y Luz del Sur",
           "Prorrateo legal al céntimo y liquidación digital por departamento",
-          "Contrato de 24 meses con garantía reembolsable de 2 cuotas"
+          "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida"
         ]
       },
       "gran-torre": {
@@ -213,7 +213,7 @@
           "Monitoreo de varias cisternas, tableros y ascensores",
           "Detección de anomalías y conciliación con los recibos matriz",
           "Prorrateo por alícuotas con cuadre exacto al 100.0000%",
-          "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+          "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida",
           "Mantenimiento preventivo y calibración periódica de sensores"
         ]
       }
@@ -242,21 +242,24 @@
       "assigned": "Por sus {units} departamentos le corresponde el plan {plan}. El plan se asigna automáticamente y cambia si cambia el número de departamentos.",
       "monthlyDetail": "{amount} al mes con IGV · {perUnit} por departamento",
       "contract": "Contrato de {months} meses con los equipos en comodato",
-      "guaranteeTerm": "Garantía reembolsable de {months} cuotas: se devuelve al terminar el contrato",
-      "earlyExit": "Si se cancela antes, se paga el saldo pendiente de los equipos (se descuenta de la garantía)",
+      "earlyExit": "Si se cancela antes, se paga el saldo pendiente de los equipos (se descuenta el mes adelantado)",
       "todayTitle": "Pago de activación",
-      "firstFee": "Primera cuota (con IGV)",
-      "activationFee": "Cuota de activación: instalación (con IGV)",
-      "guarantee": "Garantía reembolsable (2 cuotas, sin IGV)",
+      "firstFee": "Primer mes (con IGV)",
       "total": "Total a pagar hoy",
       "payerHint": "El pago corresponde a la junta de propietarios del condominio; el comprobante se emite a su nombre.",
       "cta": "Activar y pagar",
       "unavailable": "No se pudo calcular la activación de este condominio. Revisa su número de departamentos.",
-      "assignedOnly": "El plan se asigna por el número de departamentos del condominio; solo puedes activar el que le corresponde."
+      "assignedOnly": "El plan se asigna por el número de departamentos del condominio; solo puedes activar el que le corresponde.",
+      "prepaidTerm": "Hoy pagas el primer y el último mes (el mes {months}). La instalación corre por nuestra cuenta",
+      "lastFee": "Último mes adelantado: mes {month} (con IGV)",
+      "installation": "Instalación del kit",
+      "included": "Incluida"
     },
     "cancellation": {
-      "early": "Faltan {months} meses del contrato. Saldo pendiente de los equipos: {balance}. Se aplica la garantía de {guarantee}: quedan {due} por pagar y se devuelven {refund}. ¿Confirmas la cancelación?",
-      "completed": "El contrato ya se cumplió: no hay saldo de equipos y se devuelve la garantía de {refund}. ¿Confirmas la cancelación?"
+      "early": "Faltan {months} meses del contrato. Saldo pendiente de los equipos: {balance}. Se aplica el mes adelantado de {credit}: quedan {due} por pagar y se devuelven {refund}. ¿Confirmas la cancelación?",
+      "lastMonth": "Es el último mes del contrato y ya está cubierto por el mes adelantado. Saldo pendiente de los equipos: {due}. ¿Confirmas la cancelación?",
+      "completed": "El contrato ya se cumplió: no hay saldo de equipos ni montos pendientes. ¿Confirmas la cancelación?",
+      "completedRefund": "El contrato ya se cumplió: no hay saldo de equipos y se devuelven {refund}. ¿Confirmas la cancelación?"
     }
   },
   "iam": {

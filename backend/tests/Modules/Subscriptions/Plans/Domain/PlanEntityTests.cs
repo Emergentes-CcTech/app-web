@@ -82,37 +82,39 @@ public sealed class PlanEntityTests
 
     [Fact]
     [Trait("Category", "BDD")]
-    public void Given_the_esencial_plan_when_activating_then_first_fee_activation_and_guarantee_are_charged()
+    public void Given_the_esencial_plan_when_activating_then_the_first_and_last_month_are_charged()
     {
-        // Primera cuota S/ 413.00 + activación S/ 295.00 (S/ 250 + IGV) + garantía S/ 700.00 (2 cuotas sin IGV)
+        // Primer mes S/ 413.00 + último mes adelantado S/ 413.00: sin cuota de instalación ni garantía
         var esencial = new Plan("Esencial", "", 350.00m);
-        Assert.Equal(295.00m, esencial.ActivationFeeWithIgv);
-        Assert.Equal(700.00m, esencial.Guarantee);
-        Assert.Equal(1408.00m, esencial.ActivationTotal);
+        Assert.Equal(413.00m, esencial.PrepaidLastMonthWithIgv);
+        Assert.Equal(826.00m, esencial.ActivationTotal);
+        Assert.Equal(991.20m, new Plan("Urbano", "", 420.00m).ActivationTotal);
 
         var start = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
         var subscription = Subscription.Activate(10, esencial, start);
         Assert.Equal(start.AddMonths(24), subscription.EndDate);
-        Assert.Equal(700.00m, subscription.GuaranteeSoles);
-        Assert.Equal(295.00m, subscription.ActivationFeeSoles);
+        Assert.Equal(413.00m, subscription.PrepaidMonthSoles);
+        Assert.Equal(0m, subscription.GuaranteeSoles);
+        Assert.Equal(0m, subscription.ActivationFeeSoles);
     }
 
     [Theory]
     [Trait("Category", "BDD")]
-    [InlineData(2, 22, 953.33, 113.33, 0)]   // Urbano cancelado en el mes 2: debe el saldo de equipos menos la garantía
-    [InlineData(20, 4, 173.33, 0, 666.67)]   // Cerca del final: la garantía cubre el saldo y se devuelve la diferencia
-    [InlineData(24, 0, 0, 0, 840)]           // Contrato cumplido: no hay saldo y la garantía se devuelve completa
-    public void Given_an_urbano_contract_when_cancelling_then_the_equipment_balance_is_settled_against_the_guarantee(
+    [InlineData(2, 22, 953.33, 457.73, 0)]       // Urbano cancelado en el mes 2: debe el saldo de equipos menos el mes adelantado
+    [InlineData(20, 4, 173.33, 0, 322.27)]       // Cerca del final: el mes adelantado cubre el saldo y se devuelve la diferencia
+    [InlineData(23, 1, 43.33, 43.33, 0)]         // En el último mes el adelanto ya paga ese mes: queda solo el saldo
+    [InlineData(24, 0, 0, 0, 0)]                 // Contrato cumplido: el mes adelantado fue el mes 24; no hay saldo ni devolución
+    public void Given_an_urbano_contract_when_cancelling_then_the_equipment_balance_is_settled_against_the_prepaid_month(
         int monthsElapsed, int expectedRemaining, double expectedBalance, double expectedDue, double expectedRefund)
     {
         var urbano = new Plan("Urbano", "", 420.00m);
         var start = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
-        var quote = urbano.QuoteEarlyTermination(start.AddMonths(24), urbano.Guarantee, start.AddMonths(monthsElapsed));
+        var quote = urbano.QuoteEarlyTermination(start.AddMonths(24), urbano.PrepaidLastMonthWithIgv, 0m, start.AddMonths(monthsElapsed));
 
         Assert.Equal(expectedRemaining, quote.MonthsRemaining);
         Assert.Equal((decimal)expectedBalance, quote.EquipmentBalance);
         Assert.Equal((decimal)expectedDue, quote.AmountDue);
-        Assert.Equal((decimal)expectedRefund, quote.GuaranteeRefund);
+        Assert.Equal((decimal)expectedRefund, quote.Refund);
     }
 
     [Theory]

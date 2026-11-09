@@ -57,7 +57,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
     [Trait("Flow", "SUBSCRIPTIONS.PURCHASE")]
     [Trait("Layer", "Api")]
     [Trait("Risk", "A")]
-    public async Task ACTIVATION_plan_is_assigned_by_units_and_charges_first_fee_activation_and_guarantee()
+    public async Task ACTIVATION_plan_is_assigned_by_units_and_charges_the_first_and_last_month()
     {
         await using var factory = new PurchaseApiFactory();
         using var client = factory.CreateClient();
@@ -68,9 +68,9 @@ public sealed partial class SubscriptionPurchaseFlowTests
             .Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Esencial", quote.GetProperty("planName").GetString());
         Assert.Equal(413.00m, quote.GetProperty("monthlyPriceWithIgv").GetDecimal());
-        Assert.Equal(295.00m, quote.GetProperty("activationFeeWithIgv").GetDecimal());
-        Assert.Equal(700.00m, quote.GetProperty("guarantee").GetDecimal());
-        Assert.Equal(1408.00m, quote.GetProperty("total").GetDecimal());
+        Assert.Equal(413.00m, quote.GetProperty("prepaidLastMonthWithIgv").GetDecimal());
+        Assert.Equal(826.00m, quote.GetProperty("total").GetDecimal());
+        Assert.False(quote.TryGetProperty("activationFeeWithIgv", out _));
         Assert.Equal(24, quote.GetProperty("contractMonths").GetInt32());
 
         // Otro plan que no corresponde a sus departamentos se rechaza antes de cobrar
@@ -89,7 +89,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
     [Trait("Flow", "SUBSCRIPTIONS.PURCHASE")]
     [Trait("Layer", "Api")]
     [Trait("Risk", "A")]
-    public async Task CANCEL_EARLY_settles_the_equipment_balance_against_the_guarantee()
+    public async Task CANCEL_EARLY_settles_the_equipment_balance_against_the_prepaid_month()
     {
         await using var factory = new PurchaseApiFactory();
         using var client = factory.CreateClient();
@@ -98,18 +98,19 @@ public sealed partial class SubscriptionPurchaseFlowTests
         var id = (await (await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions", buyer12)).Content.ReadFromJsonAsync<List<JsonElement>>())!
             .First(s => s.GetProperty("builderId").GetInt32() == 12).GetProperty("id").GetInt32();
 
-        // Urbano recién activado: faltan 24 meses, saldo de equipos S/ 1,040 menos garantía S/ 840 = S/ 200 por pagar
+        // Urbano recién activado: faltan 24 meses, saldo de equipos S/ 1,040 menos el mes adelantado S/ 495.60 = S/ 544.40
         var quote = await (await SendAsync(client, HttpMethod.Get, $"/api/v1/subscriptions/{id}/cancellation-quote", buyer12))
             .Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(24, quote.GetProperty("monthsRemaining").GetInt32());
         Assert.Equal(1040.00m, quote.GetProperty("equipmentBalance").GetDecimal());
-        Assert.Equal(840.00m, quote.GetProperty("guaranteeHeld").GetDecimal());
-        Assert.Equal(200.00m, quote.GetProperty("amountDue").GetDecimal());
+        Assert.Equal(495.60m, quote.GetProperty("creditApplied").GetDecimal());
+        Assert.Equal(544.40m, quote.GetProperty("amountDue").GetDecimal());
 
         Assert.Equal(HttpStatusCode.NoContent, (await SendAsync(client, HttpMethod.Post, $"/api/v1/subscriptions/{id}/cancel", buyer12)).StatusCode);
         var after = await (await SendAsync(client, HttpMethod.Get, $"/api/v1/subscriptions/{id}", buyer12)).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("cancelled", after.GetProperty("status").GetString());
-        Assert.Equal(200.00m, after.GetProperty("earlyTerminationFeeSoles").GetDecimal());
+        Assert.Equal(544.40m, after.GetProperty("earlyTerminationFeeSoles").GetDecimal());
+        Assert.Equal(495.60m, after.GetProperty("prepaidMonthSoles").GetDecimal());
         Assert.Equal(0m, after.GetProperty("guaranteeRefundSoles").GetDecimal());
     }
 

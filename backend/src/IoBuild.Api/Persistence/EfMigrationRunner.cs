@@ -184,6 +184,7 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
             }
             foreach (var (colName, colType) in new (string Name, string Type)[]
             {
+                ("PrepaidMonthSoles", "DECIMAL(18,2) NOT NULL DEFAULT 0"),
                 ("GuaranteeSoles", "DECIMAL(18,2) NOT NULL DEFAULT 0"),
                 ("ActivationFeeSoles", "DECIMAL(18,2) NOT NULL DEFAULT 0"),
                 ("EarlyTerminationFeeSoles", "DECIMAL(18,2) NULL"),
