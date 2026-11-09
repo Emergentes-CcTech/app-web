@@ -81,12 +81,9 @@ public sealed class Plan
         _ => 2
     };
 
-    // Periodo contractual estándar: 24 meses de servicio con garantía reembolsable de 2 cuotas
+    // Periodo contractual estándar: 24 meses de servicio; al activar se pagan el primer y el último mes
     [NotMapped]
     public int ContractMonths => 24;
-
-    [NotMapped]
-    public int GuaranteeMonths => 2;
 
     // Costo del kit ESP32 en comodato (sin IGV): base del saldo que se cobra si el contrato termina antes
     [NotMapped]
@@ -98,28 +95,14 @@ public sealed class Plan
         _ => 1040.00m
     };
 
-    // Cuota única de activación: cubre la instalación (técnico + electricista), sin IGV
+    // La instalación corre por cuenta de IoBuild. En su lugar se cobra por adelantado el último mes del contrato,
+    // que respalda el comodato: si se cancela antes, se aplica al saldo de los equipos
     [NotMapped]
-    public decimal ActivationFee => Name switch
-    {
-        "Esencial" => 250.00m,
-        "Urbano" => 300.00m,
-        "GranTorre" => 400.00m,
-        _ => 300.00m
-    };
+    public decimal PrepaidLastMonthWithIgv => PriceWithIgv;
 
+    // Pago de activación: primer mes y último mes (mes 24), ambos con IGV
     [NotMapped]
-    public decimal ActivationFeeWithIgv => WithIgv(ActivationFee);
-
-    // Garantía reembolsable de dos cuotas sin IGV: es un depósito, no una venta
-    [NotMapped]
-    public decimal Guarantee => Price * GuaranteeMonths;
-
-    // Pago de activación: primera cuota y cuota de activación con IGV, más la garantía
-    [NotMapped]
-    public decimal ActivationTotal => PriceWithIgv + ActivationFeeWithIgv + Guarantee;
-
-    private static decimal WithIgv(decimal amount) => Math.Round(amount * (1 + IgvRate), 2, MidpointRounding.AwayFromZero);
+    public decimal ActivationTotal => PriceWithIgv + PrepaidLastMonthWithIgv;
 
     // Plan que corresponde al número de departamentos del condominio
     public static string NameForUnits(int totalUnits) => totalUnits switch
@@ -129,8 +112,9 @@ public sealed class Plan
         _ => "GranTorre"
     };
 
-    // Saldo de equipos al terminar antes de tiempo: el kit se amortiza en partes iguales durante el contrato
-    public EarlyTerminationQuote QuoteEarlyTermination(DateTimeOffset contractEnd, decimal guaranteeHeld, DateTimeOffset now)
+    // Saldo de equipos al terminar antes de tiempo: el kit se amortiza en partes iguales durante el contrato.
+    // El mes 24 adelantado se aplica al saldo mientras no se haya llegado a él; una garantía de contratos anteriores también
+    public EarlyTerminationQuote QuoteEarlyTermination(DateTimeOffset contractEnd, decimal prepaidLastMonth, decimal guaranteeHeld, DateTimeOffset now)
     {
         var monthsRemaining = 0;
         if (contractEnd > now)
@@ -140,9 +124,11 @@ public sealed class Plan
             monthsRemaining = Math.Clamp(monthsRemaining, 0, ContractMonths);
         }
         var equipmentBalance = Math.Round(KitCost * monthsRemaining / ContractMonths, 2, MidpointRounding.AwayFromZero);
-        var amountDue = Math.Max(0, equipmentBalance - guaranteeHeld);
-        var refund = Math.Max(0, guaranteeHeld - equipmentBalance);
-        return new EarlyTerminationQuote(monthsRemaining, equipmentBalance, guaranteeHeld, amountDue, refund);
+        // En el último mes el pago adelantado ya está cubriendo el servicio: deja de ser un saldo a favor
+        var credit = (monthsRemaining >= 2 ? prepaidLastMonth : 0m) + guaranteeHeld;
+        var amountDue = Math.Max(0, equipmentBalance - credit);
+        var refund = Math.Max(0, credit - equipmentBalance);
+        return new EarlyTerminationQuote(monthsRemaining, equipmentBalance, credit, amountDue, refund);
     }
 
     public Plan() { }
@@ -188,5 +174,5 @@ public sealed class Plan
     }
 }
 
-/// <summary>Liquidación de una salida anticipada: saldo de equipos, garantía aplicada y lo que queda por pagar o devolver.</summary>
-public sealed record EarlyTerminationQuote(int MonthsRemaining, decimal EquipmentBalance, decimal GuaranteeHeld, decimal AmountDue, decimal GuaranteeRefund);
+/// <summary>Liquidación de una salida anticipada: saldo de equipos, saldo a favor aplicado y lo que queda por pagar o devolver.</summary>
+public sealed record EarlyTerminationQuote(int MonthsRemaining, decimal EquipmentBalance, decimal CreditApplied, decimal AmountDue, decimal Refund);

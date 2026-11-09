@@ -189,15 +189,12 @@ const handleCancelPlan = async () => {
   let message = t("subscriptions.confirm-cancel");
   try {
     const { data } = await subscriptionApi.getCancellationQuote(store.currentSubscription.id);
-    message = data.monthsRemaining > 0
-      ? t('subscriptions.cancellation.early', {
-          months: data.monthsRemaining,
-          balance: money(data.equipmentBalance),
-          guarantee: money(data.guaranteeHeld),
-          due: money(data.amountDue),
-          refund: money(data.guaranteeRefund)
-        })
-      : t('subscriptions.cancellation.completed', { refund: money(data.guaranteeRefund) });
+    // El mes adelantado se aplica al saldo de los equipos; en el último mes ya está pagando ese mes
+    const amounts = { months: data.monthsRemaining, balance: money(data.equipmentBalance), credit: money(data.creditApplied),
+      due: money(data.amountDue), refund: money(data.refund) };
+    if (data.monthsRemaining <= 0) message = Number(data.refund) > 0 ? t('subscriptions.cancellation.completedRefund', amounts) : t('subscriptions.cancellation.completed');
+    else if (Number(data.creditApplied) > 0) message = t('subscriptions.cancellation.early', amounts);
+    else message = t('subscriptions.cancellation.lastMonth', amounts);
   } catch (_) { /* sin liquidación disponible se muestra la confirmación simple */ }
   confirm.require({
     message,

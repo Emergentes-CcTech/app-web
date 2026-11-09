@@ -46,12 +46,12 @@ export class SubscriptionApi extends BaseApi {
         return this.http.post(`${subscriptionsEndpointPath}/payments/sessions`, { administratorId, condominiumId, builderId: condominiumId, planId, successUrl, cancelUrl });
     }
 
-    /** Plan asignado por departamentos y montos del pago de activación (primera cuota, activación y garantía). */
+    /** Plan asignado por departamentos y montos del pago de activación (primer mes y último mes adelantado). */
     getActivationQuote(condominiumId) {
         return this.http.get(`${subscriptionsEndpointPath}/activation-quote`, { params: { condominiumId } });
     }
 
-    /** Saldo de equipos y garantía si se cancela antes de terminar el contrato. */
+    /** Saldo de equipos y mes adelantado aplicado si se cancela antes de terminar el contrato. */
     getCancellationQuote(subscriptionId) {
         return this.http.get(`${subscriptionsEndpointPath}/${subscriptionId}/cancellation-quote`);
     }

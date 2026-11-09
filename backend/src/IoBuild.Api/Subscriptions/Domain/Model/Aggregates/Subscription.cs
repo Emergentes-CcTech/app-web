@@ -31,13 +31,14 @@ public sealed class Subscription
     // Fecha de finalización del periodo de servicio
     public DateTimeOffset? EndDate { get; set; }
 
-    // Garantía reembolsable cobrada al activar (dos cuotas sin IGV)
-    public decimal GuaranteeSoles { get; set; }
+    // Último mes del contrato pagado por adelantado al activar (con IGV)
+    public decimal PrepaidMonthSoles { get; set; }
 
-    // Cuota de activación cobrada al activar (instalación, con IGV)
+    // Garantía y cuota de instalación de contratos anteriores al cobro de primer y último mes (en cero desde entonces)
+    public decimal GuaranteeSoles { get; set; }
     public decimal ActivationFeeSoles { get; set; }
 
-    // Liquidación registrada al cancelar antes de terminar el contrato
+    // Liquidación registrada al cancelar antes de terminar el contrato (GuaranteeRefundSoles guarda lo que se devuelve)
     public decimal? EarlyTerminationFeeSoles { get; set; }
     public decimal? GuaranteeRefundSoles { get; set; }
 
@@ -62,8 +63,7 @@ public sealed class Subscription
         Status = "active",
         StartDate = startDate,
         EndDate = startDate.AddMonths(plan.ContractMonths),
-        GuaranteeSoles = plan.Guarantee,
-        ActivationFeeSoles = plan.ActivationFeeWithIgv
+        PrepaidMonthSoles = plan.PrepaidLastMonthWithIgv
     };
 
     // Cancela la suscripción activa
@@ -78,7 +78,7 @@ public sealed class Subscription
     {
         if (Status == "cancelled") return;
         EarlyTerminationFeeSoles = quote.AmountDue;
-        GuaranteeRefundSoles = quote.GuaranteeRefund;
+        GuaranteeRefundSoles = quote.Refund;
         Cancel();
     }
 }
