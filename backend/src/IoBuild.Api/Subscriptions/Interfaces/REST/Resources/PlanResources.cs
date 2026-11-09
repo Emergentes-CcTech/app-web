@@ -4,9 +4,7 @@ public record PlanResource(int Id, string Name, string Description, decimal Pric
 {
     // Montos del contrato HaaS que la pantalla de activación muestra antes de pagar
     public decimal PriceWithIgv { get; init; }
-    public decimal ActivationFee { get; init; }
-    public decimal ActivationFeeWithIgv { get; init; }
-    public decimal Guarantee { get; init; }
+    public decimal PrepaidLastMonthWithIgv { get; init; }
     public decimal ActivationTotal { get; init; }
     public int ContractMonths { get; init; }
     public int MinUnits { get; init; }

@@ -189,7 +189,7 @@
           "Night-leak detection in the cistern",
           "Cistern and pump panel monitoring",
           "Monthly proration by legal aliquot (Law 27157)",
-          "24-month contract with a refundable 2-fee deposit",
+          "24-month contract: pay the first and last month at activation, installation included",
           "Non-invasive installation: no water or power cuts"
         ]
       },
@@ -202,7 +202,7 @@
           "Night-leak and off-hours consumption detection",
           "Monthly reconciliation against Sedapal and Luz del Sur bills",
           "Cent-exact legal proration and digital settlement per unit",
-          "24-month contract with a refundable 2-fee deposit"
+          "24-month contract: pay the first and last month at activation, installation included"
         ]
       },
       "gran-torre": {
@@ -213,7 +213,7 @@
           "Monitoring of multiple cisterns, panels and elevators",
           "Anomaly detection and reconciliation with master bills",
           "Aliquot proration with an exact 100.0000% balance",
-          "24-month contract with a refundable 2-fee deposit",
+          "24-month contract: pay the first and last month at activation, installation included",
           "Preventive maintenance and periodic sensor calibration"
         ]
       }
@@ -242,21 +242,24 @@
       "assigned": "With {units} units, this condominium gets the {plan} plan. The plan is assigned automatically and changes if the number of units changes.",
       "monthlyDetail": "{amount} per month incl. VAT · {perUnit} per unit",
       "contract": "{months}-month contract with loaned equipment",
-      "guaranteeTerm": "Refundable deposit of {months} fees: returned when the contract ends",
-      "earlyExit": "Cancelling early means paying the remaining equipment balance (deducted from the deposit)",
+      "earlyExit": "Cancelling early means paying the remaining equipment balance (the prepaid month is deducted)",
       "todayTitle": "Activation payment",
-      "firstFee": "First fee (incl. VAT)",
-      "activationFee": "Activation fee: installation (incl. VAT)",
-      "guarantee": "Refundable deposit (2 fees, no VAT)",
+      "firstFee": "First month (incl. VAT)",
       "total": "Total due today",
       "payerHint": "The payment belongs to the condominium's owners' board; the receipt is issued in its name.",
       "cta": "Activate and pay",
       "unavailable": "The activation for this condominium could not be calculated. Check its number of units.",
-      "assignedOnly": "The plan is assigned by the condominium's number of units; you can only activate the one that applies."
+      "assignedOnly": "The plan is assigned by the condominium's number of units; you can only activate the one that applies.",
+      "prepaidTerm": "Today you pay the first and last month (month {months}). Installation is on us",
+      "lastFee": "Last month in advance: month {month} (incl. VAT)",
+      "installation": "Kit installation",
+      "included": "Included"
     },
     "cancellation": {
-      "early": "{months} months of the contract remain. Remaining equipment balance: {balance}. The {guarantee} deposit is applied: {due} remains to be paid and {refund} is refunded. Confirm the cancellation?",
-      "completed": "The contract is complete: there is no equipment balance and the {refund} deposit is refunded. Confirm the cancellation?"
+      "early": "{months} months of the contract remain. Remaining equipment balance: {balance}. The {credit} prepaid month is applied: {due} remains to be paid and {refund} is refunded. Confirm the cancellation?",
+      "lastMonth": "This is the last month of the contract and it's already covered by the prepaid month. Remaining equipment balance: {due}. Confirm the cancellation?",
+      "completed": "The contract is complete: there is no equipment balance and nothing is pending. Confirm the cancellation?",
+      "completedRefund": "The contract is complete: there is no equipment balance and {refund} is refunded. Confirm the cancellation?"
     }
   },
   "iam": {

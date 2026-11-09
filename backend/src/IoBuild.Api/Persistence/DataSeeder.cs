@@ -39,7 +39,7 @@ public static class DataSeeder
                 "Detección de fugas nocturnas en la cisterna",
                 "Monitoreo de cisterna y tablero de bombas",
                 "Prorrateo mensual según alícuota legal (Ley 27157)",
-                "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+                "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida",
                 "Instalación no invasiva: sin cortar agua ni energía"
             }),
         ("Urbano", null,
@@ -53,7 +53,7 @@ public static class DataSeeder
                 "Detección de fugas nocturnas y consumos fuera de horario",
                 "Conciliación mensual contra los recibos de Sedapal y Luz del Sur",
                 "Prorrateo legal al céntimo y liquidación digital por departamento",
-                "Contrato de 24 meses con garantía reembolsable de 2 cuotas"
+                "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida"
             }),
         ("GranTorre", null,
             "Plan HaaS para condominios de más de 80 departamentos. Dotación en comodato: 7 equipos IoT.",
@@ -65,7 +65,7 @@ public static class DataSeeder
                 "Monitoreo de varias cisternas, tableros y ascensores",
                 "Detección de anomalías y conciliación con los recibos matriz",
                 "Prorrateo por alícuotas con cuadre exacto al 100.0000%",
-                "Contrato de 24 meses con garantía reembolsable de 2 cuotas",
+                "Contrato de 24 meses: al activar pagas el primer y el último mes, instalación incluida",
                 "Mantenimiento preventivo y calibración periódica de sensores"
             })
     };

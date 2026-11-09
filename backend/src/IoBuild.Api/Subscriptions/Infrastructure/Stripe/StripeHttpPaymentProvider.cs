@@ -53,9 +53,8 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
             string name;
             long amountInCents;
             string description;
-            // Pago de activación: además de la primera cuota se cobran la activación (instalación) y la garantía
-            long activationInCents = 0;
-            long guaranteeInCents = 0;
+            // Pago de activación: además del primer mes se cobra por adelantado el último mes del contrato
+            long prepaidInCents = 0;
 
             if (serviceProvider != null)
             {
@@ -67,8 +66,7 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                     name = plan.Name;
                     // La junta paga el precio con IGV
                     amountInCents = (long)(plan.PriceWithIgv * 100);
-                    activationInCents = (long)(plan.ActivationFeeWithIgv * 100);
-                    guaranteeInCents = (long)(plan.Guarantee * 100);
+                    prepaidInCents = (long)(plan.PrepaidLastMonthWithIgv * 100);
                     description = plan.Description;
                 }
                 else
@@ -113,8 +111,7 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                 formFields[$"line_items[{line}][price_data][product_data][description]"] = itemDescription;
                 line++;
             }
-            AddLine(activationInCents, "Cuota de activación", "Instalación no invasiva del kit IoT (pago único)");
-            AddLine(guaranteeInCents, "Garantía reembolsable", "Dos cuotas sin IGV; se devuelve o se aplica al terminar el contrato de 24 meses");
+            AddLine(prepaidInCents, "Último mes adelantado", "Mes 24 del contrato; si se cancela antes, se aplica al saldo de los equipos");
         }
 
         using var body = new FormUrlEncodedContent(formFields);

@@ -122,6 +122,7 @@ public static class SubscriptionsEndpoints
                     s.StartDate,
                     s.EndDate,
                     ContractEndDate = s.EndDate,
+                    s.PrepaidMonthSoles,
                     s.GuaranteeSoles,
                     s.ActivationFeeSoles,
                     s.EarlyTerminationFeeSoles,
@@ -167,6 +168,7 @@ public static class SubscriptionsEndpoints
                 s.StartDate,
                 s.EndDate,
                 ContractEndDate = s.EndDate,
+                s.PrepaidMonthSoles,
                 s.GuaranteeSoles,
                 s.ActivationFeeSoles,
                 s.EarlyTerminationFeeSoles,
@@ -231,11 +233,9 @@ public static class SubscriptionsEndpoints
                 MonthlyPrice = plan.Price,
                 MonthlyPriceWithIgv = plan.PriceWithIgv,
                 PricePerUnitWithIgv = project.TotalUnits > 0 ? Math.Round(plan.PriceWithIgv / project.TotalUnits, 2) : 0m,
-                ActivationFeeWithIgv = plan.ActivationFeeWithIgv,
-                plan.Guarantee,
+                plan.PrepaidLastMonthWithIgv,
                 Total = plan.ActivationTotal,
-                plan.ContractMonths,
-                plan.GuaranteeMonths
+                plan.ContractMonths
             });
         }).RequireAuthorization();
 
@@ -246,20 +246,20 @@ public static class SubscriptionsEndpoints
             if (item is null || !await OwnsProjectAsync(user, db, item.ProjectId, ct)) return Results.NotFound();
             var plan = await db.Plans.FindAsync([item.PlanId], ct);
             if (plan is null) return Results.NotFound();
-            var quote = plan.QuoteEarlyTermination(item.EndDate ?? item.StartDate.AddMonths(plan.ContractMonths), item.GuaranteeSoles, DateTimeOffset.UtcNow);
+            var quote = plan.QuoteEarlyTermination(item.EndDate ?? item.StartDate.AddMonths(plan.ContractMonths), item.PrepaidMonthSoles, item.GuaranteeSoles, DateTimeOffset.UtcNow);
             return Results.Ok(new
             {
                 SubscriptionId = item.Id,
                 ContractEndDate = item.EndDate,
                 quote.MonthsRemaining,
                 quote.EquipmentBalance,
-                quote.GuaranteeHeld,
+                quote.CreditApplied,
                 quote.AmountDue,
-                quote.GuaranteeRefund
+                quote.Refund
             });
         }).RequireAuthorization();
 
-        // Cancelar la suscripción registrando el saldo de equipos y la devolución de la garantía
+        // Cancelar la suscripción registrando el saldo de equipos y lo que se devuelve del mes adelantado
         subs.MapPost("/subscriptions/{id:int}/cancel", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var item = await db.Subscriptions.FindAsync([id], ct);
@@ -272,7 +272,7 @@ public static class SubscriptionsEndpoints
             else
             {
                 var contractEnd = item.EndDate ?? item.StartDate.AddMonths(plan.ContractMonths);
-                item.Cancel(plan.QuoteEarlyTermination(contractEnd, item.GuaranteeSoles, DateTimeOffset.UtcNow));
+                item.Cancel(plan.QuoteEarlyTermination(contractEnd, item.PrepaidMonthSoles, item.GuaranteeSoles, DateTimeOffset.UtcNow));
             }
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
@@ -388,7 +388,7 @@ public static class SubscriptionsEndpoints
                     AmountInCents = amountInCents,
                     Amount = plan?.ActivationTotal ?? 0m,
                     Currency = "PEN",
-                    Description = $"Activación Plan {plan?.Name ?? "IoBuild HaaS"}: primera cuota, activación y garantía",
+                    Description = $"Activación Plan {plan?.Name ?? "IoBuild HaaS"}: primer mes y último mes adelantado",
                     Date = s.StartDate,
                     ReceiptUrl = (string?)null
                 };
