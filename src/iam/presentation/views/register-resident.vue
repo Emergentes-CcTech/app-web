@@ -87,6 +87,7 @@
                     icon="pi pi-arrow-right"
                     iconPos="right"
                     
+                    :loading="checkingEmail"
                     @click="goToStep2"
                     class="flex-1"
                   />
@@ -97,21 +98,10 @@
             <!-- Step 2: Personal Information -->
             <pv-step-panel :value="2">
               <div class="step-content">
-                <!-- Código de activación (lo entrega la administración) -->
-                <pv-message severity="info" :closable="false" class="mb-4">
-                  {{ $t('iam.registerResident.activationCodeHint') }}
+                <!-- Unidad que la administración asignó a este correo -->
+                <pv-message v-if="invitedUnits.length" severity="success" :closable="false" class="mb-4">
+                  {{ $t('iam.registerResident.invitedUnits', { units: invitedUnitsText }) }}
                 </pv-message>
-          <div class="mb-3">
-            <label for="activationCode" class="block mb-2">{{ $t('iam.registerResident.activationCode') }} *</label>
-            <pv-input-text
-              id="activationCode"
-              v-model="registerForm.activationCode"
-              :placeholder="$t('iam.registerResident.activationCodePlaceholder')"
-              :invalid="!!fieldErrors.activationCode"
-              class="w-full"
-            />
-            <small v-if="fieldErrors.activationCode" class="p-error block mt-1">{{ fieldErrors.activationCode }}</small>
-          </div>
 
           <!-- Photo URL -->
           <div class="mb-3">
@@ -240,7 +230,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useIamStore } from '../../application/iam.store.js';
@@ -256,14 +246,12 @@ import {
 } from '../../../shared/presentation/validators.js';
 import { ROLES } from '../../../shared/infrastructure/roles.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
-import { CondominiumApi } from '../../../condominiums/infrastructure/condominium-api.js';
 
 const router = useRouter();
 const { t } = useI18n();
 const iamStore = useIamStore();
 const profileStore = useProfileStore();
 const iamApi = new IamApi();
-const condominiumApi = new CondominiumApi();
 
 const currentStep = ref(1);
 const fieldErrors = ref({});
@@ -323,7 +311,6 @@ const registerForm = ref({
   password: '',
   confirmPassword: '',
   photoUrl: '',
-  activationCode: '',
   fullName: '',
   dni: '',
   phoneNumber: '',
@@ -334,6 +321,11 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const isEmailAlreadyRegistered = ref(false);
+const invitedUnits = ref([]);
+const checkingEmail = ref(false);
+const invitedUnitsText = computed(() => invitedUnits.value
+  .map(u => t('iam.registerResident.invitedUnit', { unit: u.unitNumber, condominium: u.condominiumName || '' }).trim())
+  .join(', '));
 
 async function goToStep2() {
   errorMessage.value = '';
@@ -366,6 +358,30 @@ async function goToStep2() {
     return;
   }
 
+  // Solo puede registrarse quien fue pre-registrado por la administración con este correo
+  try {
+    checkingEmail.value = true;
+    const { data } = await iamApi.checkInvitation(email);
+    if (data?.alreadyRegistered) {
+      isEmailAlreadyRegistered.value = true;
+      fieldErrors.value.email = t('iam.validation.emailAlreadyRegistered');
+      errorMessage.value = t('iam.validation.emailAlreadyRegistered');
+      return;
+    }
+    isEmailAlreadyRegistered.value = false;
+    if (!data?.assigned) {
+      fieldErrors.value.email = t('iam.registerResident.notInvited');
+      errorMessage.value = t('iam.registerResident.notInvited');
+      return;
+    }
+    invitedUnits.value = Array.isArray(data.units) ? data.units : [];
+  } catch (_) {
+    errorMessage.value = t('iam.validation.registrationFailed');
+    return;
+  } finally {
+    checkingEmail.value = false;
+  }
+
   registerForm.value.email = email;
   currentStep.value = 2;
 }
@@ -376,12 +392,10 @@ async function handleRegister() {
   successMessage.value = '';
   fieldErrors.value = {};
 
-  const activationCode = (registerForm.value.activationCode || '').trim();
   const fullName = (registerForm.value.fullName || '').trim();
   const dni = (registerForm.value.dni || '').trim();
   const phoneNumber = (registerForm.value.phoneNumber || '').trim();
 
-  if (!activationCode) fieldErrors.value.activationCode = t('iam.validation.activationCodeRequired');
   if (!fullName) {
     fieldErrors.value.fullName = t('iam.validation.fullNameRequired');
   } else if (!isValidName(fullName)) {
@@ -406,22 +420,14 @@ async function handleRegister() {
   }
 
   try {
-    // 1. Validar el código y obtener la unidad (no crea nada todavía)
-    const unit = await condominiumApi.findByActivationCode(activationCode);
-    if (!unit || unit.residentUserId) {
-      fieldErrors.value.activationCode = t('iam.registerResident.invalidCode');
-      errorMessage.value = t('iam.registerResident.invalidCode');
-      return;
-    }
-
-    // 2. Crear usuario con rol residente
+    // 1. Crear la cuenta: el backend la vincula a la unidad invitada con este correo
     await iamStore.signUp({ email: registerForm.value.email, password: registerForm.value.password, role: ROLES.RESIDENT });
     const authenticatedUser = await iamStore.signIn(registerForm.value.email, registerForm.value.password);
     if (!authenticatedUser || !authenticatedUser.id) {
       throw new Error('Failed to retrieve user ID after sign in');
     }
 
-    // 3. Crear perfil
+    // 2. Completar el perfil con los datos que confirma el propietario
     await profileStore.createProfile({
       userId: authenticatedUser.id,
       fullName,
@@ -431,16 +437,16 @@ async function handleRegister() {
     });
     iamStore.updateUserProfile({ name: fullName, photoUrl: registerForm.value.photoUrl || '' });
 
-    // 4. Vincular la unidad al usuario y consumir el código (una sola vez)
-    await condominiumApi.linkResident(unit.id, authenticatedUser.id);
-
     successMessage.value = t('iam.messages.registrationSuccess');
     setTimeout(() => {
       router.push(ROUTES.DASHBOARD);
     }, 2000);
   } catch (error) {
     console.error('Registration error:', error);
-    if (error.message?.includes('user ID')) {
+    if (error.response?.data?.code === 'owner_unit_assignment_required') {
+      errorMessage.value = t('iam.registerResident.notInvited');
+      currentStep.value = 1;
+    } else if (error.message?.includes('user ID')) {
       errorMessage.value = t('iam.messages.profileCreationFailed');
     } else if (error.response?.status === 409 || error.response?.data?.error?.includes('already exists')) {
       errorMessage.value = t('iam.validation.emailAlreadyRegistered');

@@ -24,6 +24,7 @@ const search = ref('');
 const showAdd = ref(false);
 const editing = ref(null);
 const showEdit = ref(false);
+const inviting = ref(null);
 
 
 onMounted(async () => {
@@ -41,9 +42,26 @@ const filtered = computed(() => {
 
 const reload = () => condominiumId.value && store.fetchByCondominium(condominiumId.value);
 
-async function resend(resident) {
-  // El residente ya está vinculado: se reenvía el código solo si la unidad aún no tiene residente
-  toast.add({ severity: 'info', summary: t('residents.actions.resendCode'), detail: t('residents.messages.alreadyLinked', { unit: resident.unitNumber }), life: 3000 });
+function openAdd() { inviting.value = null; showAdd.value = true; }
+function editInvite(resident) { inviting.value = resident; showAdd.value = true; }
+function view(resident) {
+  if (resident.isPending) editInvite(resident);
+  else router.push({ name: 'resident-profile', params: { id: resident.unitId } });
+}
+function cancelInvite(resident) {
+  confirm.require({
+    message: t('residents.confirmCancelInvite', { name: resident.fullName, unit: resident.unitNumber }),
+    header: t('residents.actions.cancelInvite'), icon: 'pi pi-exclamation-triangle',
+    acceptLabel: t('residents.actions.cancelInvite'), rejectLabel: t('common.cancel'), acceptProps: { severity: 'danger' },
+    accept: async () => {
+      try {
+        await store.cancelInvitation(resident.unitId);
+        toast.add({ severity: 'success', summary: t('common.success'), detail: t('residents.messages.inviteCancelled'), life: 2500 });
+      } catch (_) {
+        toast.add({ severity: 'error', summary: t('common.error'), detail: t('residents.messages.error'), life: 3000 });
+      }
+    },
+  });
 }
 function unassign(resident) {
   confirm.require({
@@ -69,11 +87,10 @@ async function saveEdit(partial) {
 <template>
   <div class="page">
     <resident-list-header v-model:condominium="condominiumId" v-model:status="status" v-model:search="search"
-                          :condominiums="condominiums" :residents="store.residents" @add="showAdd = true" />
+                          :condominiums="condominiums" :residents="store.residents" @add="openAdd" />
     <residents-table :residents="filtered" :loading="store.isLoading"
-                     @view="router.push({ name: 'resident-profile', params: { id: $event.unitId } })"
-                     @edit="edit" @resend="resend" @unassign="unassign" />
-    <resident-add-dialog v-model:visible="showAdd" :condominiums="condominiums" :defaultCondominiumId="condominiumId" @done="reload" />
+                     @view="view" @edit="edit" @edit-invite="editInvite" @cancel-invite="cancelInvite" @unassign="unassign" />
+    <resident-add-dialog v-model:visible="showAdd" :condominiums="condominiums" :defaultCondominiumId="condominiumId" :resident="inviting" @done="reload" />
     <resident-edit-dialog v-model:visible="showEdit" :resident="editing" @save="saveEdit" />
   </div>
 </template>

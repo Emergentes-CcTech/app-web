@@ -107,14 +107,19 @@ public static class IamEndpoints
                 .Where(c => !string.IsNullOrEmpty(c.Email) && c.Email.ToLower() == normalized && c.UnitId.HasValue)
                 .Select(c => c.UnitId!.Value);
 
-            var hasAssignedUnit = await db.Units.AnyAsync(u =>
-                (!string.IsNullOrEmpty(u.OwnerEmail) && u.OwnerEmail.ToLower() == normalized) ||
-                matchingClientUnitIds.Contains(u.Id), ct);
+            var invitedUnits = await db.Units
+                .Where(u => u.OwnerId == null && ((!string.IsNullOrEmpty(u.OwnerEmail) && u.OwnerEmail.ToLower() == normalized) || matchingClientUnitIds.Contains(u.Id)))
+                .OrderBy(u => u.UnitNumber)
+                .Select(u => new { u.Id, u.UnitNumber, u.ProjectId })
+                .ToListAsync(ct);
+            var projectIds = invitedUnits.Select(u => u.ProjectId).Distinct().ToList();
+            var projectNames = await db.Projects.Where(p => projectIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name, ct);
 
             return Results.Ok(new
             {
-                assigned = hasAssignedUnit,
+                assigned = invitedUnits.Count > 0,
                 alreadyRegistered = false,
+                units = invitedUnits.Select(u => new { unitNumber = u.UnitNumber, condominiumName = projectNames.GetValueOrDefault(u.ProjectId) }),
             });
         }).AllowAnonymous();
 
