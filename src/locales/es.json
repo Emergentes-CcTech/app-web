@@ -410,7 +410,8 @@
     "empty": "Aún no tienes condominios registrados.",
     "status": {
       "active": "Activo",
-      "inactive": "Baja"
+      "inactive": "Baja",
+      "pending": "Pendiente de pago"
     },
     "fields": {
       "name": "Nombre",
@@ -580,6 +581,13 @@
         "participation": "Fila {line}: la participación de {number} debe estar entre 0 y 100.",
         "type": "Fila {line}: tipo no reconocido en {number} (departamento, depósito o estacionamiento)."
       }
+    },
+    "activation": {
+      "title": "Activación pendiente",
+      "body": "El condominio se activa al pagar la suscripción: en ese momento se instalan los equipos de su plan y empieza a medir.",
+      "pay": "Activar y pagar",
+      "checkoutFailed": "No se pudo abrir el pago de activación. El condominio quedó pendiente: puedes pagarlo desde su ficha.",
+      "canceled": "Pago cancelado: el condominio queda pendiente de activación. Puedes pagarlo cuando quieras desde su ficha."
     }
   },
   "residents": {

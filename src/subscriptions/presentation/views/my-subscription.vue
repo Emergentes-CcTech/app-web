@@ -139,7 +139,9 @@ onMounted(async () => {
   try {
     await condoStore.fetchAll();
     condosLoaded.value = true;
-    selectedCondoId.value = condoStore.condominiums[0]?.id ?? null;
+    // Al volver de Stripe la URL indica qué condominio se pagó
+    const returned = Number(new URLSearchParams(window.location.search).get("condominium"));
+    selectedCondoId.value = (condoStore.condominiums.find(c => c.id === returned) || condoStore.condominiums[0])?.id ?? null;
     store.selectCondominium(selectedCondoId.value);
     await loadActivationQuote();
   } catch (_) {}
@@ -148,6 +150,12 @@ onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const sessionId = urlParams.get("session_id");
   const hasSuccess = urlParams.get("success") === "true";
+  const paidCondominium = Number(urlParams.get("condominium")) || null;
+
+  if (urlParams.get("canceled") === "true") {
+    toast.add({ severity: "info", summary: t("subscriptions.warning"), detail: t("condominiums.activation.canceled"), life: TOAST_ERROR_DURATION_MS });
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 
   if (sessionId || hasSuccess) {
     try {
@@ -165,6 +173,12 @@ onMounted(async () => {
 
       await store.fetchCurrentSubscription();
       store.selectCondominium(selectedCondoId.value);
+      // Activado con su kit de equipos: se muestra la ficha del condominio
+      if (sessionId && paidCondominium) {
+        await condoStore.fetchAll();
+        router.replace({ name: 'condominium-details', params: { id: paidCondominium } });
+        return;
+      }
     } catch (error) {
       console.error("Error confirming payment:", error);
       toast.add({
