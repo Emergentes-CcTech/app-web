@@ -25,7 +25,7 @@ public class UnitCommandService : IUnitCommandService
     // Registra una nueva unidad privativa en el condominio
     public async Task<int> Handle(CreateUnitCommand command, CancellationToken ct = default)
     {
-        var unit = new Unit(command.ProjectId, command.UnitNumber, command.Floor, areaM2: 75.0m, aliquotPercentage: 0.0m)
+        var unit = new Unit(command.ProjectId, command.UnitNumber, command.Floor, areaM2: command.AreaM2, aliquotPercentage: command.AliquotPercentage)
         {
             RoomNumber = command.RoomNumber,
             OwnerId = command.OwnerId

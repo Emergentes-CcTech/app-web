@@ -459,7 +459,7 @@
       "supplyCode": "El código debe tener de 6 a 12 dígitos.",
       "duplicateUnit": "Ya existe una unidad con ese número.",
       "area": "Ingrese un área válida.",
-      "percentage": "Ingrese un valor entre 0.01 y 100 con hasta 2 decimales.",
+      "percentage": "Ingrese un valor mayor a 0 y hasta 100 (hasta 4 decimales).",
       "commonAreasRequired": "Registra al menos un área común.",
       "commonAreaName": "Cada área común necesita un nombre de 2 a 60 caracteres.",
       "floors": "El número de pisos debe estar entre 1 y 80."
@@ -549,6 +549,36 @@
       "unitsAndFloors": "{units} departamentos",
       "floors": "{n} pisos",
       "notRegistered": "Sin registrar: complétalo para conciliar los recibos"
+    },
+    "padron": {
+      "import": "Importar CSV",
+      "calculate": "Calcular por área",
+      "confirmCalculate": "Se reemplazarán los porcentajes actuales por área de la unidad ÷ área total. Úsalo solo si el Reglamento Interno reparte por área.",
+      "calculated": "Participación calculada por área",
+      "calculatedDetail": "Revisa los porcentajes y guarda el padrón.",
+      "participationHint": "Según el Reglamento Interno. Si lo dejas vacío, usa «Calcular por área».",
+      "importTitle": "Importar padrón de unidades",
+      "summary": "{n} unidades · {area} m² en total.",
+      "willCalculate": "El archivo no trae participación: se calculará por área (área de cada unidad ÷ área total) y sumará 100 %.",
+      "willKeep": "Se usarán los porcentajes del archivo. Revisa que sumen 100 % antes de guardar.",
+      "replace": "Reemplazar las {n} unidades actuales",
+      "keepAssigned": "Las {n} unidades con residente vinculado se conservan.",
+      "importConfirm": "Importar",
+      "template": "Descargar plantilla",
+      "fixErrors": "Corrige el archivo y vuelve a importarlo:",
+      "format": "Columnas: numero y area_m2 (obligatorias); tipo, piso y participacion (opcionales). Excel: Guardar como → CSV.",
+      "imported": "{n} unidades importadas",
+      "importedByArea": "La participación se calculó por área. Revisa y guarda el padrón.",
+      "importedReview": "Revisa los porcentajes y guarda el padrón.",
+      "errors": {
+        "empty": "El archivo está vacío.",
+        "headers": "Faltan las columnas numero y area_m2 en la primera fila.",
+        "number": "Fila {line}: el número {number} tiene más de 10 caracteres.",
+        "duplicate": "Fila {line}: la unidad {number} está repetida.",
+        "area": "Fila {line}: la unidad {number} necesita un área mayor a 0.",
+        "participation": "Fila {line}: la participación de {number} debe estar entre 0 y 100.",
+        "type": "Fila {line}: tipo no reconocido en {number} (departamento, depósito o estacionamiento)."
+      }
     }
   },
   "residents": {
