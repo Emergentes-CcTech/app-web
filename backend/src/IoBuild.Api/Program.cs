@@ -241,39 +241,46 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "Bounded Context de Analytics: Métricas y Series temporales."
     });
-    options.SwaggerDoc("proration", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "IoBuild - Proration",
-        Version = "v1",
-        Description = "Bounded Context de Prorrateo: Conciliación de Recibos Matrices y Liquidación Ley N.° 27157."
-    });
-
-    options.DocInclusionPredicate((docName, apiDesc) =>
-    {
-        if (docName == "v1") return true;
-
-        var relativePath = apiDesc.RelativePath?.ToLowerInvariant() ?? string.Empty;
-        var tags = apiDesc.ActionDescriptor.EndpointMetadata
-            .OfType<Microsoft.AspNetCore.Http.Metadata.ITagsMetadata>()
-            .SelectMany(m => m.Tags)
-            .Select(t => t.ToLowerInvariant())
-            .ToList();
-
-        return docName switch
+        options.SwaggerDoc("proration", new Microsoft.OpenApi.Models.OpenApiInfo
         {
-            "publishing" => tags.Any(t => t.Contains("project") || t.Contains("unit") || t.Contains("client") || t.Contains("publishing"))
-                            || relativePath.Contains("projects") || relativePath.Contains("units") || relativePath.Contains("clients"),
-            "devices" => tags.Any(t => t.Contains("device")) || relativePath.Contains("devices") || relativePath.Contains("custom-device-types"),
-            "iam" => tags.Any(t => t.Contains("iam") || t.Contains("auth") || t.Contains("session") || t.Contains("user"))
-                     || relativePath.Contains("authentication") || relativePath.Contains("sessions") || relativePath.Contains("users"),
-            "subscriptions" => tags.Any(t => t.Contains("subscription") || t.Contains("plan"))
-                               || relativePath.Contains("subscriptions") || relativePath.Contains("plans") || relativePath.Contains("webhooks/stripe"),
-            "profiles" => tags.Any(t => t.Contains("profile")) || relativePath.Contains("profiles"),
-            "analytics" => tags.Any(t => t.Contains("analytic")) || relativePath.Contains("analytics"),
-            "proration" => tags.Any(t => t.Contains("proration")) || relativePath.Contains("proration"),
-            _ => false
-        };
-    });
+            Title = "IoBuild - Proration",
+            Version = "v1",
+            Description = "Bounded Context de Prorrateo: Conciliación de Recibos Matrices y Liquidación Ley N.° 27157."
+        });
+        options.SwaggerDoc("mobile-bff", new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "IoBuild - Mobile Resident BFF",
+            Version = "v1",
+            Description = "Backend for Frontend (BFF) exclusivo para la App Móvil Android del Propietario/Residente."
+        });
+
+        options.DocInclusionPredicate((docName, apiDesc) =>
+        {
+            if (docName == "v1") return true;
+
+            var relativePath = apiDesc.RelativePath?.ToLowerInvariant() ?? string.Empty;
+            var tags = apiDesc.ActionDescriptor.EndpointMetadata
+                .OfType<Microsoft.AspNetCore.Http.Metadata.ITagsMetadata>()
+                .SelectMany(m => m.Tags)
+                .Select(t => t.ToLowerInvariant())
+                .ToList();
+
+            return docName switch
+            {
+                "publishing" => tags.Any(t => t.Contains("project") || t.Contains("unit") || t.Contains("client") || t.Contains("publishing"))
+                                || relativePath.Contains("projects") || relativePath.Contains("units") || relativePath.Contains("clients"),
+                "devices" => tags.Any(t => t.Contains("device")) || relativePath.Contains("devices") || relativePath.Contains("custom-device-types"),
+                "iam" => tags.Any(t => t.Contains("iam") || t.Contains("auth") || t.Contains("session") || t.Contains("user"))
+                         || relativePath.Contains("authentication") || relativePath.Contains("sessions") || relativePath.Contains("users"),
+                "subscriptions" => tags.Any(t => t.Contains("subscription") || t.Contains("plan"))
+                                   || relativePath.Contains("subscriptions") || relativePath.Contains("plans") || relativePath.Contains("webhooks/stripe"),
+                "profiles" => tags.Any(t => t.Contains("profile")) || relativePath.Contains("profiles"),
+                "analytics" => tags.Any(t => t.Contains("analytic")) || relativePath.Contains("analytics"),
+                "proration" => tags.Any(t => t.Contains("proration")) || relativePath.Contains("proration"),
+                "mobile-bff" => tags.Any(t => t.Contains("mobile")) || relativePath.Contains("mobile/resident"),
+                _ => false
+            };
+        });
 
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -312,6 +319,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/profiles/swagger.json", "Profiles");
     c.SwaggerEndpoint("/swagger/analytics/swagger.json", "Analytics");
     c.SwaggerEndpoint("/swagger/proration/swagger.json", "Proration & Settlement");
+    c.SwaggerEndpoint("/swagger/mobile-bff/swagger.json", "Mobile Resident BFF (Android)");
     c.RoutePrefix = "swagger";
 });
 
@@ -372,6 +380,7 @@ app.MapSubscriptionsEndpoints();
 app.MapDevicesEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapProrationEndpoints();
+app.MapMobileResidentBffEndpoints();
 app.MapCutoverEndpoints();
 
 app.Run();
