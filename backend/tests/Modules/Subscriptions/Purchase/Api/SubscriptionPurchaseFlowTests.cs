@@ -69,7 +69,10 @@ public sealed partial class SubscriptionPurchaseFlowTests
         Assert.Equal("Esencial", quote.GetProperty("planName").GetString());
         Assert.Equal(413.00m, quote.GetProperty("monthlyPriceWithIgv").GetDecimal());
         Assert.Equal(413.00m, quote.GetProperty("prepaidLastMonthWithIgv").GetDecimal());
-        Assert.Equal(826.00m, quote.GetProperty("total").GetDecimal());
+        // El condominio sembrado tiene 6 equipos comunes y el kit Esencial incluye 3: los 3 adicionales suman
+        // S/ 35.40 cada uno al primer y al último mes (826.00 + 2 × 3 × 35.40)
+        Assert.Equal(3, quote.GetProperty("extraDevices").GetInt32());
+        Assert.Equal(1038.40m, quote.GetProperty("total").GetDecimal());
         Assert.False(quote.TryGetProperty("activationFeeWithIgv", out _));
         Assert.Equal(24, quote.GetProperty("contractMonths").GetInt32());
 

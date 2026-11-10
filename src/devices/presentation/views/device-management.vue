@@ -8,6 +8,7 @@ import { useCondominiumStore } from '../../../condominiums/application/condomini
 import DeviceListHeader from '../components/device-list-header.vue';
 import DevicesTable from '../components/devices-table.vue';
 import DeviceEditDialog from '../components/device-edit-dialog.vue';
+import { SubscriptionApi } from '../../../subscriptions/infrastructure/subscription-api.js';
 
 const { t } = useI18n();
 const toast = useToast();
@@ -20,12 +21,21 @@ const search = ref('');
 const type = ref(null);
 const showDialog = ref(false);
 const editing = ref(null);
+// Kit incluido en el plan: los equipos por encima se cobran aparte en la cuota mensual
+const subscriptionApi = new SubscriptionApi();
+const allowance = ref(null);
+async function loadAllowance(id) {
+  allowance.value = null;
+  if (!id) return;
+  try { allowance.value = (await subscriptionApi.getDeviceAllowance(id)).data; } catch (_) { /* sin datos del plan no se muestra el kit */ }
+}
+const pen = (n) => `S/ ${Number(n || 0).toFixed(2)}`;
 
 onMounted(async () => {
   if (!condoStore.condominiums.length) await condoStore.fetchAll().catch(() => {});
   condominiumId.value = condoStore.activeCondominiums[0]?.id ?? null;
 });
-watch(condominiumId, (id) => { if (id) store.fetchByCondominium(id); }, { immediate: true });
+watch(condominiumId, (id) => { if (id) store.fetchByCondominium(id); loadAllowance(id); }, { immediate: true });
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase();
@@ -34,20 +44,37 @@ const filtered = computed(() => {
 
 function add() { editing.value = null; showDialog.value = true; }
 function edit(d) { editing.value = d; showDialog.value = true; }
-async function save(entity) {
+async function persist(entity) {
   try {
     await store.save(entity);
     showDialog.value = false;
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('devices.messages.saved'), life: 2500 });
+    loadAllowance(condominiumId.value);
   } catch (e) {
     toast.add({ severity: 'error', summary: t('common.error'), detail: e.message === 'idTaken' ? t('devices.validation.idTaken') : t('devices.messages.error'), life: 3000 });
   }
+}
+function save(entity) {
+  const a = allowance.value;
+  // Un equipo nuevo por encima del kit del plan se confirma mostrando lo que suma a la cuota mensual
+  if (!editing.value && a && a.communalDevices >= a.includedDevices) {
+    confirm.require({
+      header: t('devices.extra.title'),
+      message: t('devices.extra.confirm', { plan: a.planName === 'GranTorre' ? 'Gran Torre' : a.planName, included: a.includedDevices, price: pen(a.extraDevicePrice), priceIgv: pen(a.extraDevicePriceWithIgv) }),
+      icon: 'pi pi-plus-circle',
+      acceptLabel: t('devices.extra.accept'),
+      rejectLabel: t('common.cancel'),
+      accept: () => persist(entity),
+    });
+    return;
+  }
+  persist(entity);
 }
 function unlink(d) {
   confirm.require({
     message: t('devices.confirmUnlink', { id: d.deviceId }), header: t('devices.actions.unlink'), icon: 'pi pi-exclamation-triangle',
     acceptLabel: t('devices.actions.unlink'), rejectLabel: t('common.cancel'), acceptProps: { severity: 'danger' },
-    accept: async () => { await store.unlink(d.id); toast.add({ severity: 'success', summary: t('common.success'), detail: t('devices.messages.unlinked'), life: 2500 }); },
+    accept: async () => { await store.unlink(d.id); loadAllowance(condominiumId.value); toast.add({ severity: 'success', summary: t('common.success'), detail: t('devices.messages.unlinked'), life: 2500 }); },
   });
 }
 </script>
@@ -61,6 +88,9 @@ function unlink(d) {
         <div class="stat"><span><i class="dot on" />{{ t('devices.stats.online') }}</span><strong>{{ store.online }}</strong></div>
         <div class="stat" :class="{ bad: store.offline }"><span><i class="dot down" />{{ t('devices.stats.offline') }}</span><strong>{{ store.offline }}</strong></div>
         <div class="stat"><span>{{ t('devices.stats.sampling') }}</span><strong>1 min</strong></div>
+        <div v-if="allowance" class="stat"><span>{{ t('devices.extra.kit', { plan: allowance.planName === 'GranTorre' ? 'Gran Torre' : allowance.planName }) }}</span>
+          <strong>{{ Math.min(allowance.communalDevices, allowance.includedDevices) }} / {{ allowance.includedDevices }}</strong>
+          <small v-if="allowance.extraDevices">{{ t('devices.extra.summary', { n: allowance.extraDevices, amount: pen(allowance.extrasMonthly) }) }}</small></div>
       </div>
     </device-list-header>
     <devices-table :devices="filtered" :loading="store.isLoading" @edit="edit" @unlink="unlink" />

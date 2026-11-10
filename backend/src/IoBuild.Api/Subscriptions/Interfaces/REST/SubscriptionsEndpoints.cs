@@ -23,6 +23,9 @@ public static class SubscriptionsEndpoints
         int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) && (id == builderId || builderId == 0);
 
     // El solicitante puede operar el condominio si es su id directo (compatibilidad) o si él lo registró
+    private static Task<int> CommunalDevicesAsync(IoBuildDbContext db, int projectId, CancellationToken ct) =>
+        db.Devices.CountAsync(d => d.ProjectId == projectId && d.UnitId == null, ct);
+
     private static async Task<bool> OwnsProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, int projectId, CancellationToken ct)
     {
         if (OwnsBuilder(user, projectId)) return true;
@@ -203,8 +206,7 @@ public static class SubscriptionsEndpoints
             var project = await db.Projects.FindAsync([item.ProjectId], ct);
             if (project is not null)
             {
-                var deviceCount = await db.Devices.CountAsync(d => d.ProjectId == item.ProjectId, ct);
-                if (!plan.ValidateCapacity(project.TotalUnits, deviceCount, out var capacityError))
+                if (!plan.ValidateCapacity(project.TotalUnits, out var capacityError))
                 {
                     return Results.BadRequest(new { error = capacityError });
                 }
@@ -224,6 +226,8 @@ public static class SubscriptionsEndpoints
             var planName = Plan.NameForUnits(project.TotalUnits);
             var plan = await db.Plans.FirstOrDefaultAsync(p => p.Name == planName, ct);
             if (plan is null) return Results.NotFound(new { error = "El plan del condominio no está en el catálogo." });
+            var communal = await CommunalDevicesAsync(db, project.Id, ct);
+            var extras = plan.ExtraDevices(communal);
             return Results.Ok(new
             {
                 CondominiumId = project.Id,
@@ -234,8 +238,38 @@ public static class SubscriptionsEndpoints
                 MonthlyPriceWithIgv = plan.PriceWithIgv,
                 PricePerUnitWithIgv = project.TotalUnits > 0 ? Math.Round(plan.PriceWithIgv / project.TotalUnits, 2) : 0m,
                 plan.PrepaidLastMonthWithIgv,
-                Total = plan.ActivationTotal,
+                ExtraDevices = extras,
+                ExtraDevicesMonthlyWithIgv = extras * Plan.ExtraDeviceMonthlyPriceWithIgv,
+                Total = plan.ActivationTotalWith(communal),
                 plan.ContractMonths
+            });
+        }).RequireAuthorization();
+
+        // Equipos comunes del condominio frente al kit de su plan, y lo que los adicionales suman a la cuota mensual
+        subs.MapGet("/subscriptions/device-allowance", async (int condominiumId, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var project = await db.Projects.FindAsync([condominiumId], ct);
+            if (project is null || !await OwnsProjectAsync(user, db, condominiumId, ct)) return Results.NotFound();
+            // Con suscripción activa manda su plan; si aún no tiene, el que le corresponde por departamentos
+            var activePlanId = await db.Subscriptions.Where(s => s.ProjectId == project.Id && s.Status == "active").OrderByDescending(s => s.Id).Select(s => (int?)s.PlanId).FirstOrDefaultAsync(ct);
+            var plan = (activePlanId is int planId ? await db.Plans.FindAsync([planId], ct) : null)
+                ?? await db.Plans.FirstOrDefaultAsync(p => p.Name == Plan.NameForUnits(project.TotalUnits), ct)
+                ?? new Plan { Name = Plan.NameForUnits(project.TotalUnits) };
+            var communal = await CommunalDevicesAsync(db, project.Id, ct);
+            var extras = plan.ExtraDevices(communal);
+            return Results.Ok(new
+            {
+                CondominiumId = project.Id,
+                PlanName = plan.Name,
+                IncludedDevices = plan.MaxDevices,
+                CommunalDevices = communal,
+                ExtraDevices = extras,
+                ExtraDevicePrice = Plan.ExtraDeviceMonthlyPrice,
+                ExtraDevicePriceWithIgv = Plan.ExtraDeviceMonthlyPriceWithIgv,
+                ExtrasMonthly = extras * Plan.ExtraDeviceMonthlyPrice,
+                ExtrasMonthlyWithIgv = extras * Plan.ExtraDeviceMonthlyPriceWithIgv,
+                MonthlyTotal = plan.MonthlyPriceWith(communal),
+                MonthlyTotalWithIgv = plan.MonthlyPriceWithIgvWith(communal)
             });
         }).RequireAuthorization();
 
@@ -300,8 +334,7 @@ public static class SubscriptionsEndpoints
                 {
                     return Results.BadRequest(new { error = $"Al condominio le corresponde el plan {Plan.NameForUnits(project.TotalUnits)} por sus {project.TotalUnits} departamentos." });
                 }
-                var deviceCount = await db.Devices.CountAsync(d => d.ProjectId == request.BuilderId, ct);
-                if (!plan.ValidateCapacity(project.TotalUnits, deviceCount, out var capacityError))
+                if (!plan.ValidateCapacity(project.TotalUnits, out var capacityError))
                 {
                     return Results.BadRequest(new { error = capacityError });
                 }
@@ -418,8 +451,7 @@ public static class SubscriptionsEndpoints
             var project = await db.Projects.FindAsync([request.BuilderId], ct);
             if (project is not null)
             {
-                var deviceCount = await db.Devices.CountAsync(d => d.ProjectId == request.BuilderId, ct);
-                if (!plan.ValidateCapacity(project.TotalUnits, deviceCount, out var capacityError))
+                if (!plan.ValidateCapacity(project.TotalUnits, out var capacityError))
                 {
                     return Results.BadRequest(new { error = capacityError });
                 }

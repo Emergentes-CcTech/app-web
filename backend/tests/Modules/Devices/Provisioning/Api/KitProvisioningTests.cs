@@ -115,4 +115,31 @@ public sealed class KitProvisioningTests
         await SendAuthorizedAsync(client, HttpMethod.Put, $"/api/v1/condominiums/{id}", Admin, Condominium(30, ("Cisterna", "MainCistern")));
         Assert.Equal(7, await CountAsync());
     }
+    [Fact]
+    public async Task Devices_beyond_the_kit_are_allowed_and_priced_as_extras()
+    {
+        await using var factory = new CoreBusinessApiFactory();
+        using var client = factory.CreateClient();
+        // Edificio chico (Esencial: 3 equipos) que maneja un segundo tablero eléctrico
+        var id = await CreateAsync(client, Condominium(24, ("Cisterna", "MainCistern"), ("Tablero general", "GeneralElectricalPanel")));
+        await PayActivationAsync(factory, client, id, "Esencial");
+
+        async Task<JsonElement> AllowanceAsync() => JsonDocument.Parse(await (await SendAuthorizedAsync(client, HttpMethod.Get,
+            $"/api/v1/subscriptions/device-allowance?condominiumId={id}", Admin)).Content.ReadAsStringAsync()).RootElement;
+
+        var before = await AllowanceAsync();
+        Assert.Equal(3, before.GetProperty("includedDevices").GetInt32());
+        Assert.Equal(3, before.GetProperty("communalDevices").GetInt32());
+        Assert.Equal(0, before.GetProperty("extraDevices").GetInt32());
+
+        var added = await SendAuthorizedAsync(client, HttpMethod.Post, "/api/v1/devices", Admin,
+            JsonSerializer.Serialize(new { name = "ENERGIA-02", type = "CurrentTransformerCT", location = "Tablero de bombas", macAddress = "02:AA:00:00:00:99", projectId = id, subsystem = "PressurePumpsRoom" }));
+        Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+
+        var after = await AllowanceAsync();
+        Assert.Equal(1, after.GetProperty("extraDevices").GetInt32());
+        Assert.Equal(30.00m, after.GetProperty("extrasMonthly").GetDecimal());
+        Assert.Equal(35.40m, after.GetProperty("extrasMonthlyWithIgv").GetDecimal());
+        Assert.Equal(before.GetProperty("monthlyTotal").GetDecimal() + 30.00m, after.GetProperty("monthlyTotal").GetDecimal());
+    }
 }

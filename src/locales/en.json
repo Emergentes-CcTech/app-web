@@ -260,6 +260,11 @@
       "lastMonth": "This is the last month of the contract and it's already covered by the prepaid month. Remaining equipment balance: {due}. Confirm the cancellation?",
       "completed": "The contract is complete: there is no equipment balance and nothing is pending. Confirm the cancellation?",
       "completedRefund": "The contract is complete: there is no equipment balance and {refund} is refunded. Confirm the cancellation?"
+    },
+    "extras": {
+      "line": "+ {n} extra device: {amount} + VAT per month | + {n} extra devices: {amount} + VAT per month",
+      "total": "Total monthly fee: {amount} incl. VAT",
+      "activation": "Extra devices ({n}), first and last month"
     }
   },
   "iam": {
@@ -748,6 +753,13 @@
       "intro": "Register an HaaS kit device installed in a common area. It shows as offline until its first heartbeat.",
       "locationPlaceholder": "e.g. Basement 1 - Pump panel",
       "thresholdHint": "Continuous flow between 01:00 and 04:00 above this value triggers a night-leak alert."
+    },
+    "extra": {
+      "kit": "{plan} plan kit",
+      "summary": "+{n} extra · {amount} + VAT/month",
+      "title": "Extra device",
+      "confirm": "The {plan} plan includes {included} devices and this one goes beyond them. Each extra device adds {price} + VAT ({priceIgv}) to the monthly fee. Register it?",
+      "accept": "Register and add to the fee"
     }
   },
   "telemetry": {

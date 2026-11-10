@@ -59,6 +59,14 @@ async function loadActivationQuote() {
 }
 watch(() => [selectedCondoId.value, store.currentPlan?.id], loadActivationQuote);
 
+// Equipos por encima del kit del plan: suman a la cuota mensual
+const deviceAllowance = ref(null);
+watch(selectedCondoId, async (id) => {
+  deviceAllowance.value = null;
+  if (!id) return;
+  try { deviceAllowance.value = (await subscriptionApi.getDeviceAllowance(id)).data; } catch (_) { /* sin recuento no se muestran extras */ }
+}, { immediate: true });
+
 const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const isProcessing = ref(false);
@@ -358,6 +366,7 @@ const handlePayPlan = async (plan) => {
         <!-- 1. Hero Card: Current Plan & Live Quotas -->
         <CurrentPlanCard
           v-if="store.currentPlan"
+          :allowance="deviceAllowance"
           :plan="store.currentPlan"
           :subscription="store.currentSubscription"
           :registeredUnits="registeredUnits"

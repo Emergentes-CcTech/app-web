@@ -10,8 +10,10 @@ const props = defineProps({
   plan: { type: Object, required: true },
   subscription: { type: Object, required: true },
   isProcessing: { type: Boolean, default: false },
-  registeredUnits: { type: Number, default: 0 }
+  registeredUnits: { type: Number, default: 0 },
+  allowance: { type: Object, default: null }   // equipos del condominio frente al kit del plan
 });
+const pen = (n) => `S/ ${Number(n || 0).toFixed(2)}`;
 
 defineEmits(["renew", "cancel", "view-invoices", "compare-plans"]);
 
@@ -85,6 +87,10 @@ const isNearLimit = computed(() => {
           <span class="hero-price-period">{{ t('subscriptions.plusIgv') }} / {{ t('subscriptions.month') }}</span>
         </div>
         <p class="hero-plan-desc">{{ t('subscriptions.withIgv', { amount: plan.monthlyPenWithIgv.toFixed(2) }) }}</p>
+        <p v-if="allowance?.extraDevices" class="hero-extras">
+          {{ t('subscriptions.extras.line', { n: allowance.extraDevices, amount: pen(allowance.extrasMonthly) }, allowance.extraDevices) }}<br />
+          <strong>{{ t('subscriptions.extras.total', { amount: pen(allowance.monthlyTotalWithIgv) }) }}</strong>
+        </p>
 
         <div class="hero-renewal">
           <i class="pi pi-calendar"></i>
@@ -185,6 +191,7 @@ const isNearLimit = computed(() => {
 </template>
 
 <style scoped>
+.hero-extras { margin: .35rem 0 0; font-size: .85rem; color: #92400e; background: #fffbeb; border-radius: .5rem; padding: .45rem .6rem; }
 .current-plan-card {
   background: #ffffff;
   border-radius: 1.25rem;
