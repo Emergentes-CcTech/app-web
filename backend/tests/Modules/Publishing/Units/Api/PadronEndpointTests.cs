@@ -22,7 +22,8 @@ public sealed class PadronEndpointTests
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
-        db.Projects.Add(new Project { Id = Project, Name = "Edificio de la demo", BuilderId = 70 });
+        // Un departamento declarado: los estacionamientos y depósitos no cuentan para ese límite
+        db.Projects.Add(new Project { Id = Project, Name = "Edificio de la demo", BuilderId = 70, TotalUnits = 1 });
         await db.SaveChangesAsync();
     }
 
@@ -45,6 +46,23 @@ public sealed class PadronEndpointTests
         Assert.Equal(60m, dept.GetProperty("participationPct").GetDecimal());
         Assert.Equal(4, dept.GetProperty("floor").GetInt32());
         Assert.Equal("parking", units.Single(u => u.GetProperty("number").GetString() == "E-01").GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task Rejects_more_apartments_than_the_condominium_declares()
+    {
+        await using var factory = new CoreBusinessApiFactory();
+        using var client = factory.CreateClient();
+        await SeedAsync(factory);
+
+        var response = await SendAuthorizedAsync(client, HttpMethod.Put, $"/api/v1/condominiums/{Project}/units", Admin,
+            """{"units":[{"number":"101","type":"apartment","areaM2":80,"participationPct":50},{"number":"102","type":"apartment","areaM2":80,"participationPct":50}]}""");
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal("too_many_apartments", body.GetProperty("code").GetString());
+        Assert.Equal(2, body.GetProperty("apartments").GetInt32());
+        Assert.Equal(1, body.GetProperty("declared").GetInt32());
     }
 
     [Fact]

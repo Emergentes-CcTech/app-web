@@ -580,7 +580,12 @@
         "area": "Fila {line}: la unidad {number} necesita un área mayor a 0.",
         "participation": "Fila {line}: la participación de {number} debe estar entre 0 y 100.",
         "type": "Fila {line}: tipo no reconocido en {number} (departamento, depósito o estacionamiento)."
-      }
+      },
+      "apartmentsOf": "{n} de {total} departamentos",
+      "tooMany": "El padrón tiene {n} departamentos y el condominio tiene {total} registrados: el plan se asigna con ese número. Quita departamentos o edita el condominio para guardar.",
+      "missing": "Faltan {n} de los {total} departamentos por registrar. Puedes guardar y completarlos después.",
+      "importTooMany": "Con este archivo el padrón quedaría con {n} departamentos y el condominio tiene {total} registrados. Usa un archivo con hasta {total} departamentos o edita el condominio. Estacionamientos y depósitos no cuentan.",
+      "limitReached": "El condominio ya tiene sus {n} departamentos. Para agregar otro, edita el número de departamentos del condominio."
     },
     "activation": {
       "title": "Activación pendiente",

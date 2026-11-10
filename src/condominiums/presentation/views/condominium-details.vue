@@ -78,6 +78,12 @@ const filtered = computed(() => {
 });
 const total = computed(() => sumParticipation(visible.value));
 const balanced = computed(() => isParticipationBalanced(visible.value));
+// Los departamentos del padrón no pueden superar los declarados en el condominio: con ese número se asigna el plan.
+// Estacionamientos y depósitos no cuentan. Con menos se puede guardar (el padrón se carga por partes) y se avisa
+const declaredUnits = computed(() => Number(store.current?.totalUnits) || 0);
+const apartments = computed(() => visible.value.filter(r => r.type === 'apartment').length);
+const exceedsDeclared = computed(() => apartments.value > declaredUnits.value);
+const missingApartments = computed(() => visible.value.length ? Math.max(0, declaredUnits.value - apartments.value) : 0);
 const assigned = computed(() => visible.value.filter(r => r.residentUserId).length);
 const average = computed(() => visible.value.length ? Math.round((total.value / visible.value.length) * 10000) / 10000 : 0);
 const dirty = computed(() => rows.value.some(r => r._new || r._deleted || r._dirty));
@@ -104,6 +110,7 @@ function addUnit() {
   Object.keys(unitErrors).forEach(k => delete unitErrors[k]);
   if (!isValidName(newUnit.number, 1, 10)) unitErrors.number = t('condominiums.validation.required');
   else if (visible.value.some(r => String(r.number) === String(newUnit.number).trim())) unitErrors.number = t('condominiums.validation.duplicateUnit');
+  if (newUnit.type === 'apartment' && apartments.value >= declaredUnits.value) unitErrors.type = t('condominiums.padron.limitReached', { n: declaredUnits.value });
   if (!(Number(newUnit.areaM2) > 0 && Number(newUnit.areaM2) <= 100000)) unitErrors.areaM2 = t('condominiums.validation.area');
   // La participación es opcional: si se deja vacía se completa con "Calcular por área"
   if (newUnit.participationPct !== null && newUnit.participationPct !== '' && !isValidPercentage(newUnit.participationPct)) unitErrors.participationPct = t('condominiums.validation.percentage');
@@ -151,9 +158,17 @@ const importMissingPct = computed(() => importRows.value.some(r => r.participati
 const blockedOnReplace = computed(() => visible.value.filter(r => r.residentUserId).length);
 const importTotalArea = computed(() => Math.round(importRows.value.reduce((s, r) => s + (Number(r.areaM2) || 0), 0) * 100) / 100);
 const errorText = (e) => t(`condominiums.padron.errors.${e.key}`, { line: e.line, ...(e.params || {}) });
+// Departamentos que quedarían en el padrón después de importar (mismo criterio que confirmImport)
+const importApartments = computed(() => {
+  const key = (n) => String(n).trim().toLowerCase();
+  const incoming = new Map(importRows.value.map(r => [key(r.number), r.type]));
+  const kept = visible.value.filter(r => !incoming.has(key(r.number)) && (!replaceExisting.value || r.residentUserId));
+  return kept.filter(r => r.type === 'apartment').length + [...incoming.values()].filter(type => type === 'apartment').length;
+});
+const importExceeds = computed(() => importApartments.value > declaredUnits.value);
 
 function confirmImport() {
-  if (importErrors.value.length || !importRows.value.length) return;
+  if (importErrors.value.length || !importRows.value.length || importExceeds.value) return;
   const key = (n) => String(n).trim().toLowerCase();
   const incoming = new Set(importRows.value.map(r => key(r.number)));
   // Al reemplazar se quitan las unidades que no vienen en el archivo (menos las que tienen residente)
@@ -175,7 +190,7 @@ function removeUnit(row) {
 }
 
 async function savePadron() {
-  if (!balanced.value) return;
+  if (!balanced.value || exceedsDeclared.value) return;
   saving.value = true;
   try {
     await store.saveUnits(id.value, rows.value);
@@ -275,7 +290,8 @@ function deactivate() {
 
     <h3 class="section-title">{{ t('condominiums.units.registry') }}</h3>
     <div class="stats">
-      <div class="stat"><span>{{ t('condominiums.stats.totalUnits') }}</span><strong>{{ visible.length }}</strong></div>
+      <div class="stat" :class="{ bad: exceedsDeclared }"><span>{{ t('condominiums.stats.totalUnits') }}</span><strong>{{ visible.length }}</strong>
+        <small>{{ t('condominiums.padron.apartmentsOf', { n: apartments, total: declaredUnits }) }}</small></div>
       <div class="stat"><span>{{ t('condominiums.stats.assigned') }}</span><strong>{{ assigned }}</strong></div>
       <div class="stat" :class="balanced ? 'ok' : 'bad'"><span>{{ t('condominiums.stats.sum') }}</span><strong>{{ total.toFixed(4) }} %</strong><small>{{ diffText }}</small></div>
       <div class="stat"><span>{{ t('condominiums.stats.average') }}</span><strong>{{ average.toFixed(4) }} %</strong></div>
@@ -288,9 +304,11 @@ function deactivate() {
         <pv-button :label="t('condominiums.padron.import')" icon="pi pi-upload" severity="secondary" outlined @click="pickFile" />
         <pv-button :label="t('condominiums.padron.calculate')" icon="pi pi-calculator" severity="secondary" outlined :disabled="!canCalculate" @click="calculateByArea" />
         <pv-button :label="t('condominiums.units.add')" icon="pi pi-plus" severity="secondary" @click="openDialog" />
-        <pv-button :label="t('condominiums.units.save')" icon="pi pi-save" :disabled="!balanced || !dirty" :loading="saving" @click="savePadron" />
+        <pv-button :label="t('condominiums.units.save')" icon="pi pi-save" :disabled="!balanced || !dirty || exceedsDeclared" :loading="saving" @click="savePadron" />
       </div>
     </div>
+    <pv-message v-if="exceedsDeclared" severity="error" :closable="false" class="mb-2">{{ t('condominiums.padron.tooMany', { n: apartments, total: declaredUnits }) }}</pv-message>
+    <pv-message v-else-if="missingApartments" severity="info" :closable="false" class="mb-2">{{ t('condominiums.padron.missing', { n: missingApartments, total: declaredUnits }) }}</pv-message>
     <pv-message v-if="!balanced" severity="warn" :closable="false" class="mb-2">{{ t('condominiums.participation.saveDisabled') }}</pv-message>
 
     <pv-data-table :value="filtered" :paginator="filtered.length > 10" :rows="10" dataKey="id" stripedRows>
@@ -329,7 +347,8 @@ function deactivate() {
 
     <pv-dialog v-model:visible="dialog" modal :header="t('condominiums.units.add')" :style="{ width: '28rem' }">
       <div class="field"><label>{{ t('condominiums.units.number') }} *</label><pv-input-text v-model="newUnit.number" :invalid="!!unitErrors.number" class="w-full" /><small v-if="unitErrors.number" class="p-error">{{ unitErrors.number }}</small></div>
-      <div class="field"><label>{{ t('condominiums.units.type') }}</label><pv-select v-model="newUnit.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" /></div>
+      <div class="field"><label>{{ t('condominiums.units.type') }}</label><pv-select v-model="newUnit.type" :options="typeOptions" optionLabel="label" optionValue="value" :invalid="!!unitErrors.type" class="w-full" />
+        <small v-if="unitErrors.type" class="p-error">{{ unitErrors.type }}</small></div>
       <div class="field"><label>{{ t('condominiums.units.area') }} *</label><pv-input-number v-model="newUnit.areaM2" :min="1" :maxFractionDigits="2" :invalid="!!unitErrors.areaM2" class="w-full" /><small v-if="unitErrors.areaM2" class="p-error">{{ unitErrors.areaM2 }}</small></div>
       <div class="field"><label>{{ t('condominiums.units.participation') }}</label><pv-input-number v-model="newUnit.participationPct" :min="0.0001" :max="100" :minFractionDigits="0" :maxFractionDigits="4" suffix=" %" :invalid="!!unitErrors.participationPct" class="w-full" />
         <small v-if="unitErrors.participationPct" class="p-error">{{ unitErrors.participationPct }}</small><small v-else class="muted hint">{{ t('condominiums.padron.participationHint') }}</small></div>
@@ -356,11 +375,12 @@ function deactivate() {
           <label for="replace">{{ t('condominiums.padron.replace', { n: visible.length }) }}</label>
         </div>
         <small v-if="replaceExisting && blockedOnReplace" class="muted">{{ t('condominiums.padron.keepAssigned', { n: blockedOnReplace }) }}</small>
+        <pv-message v-if="importExceeds" severity="error" :closable="false" class="mt-2">{{ t('condominiums.padron.importTooMany', { n: importApartments, total: declaredUnits }) }}</pv-message>
       </template>
       <template #footer>
         <a class="template-link" href="/demo/padron-plantilla.csv" download>{{ t('condominiums.padron.template') }}</a>
         <pv-button :label="t('common.cancel')" severity="secondary" @click="importDialog = false" />
-        <pv-button :label="t('condominiums.padron.importConfirm')" icon="pi pi-check" :disabled="!!importErrors.length || !importRows.length" @click="confirmImport" />
+        <pv-button :label="t('condominiums.padron.importConfirm')" icon="pi pi-check" :disabled="!!importErrors.length || !importRows.length || importExceeds" @click="confirmImport" />
       </template>
     </pv-dialog>
   </div>

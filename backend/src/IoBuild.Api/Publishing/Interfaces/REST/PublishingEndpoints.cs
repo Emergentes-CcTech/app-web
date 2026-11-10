@@ -1214,6 +1214,18 @@ public static class PublishingEndpoints
             var errors = UnitPadron.Validate(rows);
             if (errors.Count > 0) return Results.UnprocessableEntity(new { error = errors[0], errors });
 
+            // El plan se asigna por los departamentos declarados; estacionamientos y depósitos no cuentan
+            var declared = (await db.Projects.FirstAsync(p => p.Id == id, ct)).TotalUnits;
+            var apartments = rows.Count(r => UnitPadron.NormalizeType(r.Type) == "apartment");
+            if (apartments > declared)
+                return Results.UnprocessableEntity(new
+                {
+                    code = "too_many_apartments",
+                    error = $"El padrón tiene {apartments} departamentos y el condominio tiene {declared} registrados. Corrige el padrón o edita el condominio.",
+                    apartments,
+                    declared
+                });
+
             var existing = await db.Units.Where(u => u.ProjectId == id).ToListAsync(ct);
             var byId = existing.ToDictionary(u => u.Id);
             if (rows.FirstOrDefault(r => r.Id is > 0 && !byId.ContainsKey(r.Id.Value)) is { } foreign)
