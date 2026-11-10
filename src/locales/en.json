@@ -580,7 +580,12 @@
         "area": "Row {line}: unit {number} needs an area greater than 0.",
         "participation": "Row {line}: participation of {number} must be between 0 and 100.",
         "type": "Row {line}: unknown type for {number} (apartment, storage or parking)."
-      }
+      },
+      "apartmentsOf": "{n} of {total} apartments",
+      "tooMany": "The registry has {n} apartments and the condominium has {total} registered: the plan is assigned by that number. Remove apartments or edit the condominium to save.",
+      "missing": "{n} of the {total} apartments are still unregistered. You can save and complete them later.",
+      "importTooMany": "With this file the registry would have {n} apartments and the condominium has {total} registered. Use a file with up to {total} apartments or edit the condominium. Parking spaces and storage rooms don't count.",
+      "limitReached": "The condominium already has its {n} apartments. To add another, edit the condominium's number of apartments."
     },
     "activation": {
       "title": "Activation pending",
