@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using IoBuild.Api.Subscriptions.Application.Internal.CommandServices;
 
 namespace IoBuild.Api.Subscriptions.Infrastructure.Stripe;
@@ -55,6 +56,8 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
             string description;
             // Pago de activación: además del primer mes se cobra por adelantado el último mes del contrato
             long prepaidInCents = 0;
+            long extrasInCents = 0;
+            var extraDevices = 0;
 
             if (serviceProvider != null)
             {
@@ -68,6 +71,9 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                     amountInCents = (long)(plan.PriceWithIgv * 100);
                     prepaidInCents = (long)(plan.PrepaidLastMonthWithIgv * 100);
                     description = plan.Description;
+                    var communal = await db!.Devices.CountAsync(d => d.ProjectId == request.BuilderId && d.UnitId == null, cancellationToken);
+                    extraDevices = plan.ExtraDevices(communal);
+                    extrasInCents = (long)(2 * extraDevices * Plan.ExtraDeviceMonthlyPriceWithIgv * 100);
                 }
                 else
                 {
@@ -116,6 +122,7 @@ public sealed class StripeHttpPaymentProvider(HttpClient client, IConfiguration 
                 line++;
             }
             AddLine(prepaidInCents, "Último mes adelantado", "Mes 24 del contrato; si se cancela antes, se aplica al saldo de los equipos");
+            AddLine(extrasInCents, $"Equipos adicionales ({extraDevices})", "Equipos por encima del kit del plan: primer y último mes");
         }
 
         using var body = new FormUrlEncodedContent(formFields);

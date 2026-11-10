@@ -38,35 +38,44 @@ public sealed class PlanEntityTests
 
     [Fact]
     [Trait("Category", "BDD")]
-    public void Given_esencial_plan_when_validating_capacity_then_accepts_up_to_40_units_and_3_devices()
+    public void Given_esencial_plan_when_validating_capacity_then_accepts_up_to_40_units()
     {
-        // Dado el plan Esencial con tope de 40 departamentos y 3 equipos en comodato
+        // Dado el plan Esencial con tope de 40 departamentos
         var esencial = new Plan("Esencial", "Plan HaaS Esencial", 350.00m);
 
-        var valid = esencial.ValidateCapacity(totalUnits: 40, totalDevices: 3, out var error);
+        var valid = esencial.ValidateCapacity(totalUnits: 40, out var error);
         Assert.True(valid);
         Assert.Empty(error);
 
-        var invalidUnits = esencial.ValidateCapacity(totalUnits: 41, totalDevices: 3, out var unitError);
+        var invalidUnits = esencial.ValidateCapacity(totalUnits: 41, out var unitError);
         Assert.False(invalidUnits);
         Assert.Contains("superando el tope máximo de 40", unitError);
-
-        var invalidDevices = esencial.ValidateCapacity(totalUnits: 21, totalDevices: 4, out var deviceError);
-        Assert.False(invalidDevices);
-        Assert.Contains("superando la dotación máxima de 3 equipos", deviceError);
     }
 
     [Fact]
     [Trait("Category", "BDD")]
-    public void Given_urbano_plan_when_validating_capacity_then_accepts_up_to_80_units_and_5_devices()
+    public void Given_more_devices_than_the_kit_when_pricing_then_each_extra_device_adds_its_monthly_fee()
     {
-        // Dado el plan Urbano con tope de 80 departamentos y 5 equipos en comodato
+        // Esencial incluye 3 equipos; un edificio chico con 2 tableros y 2 puntos de agua tiene 5 (2 adicionales)
+        var esencial = new Plan("Esencial", "", 350.00m);
+        Assert.Equal(0, esencial.ExtraDevices(3));
+        Assert.Equal(2, esencial.ExtraDevices(5));
+        Assert.Equal(410.00m, esencial.MonthlyPriceWith(5));            // 350 + 2 × 30
+        Assert.Equal(483.80m, esencial.MonthlyPriceWithIgvWith(5));      // 413.00 + 2 × 35.40
+        Assert.Equal(967.60m, esencial.ActivationTotalWith(5));          // primer y último mes con sus extras
+        Assert.Equal(826.00m, esencial.ActivationTotalWith(3));
+    }
+
+    [Fact]
+    [Trait("Category", "BDD")]
+    public void Given_urbano_plan_when_validating_capacity_then_accepts_up_to_80_units()
+    {
+        // Dado el plan Urbano con tope de 80 departamentos
         var urbano = new Plan("Urbano", "Plan HaaS Urbano", 420.00m);
 
-        Assert.True(urbano.ValidateCapacity(60, 5, out _));
-        Assert.False(urbano.ValidateCapacity(85, 5, out var unitErr));
+        Assert.True(urbano.ValidateCapacity(60, out _));
+        Assert.False(urbano.ValidateCapacity(85, out var unitErr));
         Assert.Contains("superando el tope máximo de 80", unitErr);
-        Assert.False(urbano.ValidateCapacity(60, 6, out _));
     }
 
     [Fact]

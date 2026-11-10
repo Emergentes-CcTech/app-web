@@ -56,6 +56,10 @@ const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { mini
             <dt>{{ t('subscriptions.activation.lastFee', { month: props.quote.contractMonths }) }}</dt>
             <dd>{{ money(props.quote.prepaidLastMonthWithIgv) }}</dd>
           </div>
+          <div v-if="props.quote.extraDevices">
+            <dt>{{ t('subscriptions.extras.activation', { n: props.quote.extraDevices }) }}</dt>
+            <dd>{{ money(props.quote.extraDevicesMonthlyWithIgv * 2) }}</dd>
+          </div>
           <div>
             <dt>{{ t('subscriptions.activation.installation') }}</dt>
             <dd class="included">{{ t('subscriptions.activation.included') }}</dd>

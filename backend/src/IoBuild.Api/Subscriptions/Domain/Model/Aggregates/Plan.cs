@@ -104,6 +104,21 @@ public sealed class Plan
     [NotMapped]
     public decimal ActivationTotal => PriceWithIgv + PrepaidLastMonthWithIgv;
 
+    // Cada equipo común por encima del kit del plan suma una cuota mensual propia (sin IGV)
+    public const decimal ExtraDeviceMonthlyPrice = 30.00m;
+    public static decimal ExtraDeviceMonthlyPriceWithIgv => WithIgv(ExtraDeviceMonthlyPrice);
+
+    public int ExtraDevices(int communalDevices) => Math.Max(0, communalDevices - MaxDevices);
+
+    // Cuota mensual con los equipos adicionales del condominio
+    public decimal MonthlyPriceWith(int communalDevices) => Price + ExtraDevices(communalDevices) * ExtraDeviceMonthlyPrice;
+    public decimal MonthlyPriceWithIgvWith(int communalDevices) => PriceWithIgv + ExtraDevices(communalDevices) * ExtraDeviceMonthlyPriceWithIgv;
+
+    // Pago de activación o reactivación con los equipos adicionales: primer y último mes, cada uno con sus extras
+    public decimal ActivationTotalWith(int communalDevices) => 2 * MonthlyPriceWithIgvWith(communalDevices);
+
+    private static decimal WithIgv(decimal amount) => Math.Round(amount * (1 + IgvRate), 2, MidpointRounding.AwayFromZero);
+
     // Plan que corresponde al número de departamentos del condominio
     public static string NameForUnits(int totalUnits) => totalUnits switch
     {
@@ -152,20 +167,14 @@ public sealed class Plan
         FeaturesJson = featuresJson;
     }
 
-    // Valida si el condominio cumple con las restricciones de departamentos y equipos IoT del plan
-    public bool ValidateCapacity(int totalUnits, int totalDevices, out string reason)
+    // Valida que el condominio entre en el plan por su número de departamentos.
+    // Los equipos por encima del kit no bloquean: se cobran como equipos adicionales
+    public bool ValidateCapacity(int totalUnits, out string reason)
     {
         // Valida que el número de departamentos no sobrepase el tope contratado
         if (totalUnits > MaxUnits)
         {
             reason = $"El condominio registra {totalUnits} departamentos, superando el tope máximo de {MaxUnits} departamentos del Plan {Name}.";
-            return false;
-        }
-
-        // Valida que la cantidad de sensores solicitados no supere la dotación en comodato
-        if (totalDevices > MaxDevices)
-        {
-            reason = $"Se solicitan {totalDevices} equipos IoT, superando la dotación máxima de {MaxDevices} equipos en comodato del Plan {Name}.";
             return false;
         }
 
