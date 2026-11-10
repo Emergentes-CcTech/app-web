@@ -56,6 +56,11 @@ export class SubscriptionApi extends BaseApi {
         return this.http.get(`${subscriptionsEndpointPath}/${subscriptionId}/cancellation-quote`);
     }
 
+    /** Equipos comunes del condominio frente al kit de su plan y lo que suman los adicionales a la cuota. */
+    getDeviceAllowance(condominiumId) {
+        return this.http.get(`${subscriptionsEndpointPath}/device-allowance`, { params: { condominiumId } });
+    }
+
     confirmPayment({ administratorId, condominiumId }, sessionId) {
         return this.http.patch(`${subscriptionsEndpointPath}/payments/sessions/${sessionId}`, { administratorId, condominiumId, status: 'confirmed' });
     }

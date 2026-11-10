@@ -260,6 +260,11 @@
       "lastMonth": "Es el último mes del contrato y ya está cubierto por el mes adelantado. Saldo pendiente de los equipos: {due}. ¿Confirmas la cancelación?",
       "completed": "El contrato ya se cumplió: no hay saldo de equipos ni montos pendientes. ¿Confirmas la cancelación?",
       "completedRefund": "El contrato ya se cumplió: no hay saldo de equipos y se devuelven {refund}. ¿Confirmas la cancelación?"
+    },
+    "extras": {
+      "line": "+ {n} equipo adicional: {amount} + IGV al mes | + {n} equipos adicionales: {amount} + IGV al mes",
+      "total": "Cuota mensual total: {amount} con IGV",
+      "activation": "Equipos adicionales ({n}), primer y último mes"
     }
   },
   "iam": {
@@ -748,6 +753,13 @@
       "intro": "Registra un equipo del kit HaaS instalado en un área común. Aparecerá fuera de línea hasta su primer latido.",
       "locationPlaceholder": "Ej. Sótano 1 - Tablero de bombas",
       "thresholdHint": "Caudal continuo entre 01:00 y 04:00 por encima de este valor dispara una alerta de fuga nocturna."
+    },
+    "extra": {
+      "kit": "Kit del plan {plan}",
+      "summary": "+{n} adicionales · {amount} + IGV/mes",
+      "title": "Equipo adicional",
+      "confirm": "El plan {plan} incluye {included} equipos y este los supera. Cada equipo adicional suma {price} + IGV ({priceIgv}) a la cuota mensual. ¿Registrarlo?",
+      "accept": "Registrar y sumar a la cuota"
     }
   },
   "telemetry": {
