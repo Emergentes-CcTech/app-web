@@ -1,14 +1,19 @@
 package pe.iobuild.resident
 
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,12 +41,16 @@ import pe.iobuild.resident.ui.viewmodel.ResidentViewModel
 /**
  * Actividad principal de la aplicación móvil exclusiva para el Propietario (Resident) de IoBuild.
  * Aplica el patrón Backend for Frontend (BFF) consumiendo los endpoints agregados
- * `/api/v1/mobile/resident/*` del mismo backend de `app-web`.
+ * `/api/v1/mobile/resident/...` del mismo backend de `app-web`.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Barras del sistema transparentes con íconos oscuros: la app es clara y la hora queda legible
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+        )
 
         val sessionManager = SessionManager(applicationContext)
         val apiProvider = ApiClientProvider(sessionManager)
@@ -66,9 +75,9 @@ private enum class ResidentTab(
     val title: String,
     val icon: ImageVector
 ) {
-    CONSUMPTION("Mi consumo", Icons.Default.WaterDrop),
-    STATEMENT("Estado cuenta", Icons.Default.ReceiptLong),
-    FEE("Mi cuota", Icons.Default.Verified),
+    CONSUMPTION("Consumo", Icons.Default.WaterDrop),
+    STATEMENT("Pagos", Icons.AutoMirrored.Filled.ReceiptLong),
+    FEE("Mi cuota", Icons.Default.PieChart),
     PROFILE("Perfil", Icons.Default.Person)
 }
 
@@ -135,126 +144,94 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
         ?: viewModel.sessionManager.displayName.takeIf { it.isNotBlank() }
         ?: "Propietario"
 
+    val initials = residentDisplayName.split(" ").filter { it.isNotBlank() }.take(2)
+        .joinToString("") { it.first().uppercase() }.ifBlank { "P" }
+
     Scaffold(
+        containerColor = IoBuildBackground,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = IoBuildSlate900,
-                    titleContentColor = Color.White
-                ),
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(IoBuildEmerald500, IoBuildEmerald700)
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Apartment,
-                                contentDescription = "IoBuild",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f, fill = false)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "IoBuild",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = IoBuildEmerald500.copy(alpha = 0.2f)
-                                ) {
-                                    Text(
-                                        text = "PROPIETARIO",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = IoBuildEmerald100,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = IoBuildSlate900
+                    ),
+                    title = {
+                        Column {
+                            IoBuildLogo(symbolSize = 24.dp, textSize = 19.sp)
                             Text(
-                                text = "$residentDisplayName · $unitBadgeText",
-                                fontSize = 11.sp,
-                                color = Color(0xFFCBD5E1),
+                                text = unitBadgeText,
+                                fontSize = 12.sp,
+                                color = IoBuildSlate500,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.refreshAllResidentViews() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Sincronizar BFF",
-                            tint = IoBuildEmerald100
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            viewModel.signOut()
-                            authRoute = AuthRoute.LOGIN
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.refreshAllResidentViews() }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Actualizar",
+                                tint = IoBuildSlate500
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color(0xFFFCA5A5)
-                        )
+                        // Avatar con las iniciales: abre el perfil (ahí está cerrar sesión)
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(IoBuildEmerald600)
+                                .clickable { activeTab = ResidentTab.PROFILE },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                }
-            )
+                )
+                HorizontalDivider(color = IoBuildSlate200, thickness = 1.dp)
+            }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                ResidentTab.entries.forEach { tab ->
-                    val selected = activeTab == tab
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { activeTab = tab },
-                        icon = {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.title
+            Column {
+                HorizontalDivider(color = IoBuildSlate200, thickness = 1.dp)
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 0.dp
+                ) {
+                    ResidentTab.entries.forEach { tab ->
+                        val selected = activeTab == tab
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = { activeTab = tab },
+                            icon = {
+                                Icon(
+                                    imageVector = tab.icon,
+                                    contentDescription = tab.title
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = tab.title,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = IoBuildEmerald600,
+                                selectedTextColor = IoBuildEmerald700,
+                                indicatorColor = IoBuildEmerald100,
+                                unselectedIconColor = IoBuildSlate500,
+                                unselectedTextColor = IoBuildSlate500
                             )
-                        },
-                        label = {
-                            Text(
-                                text = tab.title,
-                                fontSize = 11.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = IoBuildEmerald600,
-                            selectedTextColor = IoBuildEmerald700,
-                            indicatorColor = IoBuildEmerald100,
-                            unselectedIconColor = IoBuildSlate500,
-                            unselectedTextColor = IoBuildSlate500
                         )
-                    )
+                    }
                 }
             }
         }
@@ -262,8 +239,8 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(IoBuildBackground)
+                .padding(innerPadding)
         ) {
             when (activeTab) {
                 ResidentTab.CONSUMPTION -> {

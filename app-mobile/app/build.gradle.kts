@@ -19,16 +19,15 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://iobuild.me/api/v1/\"")
+        // Producción por defecto, también en debug. Para probar contra el backend local:
+        //   ./gradlew assembleDebug -PiobuildApiUrl=http://10.0.2.2:8080/api/v1/
+        val apiBaseUrl = (project.findProperty("iobuildApiUrl") as String?) ?: "https://iobuild.me/api/v1/"
+        buildConfigField("String", "DEFAULT_API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
-        debug {
-            buildConfigField("String", "DEFAULT_API_BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
-        }
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://iobuild.me/api/v1/\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

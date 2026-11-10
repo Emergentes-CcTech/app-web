@@ -43,7 +43,7 @@ class SessionManager(context: Context) {
         private const val KEY_UNIT_NUMBER = "unit_number"
         private const val KEY_PROJECT_ID = "project_id"
         private const val KEY_ALIQUOT = "aliquot_pct"
-        private const val KEY_API_BASE_URL = "api_base_url"
+        private const val KEY_API_BASE_URL = "api_base_url_override"
         private const val KEY_LANGUAGE = "app_language"
 
         // Estado persistido de Checkout Stripe pendiente de confirmar al volver a la app (onResume)
@@ -97,16 +97,25 @@ class SessionManager(context: Context) {
         get() = Double.fromBits(prefs.getLong(KEY_ALIQUOT, (0.0).toBits()))
         set(value) = prefs.edit().putLong(KEY_ALIQUOT, value.toBits()).apply()
 
+    // El servidor es el de la compilación (producción). Solo una compilación debug acepta un servidor
+    // distinto elegido a mano para pruebas; la clave anterior se ignora para no arrastrar el 10.0.2.2 guardado
     var apiBaseUrl: String
         get() {
-            val raw = prefs.getString(KEY_API_BASE_URL, BuildConfig.DEFAULT_API_BASE_URL)
-                ?: BuildConfig.DEFAULT_API_BASE_URL
+            val override = if (BuildConfig.DEBUG) prefs.getString(KEY_API_BASE_URL, null) else null
+            val raw = override?.takeIf { it.isNotBlank() } ?: BuildConfig.DEFAULT_API_BASE_URL
             return if (raw.endsWith("/")) raw else "$raw/"
         }
         set(value) {
-            val normalized = if (value.trim().endsWith("/")) value.trim() else "${value.trim()}/"
-            prefs.edit().putString(KEY_API_BASE_URL, normalized).apply()
+            val trimmed = value.trim()
+            if (trimmed.isBlank() || trimmed.trimEnd('/') == BuildConfig.DEFAULT_API_BASE_URL.trimEnd('/')) {
+                prefs.edit().remove(KEY_API_BASE_URL).apply()
+                return
+            }
+            prefs.edit().putString(KEY_API_BASE_URL, if (trimmed.endsWith("/")) trimmed else "$trimmed/").apply()
         }
+
+    val isUsingCustomServer: Boolean
+        get() = apiBaseUrl.trimEnd('/') != BuildConfig.DEFAULT_API_BASE_URL.trimEnd('/')
 
     var language: String
         get() = prefs.getString(KEY_LANGUAGE, "es") ?: "es"
@@ -176,10 +185,10 @@ class SessionManager(context: Context) {
     }
 
     fun clearSession() {
-        val currentUrl = apiBaseUrl
+        val customUrl = if (isUsingCustomServer) apiBaseUrl else null
         val currentLang = language
         prefs.edit().clear().apply()
-        apiBaseUrl = currentUrl
+        if (customUrl != null) apiBaseUrl = customUrl
         language = currentLang
     }
 }

@@ -75,9 +75,6 @@ fun FeeExplanationScreen(
                     color = IoBuildSlate500
                 )
             }
-            IconButton(onClick = { viewModel.loadFeeExplanation(viewModel.selectedLineId) }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = IoBuildEmerald600)
-            }
         }
 
         // Selector de Periodo (cuando hay más de una liquidación)

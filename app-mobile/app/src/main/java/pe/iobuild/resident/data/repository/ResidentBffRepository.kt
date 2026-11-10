@@ -1,6 +1,7 @@
 package pe.iobuild.resident.data.repository
 
 import kotlinx.coroutines.Dispatchers
+import pe.iobuild.resident.BuildConfig
 import kotlinx.coroutines.withContext
 import pe.iobuild.resident.data.local.SessionManager
 import pe.iobuild.resident.data.model.*
@@ -52,7 +53,8 @@ class ResidentBffRepository(
             )
             Result.success(auth)
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo conectar al servidor (${sessionManager.apiBaseUrl}). Verifica que el backend esté activo.", e))
+            val detail = if (BuildConfig.DEBUG) " (${sessionManager.apiBaseUrl})" else ""
+            Result.failure(Exception("No pudimos conectar con IoBuild$detail. Revisa tu conexión a internet e inténtalo de nuevo.", e))
         }
     }
 

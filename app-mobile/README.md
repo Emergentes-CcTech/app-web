@@ -93,8 +93,10 @@ Puedes usar cualquiera de los dos servidores incluidos en `app-web`:
 
 ### 2. Abrir `app-mobile` en Android Studio
 
-1. Abre **Android Studio** (Ladybug / Koala o superior) y selecciona **Open** -> elige la carpeta `Proyecto-IoBuild/app-mobile`.
-2. Espera a que Android Studio sincronice Gradle y ejecute la configuración `app` en un Emulador Android.
-3. En la pantalla de Login:
-   - Las credenciales de demostración (`cflores@gmail.com` / `Resident123!`) están listas con el botón **"Autocompletar Propietario Demo (Dpto. 402)"**.
-   - Si deseas cambiar entre el backend `.NET :8080`, `Nginx :80`, `Mock :3000` o la IP LAN de tu PC (para un celular físico), toca la píldora inferior **"Servidor API/BFF"** en la pantalla de Login.
+1. Abre **Android Studio** y selecciona **Open** -> elige la carpeta `app-web/app-mobile` (la versionada en git).
+2. Espera a que sincronice Gradle (usa el wrapper incluido) y ejecuta la configuración `app` en un emulador o celular.
+3. **Servidor**: la app usa producción (`https://iobuild.me/api/v1/`) por defecto, tanto en debug como en release.
+   - Para compilar contra el backend local desde la terminal:
+     `./gradlew assembleDebug -PiobuildApiUrl=http://10.0.2.2:8080/api/v1/` (en el emulador, `10.0.2.2` es tu PC).
+   - En una compilación **debug** también puedes mantener presionado el logo de la pantalla de login para elegir otro servidor de prueba. Las versiones release ignoran ese ajuste.
+4. Inicia sesión con una cuenta de propietario. En el backend local sembrado: `cflores@gmail.com` / `Resident123!` (Dpto. 402).

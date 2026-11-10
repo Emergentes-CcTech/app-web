@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,9 +67,6 @@ fun AccountStatementScreen(
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
-            }
-            IconButton(onClick = { viewModel.loadAccountStatement() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = IoBuildEmerald600)
             }
         }
 
@@ -307,7 +305,7 @@ fun AccountStatementScreen(
         AlertDialog(
             onDismissRequest = { receiptDialogItem = null },
             icon = {
-                Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = IoBuildEmerald600)
+                Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = IoBuildEmerald600)
             },
             title = {
                 Text("Comprobante de pago", fontWeight = FontWeight.Bold)

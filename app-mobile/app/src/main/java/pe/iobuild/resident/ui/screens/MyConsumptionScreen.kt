@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pe.iobuild.resident.data.model.CommonAreaConsumptionRow
@@ -70,9 +73,6 @@ fun MyConsumptionScreen(
                         color = IoBuildSlate500
                     )
                 }
-            }
-            IconButton(onClick = { viewModel.loadOverview() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = IoBuildEmerald600)
             }
         }
 
@@ -285,7 +285,7 @@ fun MyConsumptionScreen(
                         title = "Proyección cierre",
                         value = projValue,
                         subtitle = "Si el ritmo sigue igual",
-                        icon = Icons.Default.TrendingUp,
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
                         iconTint = IoBuildTeal500,
                         iconBg = IoBuildEmerald50
                     )
@@ -415,7 +415,7 @@ fun MyConsumptionScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                         } else {
-                            Icon(Icons.Default.Send, contentDescription = "Preguntar", modifier = Modifier.size(16.dp))
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Preguntar", modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -614,7 +614,10 @@ private fun CommonAreaItemRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f).padding(end = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     imageVector = when (area.type) {
                         "cistern", "pool" -> Icons.Default.WaterDrop
@@ -631,7 +634,9 @@ private fun CommonAreaItemRow(
                     text = area.name,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = IoBuildSlate900
+                    color = IoBuildSlate900,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -640,7 +645,9 @@ private fun CommonAreaItemRow(
                     text = valueText,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = IoBuildSlate900
+                    color = IoBuildSlate900,
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Surface(
                     color = if (!area.monitored) IoBuildSlate100 else if (isOnline) IoBuildEmerald50 else IoBuildRed50,

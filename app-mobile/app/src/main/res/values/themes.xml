@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.IoBuildResident" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Fondo claro desde el primer cuadro: evita el destello oscuro antes de que cargue Compose -->
+    <style name="Theme.IoBuildResident" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/iobuild_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

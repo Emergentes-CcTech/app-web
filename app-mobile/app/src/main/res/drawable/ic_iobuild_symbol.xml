@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Símbolo de IoBuild redibujado como vector a partir del logo de la web: edificio verde con su ventana -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="62dp"
+    android:height="64dp"
+    android:viewportWidth="62"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M18.5,1 L57,1 Q61,1 61,5 L61,41.5 L40,63 L4.5,63 Q0.5,63 0.5,59 L0.5,27.5 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,8.5 L51.5,8.5 L51.5,32 L40,32 Z" />
+</vector>
