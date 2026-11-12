@@ -1,5 +1,9 @@
 package pe.iobuild.resident.ui.screens
 
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.R
+import pe.iobuild.resident.ui.util.AppLocale
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -39,6 +43,8 @@ fun ProfileScreen(
     onRefresh: () -> Unit,
     onSaveProfile: (fullName: String, phoneNumber: String, secondEmail: String, photoUrl: String?) -> Unit,
     onClearMessages: () -> Unit,
+    currentLanguage: String,
+    onChangeLanguage: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     var editMode by remember { mutableStateOf(false) }
@@ -69,13 +75,13 @@ fun ProfileScreen(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Mi Perfil",
+                    text = stringResource(R.string.profile_title),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = "Datos personales, preferencias de aviso y seguridad",
+                    text = stringResource(R.string.profile_subtitle),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
@@ -183,7 +189,7 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val displayName = data.fullName?.takeIf { it.isNotBlank() } ?: "Propietario"
+                val displayName = data.fullName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.owner)
                 val initials = remember(displayName) {
                     displayName
                         .split(" ")
@@ -236,7 +242,7 @@ fun ProfileScreen(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = "Dueño de departamento",
+                            text = stringResource(R.string.profile_role),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = IoBuildEmerald700
@@ -253,7 +259,7 @@ fun ProfileScreen(
                 }
 
                 Text(
-                    text = "ID de usuario: #${data.userId}",
+                    text = stringResource(R.string.profile_user_id, data.userId),
                     fontSize = 11.sp,
                     color = IoBuildSlate500
                 )
@@ -287,15 +293,15 @@ fun ProfileScreen(
                                 )
                                 Column {
                                     Text(
-                                        text = "${unit.condominiumName ?: "Condominio"} · Dpto. ${unit.unitNumber}",
+                                        text = stringResource(R.string.profile_condo_unit, unit.condominiumName ?: stringResource(R.string.condominium), unit.unitNumber),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = IoBuildSlate900
                                     )
-                                    val floorLabel = unit.floor?.let { "Piso $it · " } ?: ""
+                                    val floorLabel = unit.floor?.let { stringResource(R.string.profile_floor, it) } ?: ""
                                     val areaLabel = unit.areaM2?.let { "${it.toInt()} m² · " } ?: ""
                                     Text(
-                                        text = "${floorLabel}${areaLabel}Alícuota ${FormatUtils.formatAliquot(unit.aliquotPercentage)}",
+                                        text = floorLabel + areaLabel + stringResource(R.string.profile_aliquot, FormatUtils.formatAliquot(unit.aliquotPercentage)),
                                         fontSize = 11.sp,
                                         color = IoBuildSlate500
                                     )
@@ -325,7 +331,7 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Información de Cuenta",
+                        text = stringResource(R.string.profile_account_info),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = IoBuildSlate900
@@ -339,7 +345,7 @@ fun ProfileScreen(
                                 tint = IoBuildEmerald600
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Editar perfil", fontWeight = FontWeight.Bold, color = IoBuildEmerald600)
+                            Text(stringResource(R.string.profile_edit), fontWeight = FontWeight.Bold, color = IoBuildEmerald600)
                         }
                     }
                 }
@@ -348,7 +354,7 @@ fun ProfileScreen(
                     value = fullNameInput,
                     onValueChange = { fullNameInput = it },
                     enabled = editMode && !saving,
-                    label = { Text("Nombre completo") },
+                    label = { Text(stringResource(R.string.field_full_name)) },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -359,7 +365,7 @@ fun ProfileScreen(
                     value = data.email.orEmpty(),
                     onValueChange = {},
                     enabled = false,
-                    label = { Text("Correo electrónico principal (Solo lectura)") },
+                    label = { Text(stringResource(R.string.profile_email_readonly)) },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -370,7 +376,7 @@ fun ProfileScreen(
                     value = phoneInput,
                     onValueChange = { phoneInput = it },
                     enabled = editMode && !saving,
-                    label = { Text("Número de teléfono") },
+                    label = { Text(stringResource(R.string.profile_phone)) },
                     leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -381,7 +387,7 @@ fun ProfileScreen(
                     value = secondEmailInput,
                     onValueChange = { secondEmailInput = it },
                     enabled = editMode && !saving,
-                    label = { Text("Correo electrónico alternativo") },
+                    label = { Text(stringResource(R.string.profile_second_email)) },
                     leadingIcon = { Icon(Icons.Default.AlternateEmail, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -404,7 +410,7 @@ fun ProfileScreen(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Cancelar")
+                            Text(stringResource(R.string.action_cancel))
                         }
                         Button(
                             onClick = {
@@ -428,9 +434,50 @@ fun ProfileScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                             } else {
-                                Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.profile_save_changes), fontWeight = FontWeight.Bold)
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // ── Idioma de la app: Sistema (sigue al teléfono), Español o English ──
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_language),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = IoBuildSlate900
+                )
+                Spacer(Modifier.height(4.dp))
+                listOf(
+                    AppLocale.SYSTEM to stringResource(R.string.profile_language_system),
+                    AppLocale.SPANISH to "Español",
+                    AppLocale.ENGLISH to "English"
+                ).forEach { (code, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { if (code != currentLanguage) onChangeLanguage(code) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = code == currentLanguage,
+                            onClick = { if (code != currentLanguage) onChangeLanguage(code) },
+                            colors = RadioButtonDefaults.colors(selectedColor = IoBuildEmerald600)
+                        )
+                        Text(text = label, fontSize = 14.sp, color = IoBuildSlate900)
                     }
                 }
             }
@@ -449,41 +496,41 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Notificaciones del Propietario",
+                    text = stringResource(R.string.profile_notifications),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = "Configura cómo deseas recibir avisos sobre tu cuota y áreas comunes.",
+                    text = stringResource(R.string.profile_notifications_subtitle),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
 
                 NotificationToggleRow(
-                    title = "Notificaciones por correo",
-                    subtitle = "Recibir copia de recibos y comunicados en tu correo",
+                    title = stringResource(R.string.notif_email),
+                    subtitle = stringResource(R.string.notif_email_hint),
                     checked = notifyByEmail,
                     onCheckedChange = { notifyByEmail = it }
                 )
                 HorizontalDivider(color = IoBuildSlate200)
                 NotificationToggleRow(
-                    title = "Aviso de nueva liquidación",
-                    subtitle = "Cuando la administración publica la cuota del mes",
+                    title = stringResource(R.string.notif_new_settlement),
+                    subtitle = stringResource(R.string.notif_new_settlement_hint),
                     checked = notifyOnNewSettlement,
                     onCheckedChange = { notifyOnNewSettlement = it }
                 )
                 HorizontalDivider(color = IoBuildSlate200)
                 NotificationToggleRow(
-                    title = "Recordatorio de vencimientos",
-                    subtitle = "Aviso preventivo 3 días antes de la fecha límite",
+                    title = stringResource(R.string.notif_due),
+                    subtitle = stringResource(R.string.notif_due_hint),
                     checked = notifyDueSoon,
                     onCheckedChange = { notifyDueSoon = it }
                 )
                 HorizontalDivider(color = IoBuildSlate200)
                 NotificationToggleRow(
-                    title = "Alertas del condominio",
-                    subtitle = "Fugas, mantenimientos o anomalías en áreas comunes",
+                    title = stringResource(R.string.notif_alerts),
+                    subtitle = stringResource(R.string.notif_alerts_hint),
                     checked = notifyCondoAlerts,
                     onCheckedChange = { notifyCondoAlerts = it }
                 )
@@ -503,7 +550,7 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Seguridad de la Sesión",
+                    text = stringResource(R.string.profile_security),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = IoBuildSlate900
@@ -533,7 +580,7 @@ fun ProfileScreen(
                                     )
                                     Column {
                                         Text(
-                                            text = session.device ?: "Dispositivo móvil",
+                                            text = session.device ?: stringResource(R.string.profile_device),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = IoBuildSlate900
@@ -553,7 +600,7 @@ fun ProfileScreen(
                                         color = IoBuildEmerald50
                                     ) {
                                         Text(
-                                            text = "Activa",
+                                            text = stringResource(R.string.profile_session_active),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = IoBuildEmerald700,
@@ -584,7 +631,7 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Cerrar Sesión en este Dispositivo",
+                        text = stringResource(R.string.action_sign_out),
                         fontWeight = FontWeight.Bold
                     )
                 }

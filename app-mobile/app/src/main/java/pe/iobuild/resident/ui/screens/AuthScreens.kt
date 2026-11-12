@@ -1,5 +1,8 @@
 package pe.iobuild.resident.ui.screens
 
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.R
+import pe.iobuild.resident.ui.util.AppLocale
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -85,7 +88,9 @@ private fun PrimaryAuthButton(text: String, loading: Boolean, onClick: () -> Uni
 fun LoginScreen(
     viewModel: ResidentViewModel,
     onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    currentLanguage: String,
+    onChangeLanguage: (String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -127,13 +132,13 @@ fun LoginScreen(
         Spacer(Modifier.height(40.dp))
 
         Text(
-            text = "Hola, propietario",
+            text = stringResource(R.string.login_greeting),
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = IoBuildSlate900
         )
         Text(
-            text = "Inicia sesión para ver tu cuota, tus pagos y el consumo de tu edificio.",
+            text = stringResource(R.string.login_subtitle),
             fontSize = 15.sp,
             color = IoBuildSlate500,
             modifier = Modifier.padding(top = 6.dp)
@@ -144,7 +149,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it; viewModel.clearAuthError() },
-            label = { Text("Correo electrónico") },
+            label = { Text(stringResource(R.string.field_email)) },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = IoBuildSlate500) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
@@ -159,13 +164,13 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; viewModel.clearAuthError() },
-            label = { Text("Contraseña") },
+            label = { Text(stringResource(R.string.field_password)) },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = IoBuildSlate500) },
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                        contentDescription = stringResource(if (passwordVisible) R.string.password_hide else R.string.password_show),
                         tint = IoBuildSlate500
                     )
                 }
@@ -186,7 +191,7 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        PrimaryAuthButton(text = "Iniciar sesión", loading = viewModel.authLoading, onClick = { submit() })
+        PrimaryAuthButton(text = stringResource(R.string.action_sign_in), loading = viewModel.authLoading, onClick = { submit() })
 
         Spacer(Modifier.height(32.dp))
 
@@ -198,13 +203,13 @@ fun LoginScreen(
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Text(
-                    text = "¿Es tu primera vez?",
+                    text = stringResource(R.string.login_first_time),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = "Si tu administración ya registró tu correo, crea tu cuenta y verás tu departamento al instante.",
+                    text = stringResource(R.string.login_first_time_body),
                     fontSize = 13.sp,
                     color = IoBuildSlate700,
                     modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
@@ -220,17 +225,25 @@ fun LoginScreen(
                 ) {
                     Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Crear mi cuenta", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_create_account), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
+
+        LanguageSwitch(
+            currentLanguage = currentLanguage,
+            onChangeLanguage = onChangeLanguage,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(Modifier.height(16.dp))
 
         // Aviso solo en builds de prueba cuando se apunta a un servidor distinto al de producción
         if (BuildConfig.DEBUG && viewModel.sessionManager.isUsingCustomServer) {
             Text(
-                text = "Servidor de prueba: ${viewModel.sessionManager.apiBaseUrl}",
+                text = stringResource(R.string.debug_server_in_use, viewModel.sessionManager.apiBaseUrl),
                 fontSize = 11.sp,
                 color = IoBuildAmber500,
                 textAlign = TextAlign.Center,
@@ -243,23 +256,23 @@ fun LoginScreen(
     if (showServerDialog) {
         AlertDialog(
             onDismissRequest = { showServerDialog = false },
-            title = { Text("Servidor (solo pruebas)", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.debug_server_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        "En el emulador, 10.0.2.2 apunta a tu PC. Las versiones publicadas usan siempre producción.",
+                        stringResource(R.string.debug_server_hint),
                         fontSize = 13.sp,
                         color = IoBuildSlate500
                     )
                     OutlinedTextField(
                         value = serverUrlInput,
                         onValueChange = { serverUrlInput = it },
-                        label = { Text("URL base (/api/v1/)") },
+                        label = { Text(stringResource(R.string.debug_server_url)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AssistChip(onClick = { serverUrlInput = BuildConfig.DEFAULT_API_BASE_URL }, label = { Text("Producción", fontSize = 12.sp) })
+                        AssistChip(onClick = { serverUrlInput = BuildConfig.DEFAULT_API_BASE_URL }, label = { Text(stringResource(R.string.debug_server_production), fontSize = 12.sp) })
                         AssistChip(onClick = { serverUrlInput = "http://10.0.2.2:8080/api/v1/" }, label = { Text("Local :8080", fontSize = 12.sp) })
                     }
                 }
@@ -268,12 +281,41 @@ fun LoginScreen(
                 Button(onClick = {
                     viewModel.updateServerBaseUrl(serverUrlInput)
                     showServerDialog = false
-                }) { Text("Guardar") }
+                }) { Text(stringResource(R.string.action_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showServerDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showServerDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
+    }
+}
+
+/** Español / English: el idioma activo (también cuando sigue al teléfono) queda resaltado. */
+@Composable
+fun LanguageSwitch(
+    currentLanguage: String,
+    onChangeLanguage: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val active = if (currentLanguage == AppLocale.SYSTEM) {
+        if (java.util.Locale.getDefault().language == "en") AppLocale.ENGLISH else AppLocale.SPANISH
+    } else currentLanguage
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(Icons.Default.Language, contentDescription = null, tint = IoBuildSlate500, modifier = Modifier.size(18.dp))
+        listOf(AppLocale.SPANISH to "Español", AppLocale.ENGLISH to "English").forEach { (code, label) ->
+            TextButton(onClick = { if (code != active) onChangeLanguage(code) }) {
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = if (code == active) FontWeight.Bold else FontWeight.Normal,
+                    color = if (code == active) IoBuildEmerald700 else IoBuildSlate500
+                )
+            }
+        }
     }
 }
 
@@ -310,12 +352,12 @@ fun RegisterResidentScreen(
             },
             modifier = Modifier.offset(x = (-12).dp)
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = IoBuildSlate900)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = IoBuildSlate900)
         }
 
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Paso $step de 2",
+            text = stringResource(R.string.register_step, step),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = IoBuildEmerald700
@@ -333,9 +375,9 @@ fun RegisterResidentScreen(
         Spacer(Modifier.height(24.dp))
 
         if (step == 1) {
-            Text("Crea tu cuenta", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = IoBuildSlate900)
+            Text(stringResource(R.string.register_title), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = IoBuildSlate900)
             Text(
-                text = "Usa el correo con el que tu administración te registró en el padrón del condominio.",
+                text = stringResource(R.string.register_subtitle),
                 fontSize = 15.sp,
                 color = IoBuildSlate500,
                 modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
@@ -344,7 +386,7 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it; viewModel.clearAuthError() },
-                label = { Text("Correo electrónico") },
+                label = { Text(stringResource(R.string.field_email)) },
                 leadingIcon = { Icon(Icons.Default.Email, null, tint = IoBuildSlate500) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
@@ -357,8 +399,8 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; viewModel.clearAuthError() },
-                label = { Text("Contraseña") },
-                supportingText = { Text("Mínimo 8 caracteres") },
+                label = { Text(stringResource(R.string.field_password)) },
+                supportingText = { Text(stringResource(R.string.register_password_hint)) },
                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = IoBuildSlate500) },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
@@ -372,7 +414,7 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it; viewModel.clearAuthError() },
-                label = { Text("Confirmar contraseña") },
+                label = { Text(stringResource(R.string.field_confirm_password)) },
                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = IoBuildSlate500) },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
@@ -393,7 +435,7 @@ fun RegisterResidentScreen(
 
             Spacer(Modifier.height(24.dp))
             PrimaryAuthButton(
-                text = if (viewModel.authLoading) "Verificando…" else "Continuar",
+                text = stringResource(if (viewModel.authLoading) R.string.register_checking else R.string.action_continue),
                 loading = viewModel.authLoading,
                 onClick = {
                     focusManager.clearFocus()
@@ -401,9 +443,9 @@ fun RegisterResidentScreen(
                 }
             )
         } else {
-            Text("Tus datos", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = IoBuildSlate900)
+            Text(stringResource(R.string.register_details_title), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = IoBuildSlate900)
             Text(
-                text = "Los usamos para tu perfil de propietario.",
+                text = stringResource(R.string.register_details_subtitle),
                 fontSize = 15.sp,
                 color = IoBuildSlate500,
                 modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
@@ -421,10 +463,12 @@ fun RegisterResidentScreen(
                         Icon(Icons.Default.CheckCircle, null, tint = IoBuildEmerald600, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Tu administración te asignó", fontSize = 12.sp, color = IoBuildEmerald700)
+                            Text(stringResource(R.string.register_assigned), fontSize = 12.sp, color = IoBuildEmerald700)
+                            val unitFormat = stringResource(R.string.unit_in_condominium)
+                            val condominiumLabel = stringResource(R.string.condominium)
                             Text(
                                 text = viewModel.invitedUnits.joinToString("\n") {
-                                    "Dpto. ${it.unitNumber ?: "—"} · ${it.condominiumName ?: "Condominio"}"
+                                    String.format(unitFormat, it.unitNumber ?: "—", it.condominiumName ?: condominiumLabel)
                                 },
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
@@ -438,7 +482,7 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it; viewModel.clearAuthError() },
-                label = { Text("Nombre completo") },
+                label = { Text(stringResource(R.string.field_full_name)) },
                 leadingIcon = { Icon(Icons.Default.Person, null, tint = IoBuildSlate500) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -451,7 +495,7 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = dni,
                 onValueChange = { if (it.length <= 8 && it.all(Char::isDigit)) dni = it; viewModel.clearAuthError() },
-                label = { Text("DNI") },
+                label = { Text(stringResource(R.string.field_dni)) },
                 leadingIcon = { Icon(Icons.Default.Badge, null, tint = IoBuildSlate500) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
@@ -464,7 +508,7 @@ fun RegisterResidentScreen(
             OutlinedTextField(
                 value = phoneNumber,
                 onValueChange = { phoneNumber = it; viewModel.clearAuthError() },
-                label = { Text("Celular") },
+                label = { Text(stringResource(R.string.field_mobile)) },
                 leadingIcon = { Icon(Icons.Default.Phone, null, tint = IoBuildSlate500) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
@@ -485,7 +529,7 @@ fun RegisterResidentScreen(
                     colors = CheckboxDefaults.colors(checkedColor = IoBuildEmerald600)
                 )
                 Text(
-                    text = "Acepto la política de privacidad y el uso de datos de consumo del edificio.",
+                    text = stringResource(R.string.register_privacy),
                     fontSize = 13.sp,
                     color = IoBuildSlate700
                 )
@@ -498,7 +542,7 @@ fun RegisterResidentScreen(
 
             Spacer(Modifier.height(20.dp))
             PrimaryAuthButton(
-                text = if (viewModel.authLoading) "Creando tu cuenta…" else "Crear mi cuenta",
+                text = stringResource(if (viewModel.authLoading) R.string.register_creating else R.string.action_create_account),
                 loading = viewModel.authLoading,
                 onClick = {
                     focusManager.clearFocus()

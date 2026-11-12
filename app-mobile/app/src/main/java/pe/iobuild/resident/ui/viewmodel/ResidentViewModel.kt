@@ -1,5 +1,8 @@
 package pe.iobuild.resident.ui.viewmodel
 
+import android.content.Context
+import androidx.annotation.StringRes
+import pe.iobuild.resident.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,8 +20,12 @@ import pe.iobuild.resident.data.repository.ResidentBffRepository
  */
 class ResidentViewModel(
     val sessionManager: SessionManager,
-    private val repository: ResidentBffRepository
+    private val repository: ResidentBffRepository,
+    private val appContext: Context
 ) : ViewModel() {
+
+    // Mensajes en el idioma activo de la app
+    private fun str(@StringRes id: Int, vararg args: Any): String = appContext.getString(id, *args)
 
     // Estado de sesión
     var isAuthenticated by mutableStateOf(sessionManager.isAuthenticated)
@@ -120,7 +127,7 @@ class ResidentViewModel(
 
     fun signIn(email: String, password: String, onSuccess: () -> Unit = {}) {
         if (email.isBlank() || password.isBlank()) {
-            authError = "Ingresa tu correo electrónico y contraseña."
+            authError = str(R.string.err_login_empty)
             return
         }
         viewModelScope.launch {
@@ -133,22 +140,22 @@ class ResidentViewModel(
                 refreshAllResidentViews()
                 onSuccess()
             }.onFailure { err ->
-                authError = err.message ?: "Credenciales inválidas."
+                authError = err.message ?: str(R.string.err_invalid_credentials)
             }
         }
     }
 
     fun verifyInvitationForStep2(email: String, password: String, confirmPass: String) {
         if (email.isBlank() || !email.contains("@")) {
-            authError = "Ingresa un correo electrónico válido."
+            authError = str(R.string.err_email_invalid)
             return
         }
         if (password.length < 8) {
-            authError = "La contraseña debe tener al menos 8 caracteres."
+            authError = str(R.string.err_password_short)
             return
         }
         if (password != confirmPass) {
-            authError = "Las contraseñas no coinciden."
+            authError = str(R.string.err_password_mismatch)
             return
         }
         viewModelScope.launch {
@@ -159,10 +166,10 @@ class ResidentViewModel(
             res.onSuccess { check ->
                 when {
                     check.alreadyRegistered -> {
-                        authError = "Este correo electrónico ya está registrado. Inicia sesión."
+                        authError = str(R.string.err_email_registered)
                     }
                     !check.assigned -> {
-                        authError = "Este correo no está registrado en ningún condominio. Pide a tu administración que te registre como propietario."
+                        authError = str(R.string.err_not_invited)
                     }
                     else -> {
                         invitedUnits = check.units.orEmpty()
@@ -190,19 +197,19 @@ class ResidentViewModel(
         onSuccess: () -> Unit
     ) {
         if (fullName.trim().length < 2) {
-            authError = "Ingresa tu nombre completo."
+            authError = str(R.string.err_full_name)
             return
         }
         if (dni.trim().length != 8 || !dni.trim().all { it.isDigit() }) {
-            authError = "El DNI debe tener exactamente 8 dígitos."
+            authError = str(R.string.err_dni)
             return
         }
         if (phoneNumber.trim().length < 7) {
-            authError = "Ingresa un número telefónico válido."
+            authError = str(R.string.err_phone)
             return
         }
         if (!acceptedPrivacy) {
-            authError = "Debes aceptar las políticas de privacidad y de datos de telemetría."
+            authError = str(R.string.err_privacy)
             return
         }
 
@@ -286,7 +293,7 @@ class ResidentViewModel(
 
                 if (statusNorm == "paid") {
                     sessionManager.clearPendingCheckout()
-                    paymentNotice = "¡Pago procesado y conciliado exitosamente con Stripe!"
+                    paymentNotice = str(R.string.msg_payment_processed)
                     loadAccountStatement()
                     loadOverview()
                     loadFeeExplanation(selectedLineId)
@@ -299,11 +306,11 @@ class ResidentViewModel(
                     sessionManager.savePendingCheckout(resolvedPaymentId, sessionId)
                     confirmPendingCheckoutIfNeeded()
                 } else {
-                    paymentNotice = "Sesión de pago iniciada."
+                    paymentNotice = str(R.string.msg_payment_started)
                     loadAccountStatement()
                 }
             }.onFailure { err ->
-                paymentNotice = err.message ?: "No se pudo iniciar el pago."
+                paymentNotice = err.message ?: str(R.string.err_payment_start)
             }
         }
     }
@@ -327,18 +334,18 @@ class ResidentViewModel(
                 val stripeStatusNorm = confirm.stripePaymentStatus?.lowercase()
                 if (statusNorm == "paid" || stripeStatusNorm == "paid") {
                     sessionManager.clearPendingCheckout()
-                    paymentNotice = "¡Pago confirmado y conciliado exitosamente con Stripe!"
+                    paymentNotice = str(R.string.msg_payment_confirmed)
                     loadAccountStatement()
                     loadOverview()
                     loadFeeExplanation(selectedLineId)
                 } else if (stripeStatusNorm != null) {
                     sessionManager.clearPendingCheckout()
-                    paymentNotice = "La sesión de pago en Stripe aún no fue completada."
+                    paymentNotice = str(R.string.msg_payment_incomplete)
                     loadAccountStatement()
                 }
             }.onFailure { err ->
                 sessionManager.clearPendingCheckout()
-                paymentNotice = err.message ?: "No se pudo verificar el estado del pago."
+                paymentNotice = err.message ?: str(R.string.err_payment_verify)
                 loadAccountStatement()
             }
         }
@@ -384,11 +391,11 @@ class ResidentViewModel(
     ) {
         val current = profileData ?: return
         if (fullName.trim().length < 2) {
-            profileError = "El nombre completo debe tener al menos 2 caracteres."
+            profileError = str(R.string.err_profile_name)
             return
         }
         if (phoneNumber.trim().length < 7) {
-            profileError = "Ingresa un número de teléfono válido."
+            profileError = str(R.string.err_profile_phone)
             return
         }
         viewModelScope.launch {
@@ -403,10 +410,10 @@ class ResidentViewModel(
                 photoUrl = photoUrl
             ).onSuccess { updated ->
                 profileData = updated
-                profileSuccessMessage = "Perfil actualizado correctamente."
+                profileSuccessMessage = str(R.string.msg_profile_saved)
                 loadAccountStatement()
             }.onFailure { err ->
-                profileError = err.message ?: "No se pudo actualizar el perfil."
+                profileError = err.message ?: str(R.string.err_profile_save)
             }
             profileSaving = false
         }
@@ -414,11 +421,12 @@ class ResidentViewModel(
 
     class Factory(
         private val sessionManager: SessionManager,
-        private val repository: ResidentBffRepository
+        private val repository: ResidentBffRepository,
+        private val appContext: Context
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return ResidentViewModel(sessionManager, repository) as T
+            return ResidentViewModel(sessionManager, repository, appContext) as T
         }
     }
 }

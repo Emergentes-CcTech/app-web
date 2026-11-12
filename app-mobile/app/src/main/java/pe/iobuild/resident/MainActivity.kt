@@ -1,5 +1,12 @@
 package pe.iobuild.resident
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.app.Activity
+import android.content.Context
+import androidx.annotation.StringRes
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.ui.util.AppLocale
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -44,8 +51,14 @@ import pe.iobuild.resident.ui.viewmodel.ResidentViewModel
  * `/api/v1/mobile/resident/...` del mismo backend de `app-web`.
  */
 class MainActivity : ComponentActivity() {
+    // Las pantallas leen sus textos del contexto de la actividad, con el idioma elegido
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLocale.applyToApp(applicationContext)
         // Barras del sistema transparentes con íconos oscuros: la app es clara y la hora queda legible
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
@@ -54,8 +67,8 @@ class MainActivity : ComponentActivity() {
 
         val sessionManager = SessionManager(applicationContext)
         val apiProvider = ApiClientProvider(sessionManager)
-        val repository = ResidentBffRepository(sessionManager, apiProvider)
-        val factory = ResidentViewModel.Factory(sessionManager, repository)
+        val repository = ResidentBffRepository(sessionManager, apiProvider, applicationContext)
+        val factory = ResidentViewModel.Factory(sessionManager, repository, applicationContext)
 
         setContent {
             IoBuildResidentTheme {
@@ -72,20 +85,29 @@ private enum class AuthRoute {
 }
 
 private enum class ResidentTab(
-    val title: String,
+    @StringRes val titleRes: Int,
     val icon: ImageVector
 ) {
-    CONSUMPTION("Consumo", Icons.Default.WaterDrop),
-    STATEMENT("Pagos", Icons.AutoMirrored.Filled.ReceiptLong),
-    FEE("Mi cuota", Icons.Default.PieChart),
-    PROFILE("Perfil", Icons.Default.Person)
+    CONSUMPTION(R.string.tab_consumption, Icons.Default.WaterDrop),
+    STATEMENT(R.string.tab_payments, Icons.AutoMirrored.Filled.ReceiptLong),
+    FEE(R.string.tab_fee, Icons.Default.PieChart),
+    PROFILE(R.string.tab_profile, Icons.Default.Person)
+}
+
+// Cambia el idioma, lo aplica a toda la app y recrea la pantalla para mostrar los textos nuevos
+private fun changeLanguage(context: Context, language: String) {
+    AppLocale.save(context, language)
+    AppLocale.applyToApp(context.applicationContext)
+    (context as? Activity)?.recreate()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IoBuildResidentApp(viewModel: ResidentViewModel) {
-    var authRoute by remember { mutableStateOf(AuthRoute.LOGIN) }
-    var activeTab by remember { mutableStateOf(ResidentTab.CONSUMPTION) }
+    var authRoute by rememberSaveable { mutableStateOf(AuthRoute.LOGIN) }
+    val context = LocalContext.current
+    val currentLanguage = remember { AppLocale.saved(context) }
+    var activeTab by rememberSaveable { mutableStateOf(ResidentTab.CONSUMPTION) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Al regresar a la app desde el navegador (onResume), confirma cualquier sesión de pago Stripe pendiente
@@ -112,7 +134,9 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                     },
                     onLoginSuccess = {
                         activeTab = ResidentTab.CONSUMPTION
-                    }
+                    },
+                    currentLanguage = currentLanguage,
+                    onChangeLanguage = { changeLanguage(context, it) }
                 )
             }
             AuthRoute.REGISTER -> {
@@ -131,18 +155,18 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
         return
     }
 
-    val unitBadgeText = viewModel.overviewData?.unit?.let { u ->
-        val condoName = viewModel.overviewData?.condominium?.name
-        if (!condoName.isNullOrBlank()) "Dpto. ${u.unitNumber} · $condoName" else "Dpto. ${u.unitNumber}"
-    } ?: viewModel.statementData?.unit?.let { u ->
-        val condoName = u.condominiumName
-        if (!condoName.isNullOrBlank()) "Dpto. ${u.unitNumber} · $condoName" else "Dpto. ${u.unitNumber}"
-    } ?: "Portal Propietario"
+    val unitNumber = viewModel.overviewData?.unit?.unitNumber ?: viewModel.statementData?.unit?.unitNumber
+    val condoName = viewModel.overviewData?.condominium?.name ?: viewModel.statementData?.unit?.condominiumName
+    val unitBadgeText = when {
+        unitNumber == null -> stringResource(R.string.owner_portal)
+        !condoName.isNullOrBlank() -> stringResource(R.string.unit_in_condominium, unitNumber, condoName)
+        else -> stringResource(R.string.unit_short, unitNumber)
+    }
 
     val residentDisplayName = viewModel.profileData?.fullName?.takeIf { it.isNotBlank() }
         ?: viewModel.overviewData?.unit?.residentFullName?.takeIf { it.isNotBlank() }
         ?: viewModel.sessionManager.displayName.takeIf { it.isNotBlank() }
-        ?: "Propietario"
+        ?: stringResource(R.string.owner)
 
     val initials = residentDisplayName.split(" ").filter { it.isNotBlank() }.take(2)
         .joinToString("") { it.first().uppercase() }.ifBlank { "P" }
@@ -172,7 +196,7 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                         IconButton(onClick = { viewModel.refreshAllResidentViews() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Actualizar",
+                                contentDescription = stringResource(R.string.action_refresh),
                                 tint = IoBuildSlate500
                             )
                         }
@@ -213,12 +237,12 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                             icon = {
                                 Icon(
                                     imageVector = tab.icon,
-                                    contentDescription = tab.title
+                                    contentDescription = stringResource(tab.titleRes)
                                 )
                             },
                             label = {
                                 Text(
-                                    text = tab.title,
+                                    text = stringResource(tab.titleRes),
                                     fontSize = 11.sp,
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -287,6 +311,8 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                             viewModel.saveProfileChanges(fullName, phone, secondEmail, photoUrl)
                         },
                         onClearMessages = { viewModel.clearProfileMessages() },
+                        currentLanguage = currentLanguage,
+                        onChangeLanguage = { changeLanguage(context, it) },
                         onSignOut = {
                             viewModel.signOut()
                             authRoute = AuthRoute.LOGIN

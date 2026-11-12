@@ -91,6 +91,12 @@ Puedes usar cualquiera de los dos servidores incluidos en `app-web`:
     - **Correo**: `carla.f@email.com`
     - **Contraseña**: `Demo1234!`
 
+### Idiomas (español e inglés)
+
+- Todos los textos están en `app/src/main/res/values/strings.xml` (español, idioma por defecto) y `values-en/strings.xml` (inglés). Para agregar un texto, crea la clave en ambos archivos y úsala con `stringResource(R.string.clave)` en las pantallas o `appContext.getString(...)` en el ViewModel y el repositorio.
+- Por defecto la app sigue el idioma del teléfono (inglés si el teléfono está en inglés, español en cualquier otro caso). El propietario puede fijarlo en **Perfil → Idioma** o en el pie del login; se guarda en el teléfono y no se borra al cerrar sesión.
+- El asistente IA responde en el idioma activo. Los nombres que vienen del servidor (áreas comunes, títulos de alertas) se muestran tal como los registró la administración.
+
 ### 2. Abrir `app-mobile` en Android Studio
 
 1. Abre **Android Studio** y selecciona **Open** -> elige la carpeta `app-web/app-mobile` (la versionada en git).

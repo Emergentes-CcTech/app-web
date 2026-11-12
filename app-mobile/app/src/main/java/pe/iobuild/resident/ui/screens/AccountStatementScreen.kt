@@ -1,5 +1,7 @@
 package pe.iobuild.resident.ui.screens
 
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.R
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -57,13 +59,13 @@ fun AccountStatementScreen(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Estado de cuenta",
+                    text = stringResource(R.string.statement_title),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = "Cuotas de mantenimiento de tu unidad y su desglose según la Ley N.° 27157.",
+                    text = stringResource(R.string.statement_subtitle),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
@@ -97,7 +99,7 @@ fun AccountStatementScreen(
                         )
                     }
                     IconButton(onClick = { viewModel.clearPaymentNotice() }) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -117,7 +119,7 @@ fun AccountStatementScreen(
 
         if (!viewModel.statementError.isNullOrBlank() && statement == null) {
             ErrorBanner(
-                message = viewModel.statementError ?: "No se pudo cargar tu estado de cuenta.",
+                message = viewModel.statementError ?: stringResource(R.string.err_load_statement),
                 onRetry = { viewModel.loadAccountStatement() }
             )
             return@Column
@@ -148,7 +150,7 @@ fun AccountStatementScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Pendiente de pago · ${FormatUtils.formatPeriod(pending.period)}",
+                            text = stringResource(R.string.statement_pending_period, FormatUtils.formatPeriod(pending.period)),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = IoBuildSlate800
@@ -164,9 +166,9 @@ fun AccountStatementScreen(
                     )
 
                     val dueDetails = buildString {
-                        append("Vence: ${pending.dueDate ?: "—"}")
+                        append(stringResource(R.string.due_on, FormatUtils.formatDate(pending.dueDate)))
                         if (pending.daysOverdue > 0) {
-                            append(" · Días de atraso: ${pending.daysOverdue}")
+                            append(stringResource(R.string.statement_days_overdue, pending.daysOverdue))
                         }
                     }
                     Text(
@@ -202,7 +204,7 @@ fun AccountStatementScreen(
                             Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                         }
-                        Text("Pagar con tarjeta", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(stringResource(R.string.statement_pay_card), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
             }
@@ -228,13 +230,13 @@ fun AccountStatementScreen(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Estás al día",
+                            text = stringResource(R.string.statement_up_to_date),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = IoBuildEmerald700
                         )
                         Text(
-                            text = "No tienes cuotas de mantenimiento pendientes de pago.",
+                            text = stringResource(R.string.statement_up_to_date_body),
                             fontSize = 12.sp,
                             color = IoBuildEmerald700.copy(alpha = 0.85f)
                         )
@@ -250,7 +252,7 @@ fun AccountStatementScreen(
 
         // ── 3. Historial de Cuotas ──
         Text(
-            text = "Historial",
+            text = stringResource(R.string.statement_history),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = IoBuildSlate900
@@ -264,7 +266,7 @@ fun AccountStatementScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Text(
-                    text = "Aún no tienes liquidaciones registradas.",
+                    text = stringResource(R.string.statement_empty),
                     modifier = Modifier.padding(20.dp),
                     color = IoBuildSlate500
                 )
@@ -289,16 +291,16 @@ fun AccountStatementScreen(
         val unit = statement?.unit
         val receiptText = remember(paidItem, unit) {
             buildString {
-                appendLine("IoBuild · Comprobante de Pago")
+                appendLine(context.getString(R.string.receipt_header))
                 appendLine("-----------------------------------------")
-                appendLine("Departamento: ${unit?.unitNumber ?: "—"} - ${unit?.condominiumName ?: "—"}")
-                appendLine("Titular: ${unit?.holderName ?: "—"} (Alícuota: ${FormatUtils.formatAliquot(unit?.aliquotPercentage)})")
-                appendLine("Periodo: ${FormatUtils.formatPeriod(paidItem.period)}")
-                appendLine("Concepto: Cuota de áreas comunes")
-                appendLine("Importe: ${FormatUtils.formatPen(paidItem.amount)}")
-                appendLine("Fecha de pago: ${paidItem.paidAt ?: "—"}")
-                appendLine("Método: ${paidItem.method ?: "—"}")
-                appendLine("Referencia: ${paidItem.reference ?: "—"}")
+                appendLine(context.getString(R.string.receipt_unit, unit?.unitNumber ?: "—", unit?.condominiumName ?: "—"))
+                appendLine(context.getString(R.string.receipt_holder, unit?.holderName ?: "—", FormatUtils.formatAliquot(unit?.aliquotPercentage)))
+                appendLine(context.getString(R.string.receipt_period, FormatUtils.formatPeriod(paidItem.period)))
+                appendLine(context.getString(R.string.receipt_concept, context.getString(R.string.common_area_fee)))
+                appendLine(context.getString(R.string.receipt_amount, FormatUtils.formatPen(paidItem.amount)))
+                appendLine(context.getString(R.string.receipt_paid_on, FormatUtils.formatDate(paidItem.paidAt)))
+                appendLine(context.getString(R.string.receipt_method, paidItem.method ?: "—"))
+                appendLine(context.getString(R.string.receipt_reference, paidItem.reference ?: "—"))
             }
         }
 
@@ -308,7 +310,7 @@ fun AccountStatementScreen(
                 Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = IoBuildEmerald600)
             },
             title = {
-                Text("Comprobante de pago", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.receipt_title), fontWeight = FontWeight.Bold)
             },
             text = {
                 Surface(
@@ -333,18 +335,18 @@ fun AccountStatementScreen(
                             putExtra(Intent.EXTRA_TEXT, receiptText)
                             type = "text/plain"
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Compartir comprobante"))
+                        context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.receipt_share_title)))
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = IoBuildEmerald600)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Compartir / Guardar")
+                    Text(stringResource(R.string.receipt_share))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { receiptDialogItem = null }) {
-                    Text("Cerrar")
+                    Text(stringResource(R.string.action_close))
                 }
             }
         )
@@ -366,12 +368,12 @@ private fun UnitIsolationFactsCard(unit: AccountUnitFacts) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 FactCell(
                     modifier = Modifier.weight(1f),
-                    label = "Departamento",
+                    label = stringResource(R.string.statement_unit),
                     value = unit.unitNumber
                 )
                 FactCell(
                     modifier = Modifier.weight(1f),
-                    label = "Condominio",
+                    label = stringResource(R.string.condominium),
                     value = unit.condominiumName ?: "—"
                 )
             }
@@ -379,12 +381,12 @@ private fun UnitIsolationFactsCard(unit: AccountUnitFacts) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 FactCell(
                     modifier = Modifier.weight(1f),
-                    label = "Alícuota (Ley 27157)",
+                    label = stringResource(R.string.statement_aliquot),
                     value = FormatUtils.formatAliquot(unit.aliquotPercentage)
                 )
                 FactCell(
                     modifier = Modifier.weight(1f),
-                    label = "Titular",
+                    label = stringResource(R.string.statement_holder),
                     value = unit.holderName ?: "—"
                 )
             }
@@ -445,7 +447,7 @@ private fun StatementHistoryCard(
                         color = IoBuildSlate900
                     )
                     Text(
-                        text = item.concept ?: "Cuota de áreas comunes",
+                        text = stringResource(R.string.common_area_fee),
                         fontSize = 12.sp,
                         color = IoBuildSlate500
                     )
@@ -465,7 +467,7 @@ private fun StatementHistoryCard(
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = if (isPaid && !item.paidAt.isNullOrBlank()) "Pagado: ${item.paidAt}" else "Vence: ${item.dueDate ?: "—"}",
+                    text = if (isPaid && !item.paidAt.isNullOrBlank()) stringResource(R.string.paid_on, FormatUtils.formatDate(item.paidAt)) else stringResource(R.string.due_on, FormatUtils.formatDate(item.dueDate)),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
@@ -481,13 +483,13 @@ private fun StatementHistoryCard(
                 TextButton(onClick = onViewBreakdown) {
                     Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Ver desglose", fontSize = 13.sp)
+                    Text(stringResource(R.string.action_view_breakdown), fontSize = 13.sp)
                 }
                 if (isPaid) {
                     TextButton(onClick = onShowReceipt) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Comprobante", fontSize = 13.sp)
+                        Text(stringResource(R.string.statement_receipt), fontSize = 13.sp)
                     }
                 }
             }

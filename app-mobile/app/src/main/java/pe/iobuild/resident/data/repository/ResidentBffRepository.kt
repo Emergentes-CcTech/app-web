@@ -1,5 +1,9 @@
 package pe.iobuild.resident.data.repository
 
+import android.content.Context
+import androidx.annotation.StringRes
+import pe.iobuild.resident.R
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import pe.iobuild.resident.BuildConfig
 import kotlinx.coroutines.withContext
@@ -18,8 +22,12 @@ import pe.iobuild.resident.data.remote.ApiClientProvider
  */
 class ResidentBffRepository(
     private val sessionManager: SessionManager,
-    private val clientProvider: ApiClientProvider
+    private val clientProvider: ApiClientProvider,
+    private val appContext: Context
 ) {
+    // Mensajes en el idioma activo de la app
+    private fun str(@StringRes id: Int, vararg args: Any): String = appContext.getString(id, *args)
+
     private val api get() = clientProvider.getApi()
 
     private fun isResidentRole(role: String?): Boolean {
@@ -33,12 +41,12 @@ class ResidentBffRepository(
         try {
             val response = api.signIn(SignInRequest(email = email.trim().lowercase(), password = password))
             if (!response.isSuccessful || response.body() == null) {
-                return@withContext Result.failure(Exception("Correo o contraseña incorrectos."))
+                return@withContext Result.failure(Exception(str(R.string.err_wrong_credentials)))
             }
             val auth = response.body()!!
             if (!isResidentRole(auth.role)) {
                 return@withContext Result.failure(
-                    Exception("Esta aplicación móvil es exclusiva para propietarios de departamento. Para gestionar condominios, usa la consola web.")
+                    Exception(str(R.string.err_owners_only))
                 )
             }
             sessionManager.saveAuthSession(
@@ -54,7 +62,7 @@ class ResidentBffRepository(
             Result.success(auth)
         } catch (e: Exception) {
             val detail = if (BuildConfig.DEBUG) " (${sessionManager.apiBaseUrl})" else ""
-            Result.failure(Exception("No pudimos conectar con IoBuild$detail. Revisa tu conexión a internet e inténtalo de nuevo.", e))
+            Result.failure(Exception(str(R.string.err_connection, detail), e))
         }
     }
 
@@ -64,10 +72,10 @@ class ResidentBffRepository(
             if (res.isSuccessful && res.body() != null) {
                 Result.success(res.body()!!)
             } else {
-                Result.failure(Exception("No se pudo verificar la invitación de la unidad."))
+                Result.failure(Exception(str(R.string.err_invitation_check)))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de conexión al verificar el correo.", e))
+            Result.failure(Exception(str(R.string.err_invitation_connection), e))
         }
     }
 
@@ -83,9 +91,9 @@ class ResidentBffRepository(
             val signUpRes = api.signUp(SignUpRequest(email = normalizedEmail, password = password, role = "resident"))
             if (!signUpRes.isSuccessful) {
                 val msg = when (signUpRes.code()) {
-                    403 -> "Este correo no tiene un departamento asignado por la administración."
-                    409 -> "Este correo electrónico ya está registrado. Inicia sesión."
-                    else -> "No se pudo completar el registro."
+                    403 -> str(R.string.err_no_unit)
+                    409 -> str(R.string.err_email_registered)
+                    else -> str(R.string.err_register)
                 }
                 return@withContext Result.failure(Exception(msg))
             }
@@ -109,7 +117,7 @@ class ResidentBffRepository(
             sessionManager.displayName = fullName.trim()
             Result.success(auth)
         } catch (e: Exception) {
-            Result.failure(Exception(e.message ?: "Error al registrar propietario.", e))
+            Result.failure(Exception(e.message ?: str(R.string.err_register_owner), e))
         }
     }
 
@@ -222,7 +230,7 @@ class ResidentBffRepository(
                 )
             )
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo cargar el resumen de consumo.", e))
+            Result.failure(Exception(str(R.string.err_load_overview), e))
         }
     }
 
@@ -271,7 +279,7 @@ class ResidentBffRepository(
                 )
             )
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo cargar tu estado de cuenta.", e))
+            Result.failure(Exception(str(R.string.err_load_statement), e))
         }
     }
 
@@ -281,10 +289,10 @@ class ResidentBffRepository(
             if (res.isSuccessful && res.body() != null) {
                 Result.success(res.body()!!)
             } else {
-                Result.failure(Exception("No se pudo iniciar la sesión de pago en Stripe."))
+                Result.failure(Exception(str(R.string.err_stripe_start)))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error al procesar el pago con el servidor.", e))
+            Result.failure(Exception(str(R.string.err_payment_server), e))
         }
     }
 
@@ -294,10 +302,10 @@ class ResidentBffRepository(
             if (res.isSuccessful && res.body() != null) {
                 Result.success(res.body()!!)
             } else {
-                Result.failure(Exception("No se pudo confirmar la sesión de pago en Stripe."))
+                Result.failure(Exception(str(R.string.err_stripe_confirm)))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error al confirmar el pago con el servidor.", e))
+            Result.failure(Exception(str(R.string.err_payment_confirm_server), e))
         }
     }
 
@@ -335,7 +343,7 @@ class ResidentBffRepository(
                 )
             )
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo cargar la explicación de tu cuota.", e))
+            Result.failure(Exception(str(R.string.err_load_fee), e))
         }
     }
 
@@ -386,7 +394,7 @@ class ResidentBffRepository(
                 )
             )
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo cargar tu perfil.", e))
+            Result.failure(Exception(str(R.string.err_load_profile), e))
         }
     }
 
@@ -415,7 +423,7 @@ class ResidentBffRepository(
             if (!photoUrl.isNullOrBlank()) sessionManager.photoUrl = photoUrl
             fetchProfile()
         } catch (e: Exception) {
-            Result.failure(Exception("No se pudo guardar los cambios del perfil.", e))
+            Result.failure(Exception(str(R.string.err_profile_update), e))
         }
     }
 
@@ -423,7 +431,7 @@ class ResidentBffRepository(
         try {
             val req = MobileAiExplainRequest(
                 question = question,
-                language = sessionManager.language,
+                language = if (Locale.getDefault().language == "en") "en" else "es",
                 projectId = sessionManager.projectId,
                 unitId = sessionManager.unitId.takeIf { it > 0 }
             )
@@ -433,16 +441,16 @@ class ResidentBffRepository(
             }
             if (bffRes.code() == 429) {
                 return@withContext Result.failure(
-                    Exception("Has alcanzado el límite de consultas por minuto al asistente IA. Intenta nuevamente en unos segundos.")
+                    Exception(str(R.string.err_ai_limit))
                 )
             }
             val stdRes = api.askStandardAi(req)
             if (stdRes.isSuccessful && stdRes.body() != null) {
                 return@withContext Result.success(stdRes.body()!!)
             }
-            Result.failure(Exception("No se pudo obtener respuesta del asistente IoBuild."))
+            Result.failure(Exception(str(R.string.err_ai_no_answer)))
         } catch (e: Exception) {
-            Result.failure(Exception("Error al consultar al asistente IoBuild.", e))
+            Result.failure(Exception(str(R.string.err_ai_error), e))
         }
     }
 }

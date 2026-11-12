@@ -1,5 +1,7 @@
 package pe.iobuild.resident.ui.screens
 
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -61,14 +63,14 @@ fun MyConsumptionScreen(
         ) {
             Column {
                 Text(
-                    text = "Mi consumo",
+                    text = stringResource(R.string.consumption_title),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = IoBuildSlate900
                 )
                 overview?.unit?.let { u ->
                     Text(
-                        text = "Departamento ${u.unitNumber} · Alícuota ${FormatUtils.formatAliquot(u.aliquotPercentage)}",
+                        text = stringResource(R.string.consumption_unit_aliquot, u.unitNumber, FormatUtils.formatAliquot(u.aliquotPercentage)),
                         fontSize = 13.sp,
                         color = IoBuildSlate500
                     )
@@ -90,7 +92,7 @@ fun MyConsumptionScreen(
 
         if (!viewModel.overviewError.isNullOrBlank() && overview == null) {
             ErrorBanner(
-                message = viewModel.overviewError ?: "No se pudo cargar la información.",
+                message = viewModel.overviewError ?: stringResource(R.string.err_load_generic),
                 onRetry = { viewModel.loadOverview() }
             )
             return@Column
@@ -103,7 +105,7 @@ fun MyConsumptionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Tu cuenta aún no está vinculada a un departamento. Pide a la administración tu registro en el padrón.",
+                    text = stringResource(R.string.consumption_no_unit),
                     modifier = Modifier.padding(20.dp),
                     color = IoBuildSlate700
                 )
@@ -145,7 +147,7 @@ fun MyConsumptionScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Mi liquidación de ${FormatUtils.formatPeriod(latest.period)}",
+                            text = stringResource(R.string.consumption_my_settlement, FormatUtils.formatPeriod(latest.period)),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = IoBuildSlate700
@@ -167,9 +169,9 @@ fun MyConsumptionScreen(
                     ) {
                         Text(
                             text = if (isPaid && !latest.paidAt.isNullOrBlank()) {
-                                "Pagada el ${latest.paidAt}"
+                                stringResource(R.string.paid_on, FormatUtils.formatDate(latest.paidAt))
                             } else {
-                                "Vence: ${latest.dueDate ?: "—"}"
+                                stringResource(R.string.due_on, FormatUtils.formatDate(latest.dueDate))
                             },
                             fontSize = 12.sp,
                             color = IoBuildSlate500
@@ -181,12 +183,12 @@ fun MyConsumptionScreen(
                         ) {
                             Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Ver desglose", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.action_view_breakdown), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 } else {
                     Text(
-                        text = "Aún no tienes liquidaciones emitidas.",
+                        text = stringResource(R.string.consumption_no_settlements),
                         color = IoBuildSlate500,
                         fontSize = 14.sp
                     )
@@ -205,13 +207,13 @@ fun MyConsumptionScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Consumo de áreas comunes este mes",
+                            text = stringResource(R.string.consumption_common_title),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = IoBuildSlate900
                         )
                         Text(
-                            text = "${overview.condominium?.name ?: "Condominio"} · ${FormatUtils.formatPeriod(consumption.period)}",
+                            text = stringResource(R.string.consumption_condo_period, overview.condominium?.name ?: stringResource(R.string.condominium), FormatUtils.formatPeriod(consumption.period)),
                             fontSize = 12.sp,
                             color = IoBuildSlate500
                         )
@@ -225,12 +227,12 @@ fun MyConsumptionScreen(
                             .padding(2.dp)
                     ) {
                         FilterChipButton(
-                            label = "Agua",
+                            label = stringResource(R.string.water),
                             selected = selectedMetric == "water",
                             onClick = { selectedMetric = "water" }
                         )
                         FilterChipButton(
-                            label = "Energía",
+                            label = stringResource(R.string.energy),
                             selected = selectedMetric == "energy",
                             onClick = { selectedMetric = "energy" }
                         )
@@ -239,12 +241,12 @@ fun MyConsumptionScreen(
 
                 // 4 Tarjetas KPI de Áreas Comunes (2x2 Grid móvil)
                 val waterChangeStr = consumption.waterChangePct?.let {
-                    "${if (it > 0) "+" else ""}$it% vs mes ant."
-                } ?: "Sin mes previo"
+                    stringResource(R.string.consumption_vs_previous, "${if (it > 0) "+" else ""}$it")
+                } ?: stringResource(R.string.consumption_no_previous)
 
                 val energyChangeStr = consumption.energyChangePct?.let {
-                    "${if (it > 0) "+" else ""}$it% vs mes ant."
-                } ?: "Sin mes previo"
+                    stringResource(R.string.consumption_vs_previous, "${if (it > 0) "+" else ""}$it")
+                } ?: stringResource(R.string.consumption_no_previous)
 
                 val projValue = if (selectedMetric == "water") {
                     "${consumption.projectedWaterM3} m³"
@@ -258,7 +260,7 @@ fun MyConsumptionScreen(
                 ) {
                     KpiStatCard(
                         modifier = Modifier.weight(1f),
-                        title = "Agua común",
+                        title = stringResource(R.string.consumption_common_water),
                         value = "${consumption.waterM3} m³",
                         subtitle = waterChangeStr,
                         icon = Icons.Default.WaterDrop,
@@ -267,7 +269,7 @@ fun MyConsumptionScreen(
                     )
                     KpiStatCard(
                         modifier = Modifier.weight(1f),
-                        title = "Energía común",
+                        title = stringResource(R.string.consumption_common_energy),
                         value = "${consumption.energyKwh} kWh",
                         subtitle = energyChangeStr,
                         icon = Icons.Default.Bolt,
@@ -282,18 +284,18 @@ fun MyConsumptionScreen(
                 ) {
                     KpiStatCard(
                         modifier = Modifier.weight(1f),
-                        title = "Proyección cierre",
+                        title = stringResource(R.string.consumption_projection),
                         value = projValue,
-                        subtitle = "Si el ritmo sigue igual",
+                        subtitle = stringResource(R.string.consumption_projection_hint),
                         icon = Icons.AutoMirrored.Filled.TrendingUp,
                         iconTint = IoBuildTeal500,
                         iconBg = IoBuildEmerald50
                     )
                     KpiStatCard(
                         modifier = Modifier.weight(1f),
-                        title = "Áreas monitoreadas",
+                        title = stringResource(R.string.consumption_monitored),
                         value = "${consumption.monitoredAreasCount} / ${consumption.totalAreasCount}",
-                        subtitle = "Con medidor IoT activo",
+                        subtitle = stringResource(R.string.consumption_monitored_hint),
                         icon = Icons.Default.Sensors,
                         iconTint = IoBuildEmerald700,
                         iconBg = IoBuildEmerald50
@@ -313,7 +315,7 @@ fun MyConsumptionScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Detalle por área común (${if (selectedMetric == "water") "m³" else "kWh"})",
+                                text = stringResource(R.string.consumption_area_detail, if (selectedMetric == "water") "m³" else "kWh"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = IoBuildSlate900
@@ -325,7 +327,7 @@ fun MyConsumptionScreen(
                             }
 
                             Text(
-                                text = "Estos consumos de los sensores IoT de áreas comunes sustentan el prorrateo de tu departamento.",
+                                text = stringResource(R.string.consumption_area_note),
                                 fontSize = 11.sp,
                                 color = IoBuildSlate500
                             )
@@ -355,23 +357,23 @@ fun MyConsumptionScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Pregúntale a IoBuild",
+                        text = stringResource(R.string.ai_title),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = IoBuildSlate900
                     )
                 }
                 Text(
-                    text = "Explica la última cuota emitida con lenguaje claro a partir de las mediciones y alertas del edificio.",
+                    text = stringResource(R.string.ai_subtitle),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
 
                 // Chips de preguntas sugeridas para el propietario
                 val residentSuggestions = listOf(
-                    "¿Por qué varió mi cuota este mes?",
-                    "¿Cómo se calcula mi parte del gasto común?",
-                    "¿Hubo alguna fuga en el edificio?"
+                    stringResource(R.string.ai_suggestion_change),
+                    stringResource(R.string.ai_suggestion_share),
+                    stringResource(R.string.ai_suggestion_leak)
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     residentSuggestions.forEach { suggestion ->
@@ -397,7 +399,7 @@ fun MyConsumptionScreen(
                     OutlinedTextField(
                         value = aiQuestionInput,
                         onValueChange = { aiQuestionInput = it },
-                        placeholder = { Text("Escribe tu pregunta sobre el consumo...", fontSize = 12.sp) },
+                        placeholder = { Text(stringResource(R.string.ai_placeholder), fontSize = 12.sp) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
@@ -415,7 +417,7 @@ fun MyConsumptionScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                         } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Preguntar", modifier = Modifier.size(16.dp))
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.action_ask), modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -440,7 +442,7 @@ fun MyConsumptionScreen(
                         ) {
                             if (!ans.period.isNullOrBlank()) {
                                 Text(
-                                    text = "Periodo analizado: ${FormatUtils.formatPeriod(ans.period)}",
+                                    text = stringResource(R.string.ai_period, FormatUtils.formatPeriod(ans.period)),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = IoBuildEmerald700
@@ -453,17 +455,17 @@ fun MyConsumptionScreen(
                                 color = IoBuildSlate900
                             )
                             if (ans.waterAnalysis.isNotBlank()) {
-                                Text("• Agua: ${ans.waterAnalysis}", fontSize = 12.sp, color = IoBuildSlate700)
+                                Text(stringResource(R.string.ai_water, ans.waterAnalysis), fontSize = 12.sp, color = IoBuildSlate700)
                             }
                             if (ans.energyAnalysis.isNotBlank()) {
-                                Text("• Energía: ${ans.energyAnalysis}", fontSize = 12.sp, color = IoBuildSlate700)
+                                Text(stringResource(R.string.ai_energy, ans.energyAnalysis), fontSize = 12.sp, color = IoBuildSlate700)
                             }
                             if (ans.aliquotImpact.isNotBlank()) {
-                                Text("• Tu alícuota: ${ans.aliquotImpact}", fontSize = 12.sp, color = IoBuildSlate700)
+                                Text(stringResource(R.string.ai_aliquot, ans.aliquotImpact), fontSize = 12.sp, color = IoBuildSlate700)
                             }
                             ans.recommendations?.takeIf { it.isNotEmpty() }?.let { recs ->
                                 Text(
-                                    text = "Recomendaciones:",
+                                    text = stringResource(R.string.ai_recommendations),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = IoBuildSlate800
@@ -497,13 +499,13 @@ fun MyConsumptionScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Últimas liquidaciones",
+                            text = stringResource(R.string.consumption_recent),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = IoBuildSlate900
                         )
                         TextButton(onClick = onNavigateToAccountStatement) {
-                            Text("Estado de cuenta", color = IoBuildEmerald600, fontSize = 13.sp)
+                            Text(stringResource(R.string.statement_title), color = IoBuildEmerald600, fontSize = 13.sp)
                         }
                     }
 
@@ -654,7 +656,7 @@ private fun CommonAreaItemRow(
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = if (!area.monitored) "Sin medidor" else if (isOnline) "En línea" else "Sin señal",
+                        text = stringResource(if (!area.monitored) R.string.meter_none else if (isOnline) R.string.meter_online else R.string.meter_offline),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (!area.monitored) IoBuildSlate500 else if (isOnline) IoBuildEmerald700 else IoBuildRed500,
@@ -731,7 +733,7 @@ fun StatusBadge(status: String?) {
         border = androidx.compose.foundation.BorderStroke(1.dp, fg.copy(alpha = 0.25f))
     ) {
         Text(
-            text = FormatUtils.statusLabel(norm),
+            text = stringResource(FormatUtils.statusLabelRes(norm)),
             color = fg,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
@@ -765,7 +767,7 @@ fun ErrorBanner(
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onRetry) {
-                Text("Reintentar", fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C))
+                Text(stringResource(R.string.action_retry), fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C))
             }
         }
     }

@@ -1,5 +1,7 @@
 package pe.iobuild.resident.ui.screens
 
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.R
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -64,13 +66,13 @@ fun FeeExplanationScreen(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "¿Cómo se calculó mi cuota?",
+                    text = stringResource(R.string.fee_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = IoBuildSlate900
                 )
                 Text(
-                    text = "Te explicamos paso a paso de dónde sale lo que pagas.",
+                    text = stringResource(R.string.fee_subtitle),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
@@ -88,7 +90,7 @@ fun FeeExplanationScreen(
                     value = "${FormatUtils.formatPeriod(currentSelected.period)} · ${FormatUtils.formatPen(currentSelected.amount)}",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Elegir mes") },
+                    label = { Text(stringResource(R.string.fee_pick_month)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
                     modifier = Modifier
                         .menuAnchor()
@@ -132,7 +134,7 @@ fun FeeExplanationScreen(
 
         if (!viewModel.feeError.isNullOrBlank() && explanation == null) {
             ErrorBanner(
-                message = viewModel.feeError ?: "No se pudo cargar la explicación de tu cuota.",
+                message = viewModel.feeError ?: stringResource(R.string.err_load_fee),
                 onRetry = { viewModel.loadFeeExplanation(viewModel.selectedLineId) }
             )
             return@Column
@@ -145,7 +147,7 @@ fun FeeExplanationScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Text(
-                    text = "Aún no tienes liquidaciones para mostrar.",
+                    text = stringResource(R.string.fee_empty),
                     modifier = Modifier.padding(20.dp),
                     color = IoBuildSlate500
                 )
@@ -204,7 +206,7 @@ private fun FeeExplanationContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Tu cuota de $monthLabel · Departamento ${explanation.unitNumber}",
+                    text = stringResource(R.string.fee_your_fee, monthLabel, explanation.unitNumber ?: "—"),
                     fontSize = 13.sp,
                     color = IoBuildSlate700,
                     fontWeight = FontWeight.Medium
@@ -219,9 +221,9 @@ private fun FeeExplanationContent(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = if (isPaid) {
-                        if (!explanation.paidAt.isNullOrBlank()) "Pagada el ${explanation.paidAt}" else "Pagado"
+                        if (!explanation.paidAt.isNullOrBlank()) stringResource(R.string.paid_on, FormatUtils.formatDate(explanation.paidAt)) else stringResource(R.string.status_paid)
                     } else {
-                        "Vence el ${explanation.dueDate ?: "—"}"
+                        stringResource(R.string.due_on, FormatUtils.formatDate(explanation.dueDate))
                     },
                     fontSize = 12.sp,
                     color = IoBuildSlate500
@@ -235,40 +237,40 @@ private fun FeeExplanationContent(
                 ) {
                     Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Ir a pagar")
+                    Text(stringResource(R.string.fee_go_pay))
                 }
             }
         }
     }
 
     // ── PASO 1: Lo que costó el edificio ──
-    StepCard(stepNumber = 1, title = "Lo que costó el edificio en $monthLabel") {
+    StepCard(stepNumber = 1, title = stringResource(R.string.fee_step1_title, monthLabel)) {
         Text(
-            text = "Estos son los recibos de las áreas comunes y los demás gastos que registró la administración.",
+            text = stringResource(R.string.fee_step1_body),
             fontSize = 13.sp,
             color = IoBuildSlate500
         )
         Spacer(Modifier.height(8.dp))
-        ConceptRow(label = "Agua (Sedapal)", amount = explanation.common.water, dotColor = IoBuildEmerald500)
-        ConceptRow(label = "Luz (Luz del Sur)", amount = explanation.common.energy, dotColor = IoBuildAmber500)
+        ConceptRow(label = stringResource(R.string.fee_water_bill), amount = explanation.common.water, dotColor = IoBuildEmerald500)
+        ConceptRow(label = stringResource(R.string.fee_power_bill), amount = explanation.common.energy, dotColor = IoBuildAmber500)
         if (explanation.common.other > 0) {
-            ConceptRow(label = "Otros gastos comunes", amount = explanation.common.other, dotColor = IoBuildSlate500)
+            ConceptRow(label = stringResource(R.string.fee_other), amount = explanation.common.other, dotColor = IoBuildSlate500)
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = IoBuildSlate200)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Gasto común total", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = IoBuildSlate900)
+            Text(stringResource(R.string.fee_total_common), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = IoBuildSlate900)
             Text(FormatUtils.formatPen(explanation.common.total), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = IoBuildSlate900)
         }
     }
 
     // ── PASO 2: Tu parte según tu alícuota legal ──
     val aliquotFormatted = FormatUtils.formatAliquot(explanation.aliquot)
-    StepCard(stepNumber = 2, title = "Tu parte es el $aliquotFormatted") {
+    StepCard(stepNumber = 2, title = stringResource(R.string.fee_step2_title, aliquotFormatted)) {
         Text(
-            text = "Es la alícuota de tu departamento, fijada según la Ley N.° 27157. Significa que, de cada S/ 100.00 del gasto común, te corresponden ${FormatUtils.formatPen(explanation.aliquot)}.",
+            text = stringResource(R.string.fee_step2_body, FormatUtils.formatPen(explanation.aliquot)),
             fontSize = 13.sp,
             color = IoBuildSlate500
         )
@@ -289,7 +291,7 @@ private fun FeeExplanationContent(
     }
 
     // ── PASO 3: Así se compone tu cuota ──
-    StepCard(stepNumber = 3, title = "Así se compone tu cuota") {
+    StepCard(stepNumber = 3, title = stringResource(R.string.fee_step3_title)) {
         // Barra apilada de proporciones
         Row(
             modifier = Modifier
@@ -326,18 +328,18 @@ private fun FeeExplanationContent(
 
         Spacer(Modifier.height(8.dp))
         ConceptRow(
-            label = "Agua ($waterSharePct%)",
+            label = stringResource(R.string.fee_share_water, waterSharePct.toString()),
             amount = explanation.mine.water,
             dotColor = IoBuildEmerald500
         )
         ConceptRow(
-            label = "Luz ($energySharePct%)",
+            label = stringResource(R.string.fee_share_power, energySharePct.toString()),
             amount = explanation.mine.energy,
             dotColor = IoBuildAmber500
         )
         if (explanation.mine.other > 0 || explanation.common.other > 0) {
             ConceptRow(
-                label = "Otros gastos comunes ($otherSharePct%)",
+                label = stringResource(R.string.fee_share_other, otherSharePct.toString()),
                 amount = explanation.mine.other,
                 dotColor = IoBuildSlate500
             )
@@ -347,7 +349,7 @@ private fun FeeExplanationContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Tu cuota", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = IoBuildSlate900)
+            Text(stringResource(R.string.fee_yours), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = IoBuildSlate900)
             Text(FormatUtils.formatPen(explanation.mine.total), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = IoBuildSlate900)
         }
     }
@@ -364,7 +366,7 @@ private fun FeeExplanationContent(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "Comparación con $prevMonthLabel",
+                text = stringResource(R.string.fee_compare_with, prevMonthLabel),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = IoBuildSlate900
@@ -372,7 +374,7 @@ private fun FeeExplanationContent(
             val prev = explanation.previous
             if (prev == null || prev.totalSoles <= 0) {
                 Text(
-                    text = "No hay cuota de $prevMonthLabel para comparar.",
+                    text = stringResource(R.string.fee_no_previous, prevMonthLabel),
                     fontSize = 13.sp,
                     color = IoBuildSlate500
                 )
@@ -402,14 +404,14 @@ private fun FeeExplanationContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Alertas con costo en $monthLabel",
+                text = stringResource(R.string.fee_alerts_title, monthLabel),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = IoBuildSlate900
             )
             if (explanation.alerts.isEmpty()) {
                 Text(
-                    text = "No se detectaron fugas ni sobreconsumos con costo en este mes.",
+                    text = stringResource(R.string.fee_no_alerts),
                     fontSize = 13.sp,
                     color = IoBuildSlate500
                 )
@@ -430,7 +432,7 @@ private fun FeeExplanationContent(
                                 color = IoBuildSlate900
                             )
                             Text(
-                                text = "Edificio: ${FormatUtils.formatPen(a.overcost)} · Tu parte: ${FormatUtils.formatPen(a.myShare)}",
+                                text = stringResource(R.string.fee_alert_cost, FormatUtils.formatPen(a.overcost), FormatUtils.formatPen(a.myShare)),
                                 fontSize = 12.sp,
                                 color = IoBuildSlate500
                             )
@@ -440,7 +442,7 @@ private fun FeeExplanationContent(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = if (a.isOpen) "En revisión" else "Resuelta",
+                                text = stringResource(if (a.isOpen) R.string.fee_alert_open else R.string.fee_alert_resolved),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (a.isOpen) Color(0xFFB45309) else IoBuildEmerald700,
@@ -465,13 +467,13 @@ private fun FeeExplanationContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "De dónde salen los datos",
+                text = stringResource(R.string.fee_sources_title),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = IoBuildSlate900
             )
             Text(
-                text = "Los montos vienen de los recibos matriz del edificio: ${explanation.common.waterM3} m³ de Sedapal y ${explanation.common.energyKwh} kWh de Luz del Sur.",
+                text = stringResource(R.string.fee_sources_body, explanation.common.waterM3.toString(), explanation.common.energyKwh.toString()),
                 fontSize = 13.sp,
                 color = IoBuildSlate500
             )
@@ -483,20 +485,20 @@ private fun FeeExplanationContent(
                         OutlinedButton(onClick = { onOpenUrl(explanation.common.waterReceiptUrl!!) }) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Ver recibo de agua", fontSize = 12.sp)
+                            Text(stringResource(R.string.fee_view_water_bill), fontSize = 12.sp)
                         }
                     }
                     if (hasEnergyUrl) {
                         OutlinedButton(onClick = { onOpenUrl(explanation.common.energyReceiptUrl!!) }) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Ver recibo de luz", fontSize = 12.sp)
+                            Text(stringResource(R.string.fee_view_power_bill), fontSize = 12.sp)
                         }
                     }
                 }
             } else {
                 Text(
-                    text = "La administración todavía no adjuntó las imágenes de los recibos de este mes.",
+                    text = stringResource(R.string.fee_no_bills),
                     fontSize = 12.sp,
                     color = IoBuildSlate500
                 )
@@ -516,28 +518,28 @@ private fun FeeExplanationContent(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Palabras que aparecen en tu cuota",
+                text = stringResource(R.string.fee_glossary_title),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = IoBuildSlate900
             )
             GlossaryItem(
-                term = "Alícuota",
-                definition = "El porcentaje del edificio que le corresponde a tu departamento según la Ley N.° 27157. Define qué parte de los gastos comunes pagas."
+                term = stringResource(R.string.glossary_aliquot),
+                definition = stringResource(R.string.glossary_aliquot_def)
             )
             GlossaryItem(
-                term = "Gasto común",
-                definition = "Lo que cuesta mantener las áreas compartidas: cisterna, bombas, ascensores e iluminación."
+                term = stringResource(R.string.glossary_common),
+                definition = stringResource(R.string.glossary_common_def)
             )
             GlossaryItem(
-                term = "Recibo matriz",
-                definition = "El recibo único que Sedapal o Luz del Sur emite para todo el edificio."
+                term = stringResource(R.string.glossary_master_bill),
+                definition = stringResource(R.string.glossary_master_bill_def)
             )
 
             TextButton(onClick = onAskAi) {
                 Icon(Icons.Default.AutoAwesome, null, tint = IoBuildEmerald600, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("¿Aún tienes dudas? Pregúntale a IoBuild", color = IoBuildEmerald600, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.fee_ask_ai), color = IoBuildEmerald600, fontWeight = FontWeight.Bold)
             }
         }
     }
