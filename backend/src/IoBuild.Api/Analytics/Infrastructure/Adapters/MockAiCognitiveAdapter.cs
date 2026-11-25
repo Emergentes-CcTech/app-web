@@ -34,9 +34,92 @@ public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveSe
     /// </summary>
     public static AiExplanationDto Answer(string question, ConsumptionFacts f, AssistantContext c, string language = "es")
     {
+        var english = language == "en";
         var baseline = Render(f, language);
-        var direct = DirectAnswer(question, f, c, language == "en");
-        return direct is null ? baseline : baseline with { Summary = direct };
+        var advice = ImprovementAdvice(question, f, c, english);
+        if (advice is not null) return baseline with { Summary = advice.Value.Summary, Recommendations = advice.Value.Actions };
+        var direct = DirectAnswer(question, f, c, english);
+        if (direct is not null) return baseline with { Summary = direct };
+        // Pregunta abierta que las reglas no entienden: se dice con honestidad en vez de responder otra cosa
+        if (!IsVariationQuestion(question))
+            return baseline with { Summary = (english
+                ? "Without the AI assistant I can only answer questions about debts and due dates, payment history, consumption by area, how the fee is calculated and how to reduce costs. Here is the month's summary: "
+                : "Sin el asistente de IA solo puedo responder sobre deudas y vencimientos, historial de pagos, consumo por área, cómo se calcula la cuota y cómo reducir gastos. Este es el resumen del mes: ") + baseline.Summary };
+        return baseline;
+    }
+
+    // Las preguntas sugeridas piden explicar la variación del mes: esa es la explicación base
+    private static bool IsVariationQuestion(string question)
+    {
+        var q = Normalize(question);
+        return string.IsNullOrWhiteSpace(q) || new[] { "vari", "cambi", "subi", "bajo", "aument", "por que", "explica", "alerta", "fuga", "costos extra", "mantenimiento", "why", "change", "explain", "alert", "leak", "maintenance" }.Any(q.Contains);
+    }
+
+    /// <summary>
+    /// Qué mejorar para bajar el gasto común (o responder a quejas de los propietarios): acciones concretas a partir
+    /// del consumo por área, las alertas abiertas, la diferencia con el recibo matriz y la tendencia frente al mes anterior.
+    /// </summary>
+    private static (string Summary, List<string> Actions)? ImprovementAdvice(string question, ConsumptionFacts f, AssistantContext c, bool english)
+    {
+        string L(string es, string en) => english ? en : es;
+        var q = Normalize(question);
+        if (!new[] { "mejor", "reduc", "ahorr", "quej", "bajar", "optimiz", "recomend", "consejo", "que hacer", "que podemos", "que podriamos", "caro", "elevad",
+                "improve", "reduce", "save", "complain", "lower", "cheaper", "advice", "what can we" }.Any(q.Contains))
+            return null;
+
+        var findings = new List<string>();
+        var actions = new List<string>();
+
+        var open = c.OpenAlerts;
+        if (open.Count > 0)
+        {
+            var cost = open.Sum(a => a.EstimatedOvercostSoles);
+            findings.Add(L($"hay {open.Count} alerta(s) abierta(s) con un sobrecosto estimado de {Pen(cost)}", $"there are {open.Count} open alert(s) with an estimated overcost of {Pen(cost)}"));
+            actions.Add(L($"Atender las {open.Count} alertas abiertas: es el ahorro más directo ({Pen(cost)} estimados).", $"Resolve the {open.Count} open alerts: it is the most direct saving ({Pen(cost)} estimated)."));
+        }
+
+        var measured = c.Areas.Where(a => a.Meters > 0 && a.EnergyKwh > 0).OrderByDescending(a => a.EnergyKwh).ToList();
+        var totalEnergy = measured.Sum(a => a.EnergyKwh);
+        if (measured.Count > 0 && totalEnergy > 0)
+        {
+            var top = measured[0];
+            var share = Math.Round(top.EnergyKwh / totalEnergy * 100, 0);
+            findings.Add(L($"{top.Name} concentra el {share.ToString(Num)} % de la energía medida ({Kwh(top.EnergyKwh)})", $"{top.Name} accounts for {share.ToString(Num)}% of the measured energy ({Kwh(top.EnergyKwh)})"));
+            actions.Add(top.Subsystem switch
+            {
+                "PressurePumpsRoom" => L("Revisar presostatos y alternancia de las bombas: suelen arrancar más de lo necesario.", "Check the pressure switches and pump rotation: they often start more than needed."),
+                "ElevatorsBank" => L("Programar el modo de ahorro de los ascensores en horas de poco uso y revisar su mantenimiento.", "Schedule the elevators' energy-saving mode in off-peak hours and check their maintenance."),
+                "GeneralElectricalPanel" => L("Pasar la iluminación común a LED con sensores de presencia o temporizadores.", "Switch common lighting to LED with motion sensors or timers."),
+                _ => L($"Revisar el uso y mantenimiento de {top.Name}, que es lo que más energía consume.", $"Review the use and maintenance of {top.Name}, the biggest energy consumer.")
+            });
+        }
+
+        if (f.PreviousConsumption.WaterM3 > 0 && f.Consumption.WaterM3 > f.PreviousConsumption.WaterM3 * 1.1 && !f.PeriodInProgress)
+        {
+            findings.Add(L($"el agua común subió frente a {MonthName(f.PreviousPeriod, false)}", $"common water rose compared with {MonthName(f.PreviousPeriod, true)}"));
+            actions.Add(L("Revisar de madrugada si corre agua en la cisterna, boyas y montantes.", "Check overnight whether water runs in the cistern, floats and risers."));
+        }
+
+        if (f.Bill is not null && f.Bill.WaterM3 > 0 && f.Bill.WaterLossM3 / f.Bill.WaterM3 > 0.10m)
+        {
+            var pct = Math.Round(f.Bill.WaterLossM3 / f.Bill.WaterM3 * 100, 0);
+            findings.Add(L($"el recibo de Sedapal factura {pct.ToString(Num)} % más agua de la que miden los sensores", $"the Sedapal bill charges {pct.ToString(Num)}% more water than the sensors measure"));
+            actions.Add(L("Buscar fugas o consumos fuera de lo medido: la diferencia con el recibo supera el 10 %.", "Look for leaks or unmetered use: the gap with the bill exceeds 10%."));
+        }
+
+        // Ante quejas, la transparencia también baja el conflicto aunque el gasto sea correcto
+        if (q.Contains("quej") || q.Contains("complain"))
+            actions.Add(L("Compartir con los propietarios la explicación de su cuota y los recibos escaneados: en «Mi cuota actual» ven de dónde sale cada sol.",
+                "Share each owner's fee explanation and the scanned bills with them: in «My current fee» they see where every sol goes."));
+        if (actions.Count < 2)
+            actions.Add(L("Mantener la revisión mensual de la cisterna y la alternancia de las bombas.", "Keep up the monthly cistern check and the pump rotation."));
+
+        var summary = findings.Count == 0
+            ? L($"En {MonthName(f.Period, false)} no veo un gasto fuera de lo normal: no hay alertas abiertas ni un área que se dispare. Estas medidas suelen bajar el gasto común:",
+                $"In {MonthName(f.Period, true)} I see no unusual spending: no open alerts and no area spiking. These measures usually lower the common expense:")
+            : L($"Para bajar el gasto común conviene empezar por lo que muestran los datos de {MonthName(f.Period, false)}: {string.Join("; ", findings)}.",
+                $"To lower the common expense, start with what the {MonthName(f.Period, true)} data shows: {string.Join("; ", findings)}.");
+        return (summary, actions.Take(5).ToList());
     }
 
     private static string? DirectAnswer(string question, ConsumptionFacts f, AssistantContext c, bool english)
