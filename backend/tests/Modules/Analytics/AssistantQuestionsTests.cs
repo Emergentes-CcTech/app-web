@@ -121,6 +121,32 @@ public sealed class AssistantQuestionsTests
     }
 
     [Fact]
+    public async Task Improvement_questions_get_concrete_actions_from_the_data()
+    {
+        var (db, unitId) = await SeedAsync();
+        await using var _ = db;
+
+        var answer = await AskAsync(db, unitId, "Los propietarios se quejan de los gastos, ¿qué podríamos mejorar?", $"{DateTime.UtcNow:yyyy-MM}");
+
+        Assert.Contains("Ascensores concentra el 100 % de la energía medida", answer.Summary);
+        Assert.Contains(answer.Recommendations, r => r.Contains("ascensores"));
+        Assert.Contains(answer.Recommendations, r => r.Contains("Mi cuota actual"));
+    }
+
+    [Fact]
+    public async Task Open_questions_the_rules_cannot_answer_say_so_instead_of_answering_something_else()
+    {
+        var (db, unitId) = await SeedAsync();
+        await using var _ = db;
+
+        var open = await AskAsync(db, unitId, "¿Cuántos residentes hay registrados en el edificio?");
+        Assert.StartsWith("Sin el asistente de IA solo puedo responder", open.Summary);
+
+        var variation = await AskAsync(db, unitId, "¿Por qué varió mi cuota?", "2026-10");
+        Assert.DoesNotContain("Sin el asistente de IA", variation.Summary);
+    }
+
+    [Fact]
     public async Task Before_the_first_fee_the_owner_gets_a_preview_with_an_estimate()
     {
         await using var factory = new CoreBusinessApiFactory();
