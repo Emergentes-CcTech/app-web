@@ -29,12 +29,14 @@ public sealed class GeminiCognitiveAdapter(
     public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es")
     {
         var periodFacts = await facts.BuildFactsAsync(projectId, unitId, billingPeriod);
-        var baseline = MockAiCognitiveAdapter.Render(periodFacts, language);
+        var context = await facts.BuildContextAsync(projectId, unitId, periodFacts.Period);
+        // Sin Gemini, las reglas igual responden la pregunta si es sobre deuda, historial, áreas o el cálculo de la cuota
+        var baseline = MockAiCognitiveAdapter.Answer(question, periodFacts, context, language);
         var apiKey = configuration["Gemini:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey)) return baseline;
 
         var model = string.IsNullOrWhiteSpace(configuration["Gemini:Model"]) ? DefaultModel : configuration["Gemini:Model"]!;
-        var factsJson = JsonSerializer.Serialize(periodFacts, Json);
+        var factsJson = JsonSerializer.Serialize(new { period = periodFacts, context }, Json);
         // Si cambian los datos del periodo (nuevas lecturas o alertas), la respuesta en caché deja de servir
         var cacheKey = $"gemini:{model}:{projectId}:{unitId}:{periodFacts.Period}:{language}:{Hash(question)}:{Hash(factsJson)}";
         if (cache.TryGetValue(cacheKey, out AiExplanationDto? cached) && cached is not null) return cached;
@@ -56,12 +58,27 @@ public sealed class GeminiCognitiveAdapter(
     private async Task<AiExplanationDto?> GenerateAsync(string apiKey, string model, AiExplanationDto baseline, string factsJson, string question, string language)
     {
         var baseUrl = configuration["Gemini:BaseUrl"] ?? DefaultBaseUrl;
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/v1beta/models/{Uri.EscapeDataString(model)}:generateContent");
-        // La clave va en cabecera, nunca en la URL (las URLs quedan en logs)
-        request.Headers.Add("x-goog-api-key", apiKey);
-        request.Content = JsonContent.Create(BuildRequest(factsJson, baseline, question, language));
+        var body = BuildRequest(factsJson, baseline, question, language);
+        HttpRequestMessage NewRequest()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/v1beta/models/{Uri.EscapeDataString(model)}:generateContent");
+            // La clave va en cabecera, nunca en la URL (las URLs quedan en logs)
+            request.Headers.Add("x-goog-api-key", apiKey);
+            request.Content = JsonContent.Create(body);
+            return request;
+        }
 
-        using var response = await http.SendAsync(request);
+        using var first = NewRequest();
+        var response = await http.SendAsync(first);
+        // Gemini responde 503/500 cuando está saturado: un reintento breve suele bastar antes de caer a las reglas
+        if ((int)response.StatusCode is 500 or 502 or 503 or 504)
+        {
+            response.Dispose();
+            await Task.Delay(TimeSpan.FromMilliseconds(800));
+            using var retry = NewRequest();
+            response = await http.SendAsync(retry);
+        }
+        using var _ = response;
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning("Gemini devolvió {Status}; se usa la explicación de reglas.", (int)response.StatusCode);
@@ -73,16 +90,15 @@ public sealed class GeminiCognitiveAdapter(
         if (string.IsNullOrWhiteSpace(text)) return null;
 
         var answer = JsonSerializer.Deserialize<GeminiAnswer>(text, Json);
-        if (answer is null || string.IsNullOrWhiteSpace(answer.Summary) || string.IsNullOrWhiteSpace(answer.WaterAnalysis)
-            || string.IsNullOrWhiteSpace(answer.EnergyAnalysis) || string.IsNullOrWhiteSpace(answer.AliquotImpact))
-            return null;
+        // Basta la respuesta directa: las secciones de agua, luz y alícuota se omiten cuando la pregunta no trata de ellas
+        if (answer is null || string.IsNullOrWhiteSpace(answer.Summary)) return null;
 
         // Si hay anomalías lo decide el motor de reglas, no el modelo
         return new AiExplanationDto(
             answer.Summary.Trim(),
-            answer.WaterAnalysis.Trim(),
-            answer.EnergyAnalysis.Trim(),
-            answer.AliquotImpact.Trim(),
+            answer.WaterAnalysis?.Trim() ?? string.Empty,
+            answer.EnergyAnalysis?.Trim() ?? string.Empty,
+            answer.AliquotImpact?.Trim() ?? string.Empty,
             (answer.Recommendations ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).Take(5).ToList(),
             baseline.HasAnomalies,
             Source: "gemini",
@@ -96,19 +112,28 @@ public sealed class GeminiCognitiveAdapter(
             "Eres el asistente de IoBuild, una plataforma que mide el consumo de agua y luz de las áreas comunes de condominios en Lima " +
             "y prorratea el gasto entre los departamentos según su alícuota (Ley 27157). " +
             $"Responde siempre en {lang}, aunque la pregunta o los datos estén en otro idioma, con frases cortas y claras para un propietario o un administrador. " +
-            "Usa solo los HECHOS que se te entregan: no inventes cifras, fechas, causas ni equipos. " +
-            "Si un dato no está en los hechos, dilo. No des consejos legales ni financieros. " +
-            "Responde primero a la pregunta en el resumen. Compara con el periodo anterior cuando haya datos; si el periodo está en curso, aclara que es parcial. " +
+            "Responde CUALQUIER pregunta sobre los gastos, cuotas, pagos, deudas, consumo, áreas comunes, equipos o alertas del condominio usando los HECHOS. " +
+            "Las cifras, fechas y montos salen solo de los HECHOS: no inventes ninguna. Sí puedes explicar con tus palabras conceptos generales " +
+            "(cómo funciona el prorrateo por participación, qué es un recibo matriz, por qué una fuga nocturna sube el gasto). " +
+            "Antes de decir que falta un dato, búscalo en 'period' y en 'context'; solo si de verdad no está, dilo en una frase y ofrece lo que sí sabes. " +
+            "Si la pregunta no tiene que ver con el condominio ni con sus gastos, responde amablemente que solo puedes ayudar con eso y sugiere dos preguntas útiles. " +
+            "No des consejos legales ni financieros. " +
+            "Pon la respuesta directa a la pregunta en 'summary'. Llena 'waterAnalysis', 'energyAnalysis' y 'aliquotImpact' solo si aportan a esa pregunta; si no, déjalos vacíos. " +
+            "Compara con el periodo anterior cuando haya datos; si el periodo está en curso, aclara que es parcial. " +
             "Los montos están en soles (S/), el agua en m³ y la energía en kWh. " +
             "Significado de los datos: 'consumption' es lo que midieron los sensores de IoBuild con las lecturas disponibles " +
             "('daysWithData' indica cuántos días tienen lecturas; si son pocos, la medición es parcial y no debe compararse con el recibo); " +
             "'bill' es el recibo matriz de Sedapal y Luz del Sur registrado por la administración y su conciliación; " +
             "'statement' es la cuota del departamento con su desglose; los campos 'previous...' son del mes anterior. " +
+            "En 'context': 'today' es la fecha de hoy; 'unit' es el departamento (área y participación %); 'feeHistory' son sus cuotas de hasta 12 meses " +
+            "con estado (Paid pagada, Pending pendiente, Overdue vencida), vencimiento y fecha de pago; 'outstandingSoles' es lo que debe hoy; " +
+            "'areas' es el consumo medido por área común en el periodo y el anterior; 'buildingExpenses' es el gasto común de los últimos meses; " +
+            "'openAlerts' son las alertas abiertas hoy; 'feeFormula' explica cómo se calcula la cuota. " +
             "No mezcles cifras de 'consumption' con las de 'bill'. " +
             "Si hay 'unitNumber', quien pregunta es un residente: las recomendaciones deben ser acciones a su alcance " +
             "(revisar su estado de cuenta, consultar a la administración, reportar fugas) y no tareas técnicas de mantenimiento. " +
             "Las recomendaciones deben ser acciones concretas de mantenimiento o revisión, como máximo cinco.";
-        var user = $"PREGUNTA: {question}\n\nHECHOS DEL PERIODO (JSON calculado por IoBuild):\n{factsJson}\n\nEXPLICACIÓN DE REFERENCIA DE LAS REGLAS:\n{baseline.Summary}";
+        var user = $"PREGUNTA: {question}\n\nHECHOS (JSON calculado por IoBuild: 'period' es el mes analizado y 'context' el historial y el detalle):\n{factsJson}\n\nRESPUESTA DE REFERENCIA DE LAS REGLAS:\n{baseline.Summary}";
 
         var text = new { type = "STRING" };
         return new
@@ -131,7 +156,7 @@ public sealed class GeminiCognitiveAdapter(
                         aliquotImpact = text,
                         recommendations = new { type = "ARRAY", items = text }
                     },
-                    required = new[] { "summary", "waterAnalysis", "energyAnalysis", "aliquotImpact", "recommendations" }
+                    required = new[] { "summary" }
                 }
             }
         };
