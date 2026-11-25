@@ -23,4 +23,6 @@ export class BillingApi extends BaseApi {
     getLinesByUnit(unitId) { return this.http.get(linesPath, { params: { unitId } }); }
     getLineById(id) { return this.http.get(`${linesPath}/${id}`); }
     getLineExplanation(id) { return this.http.get(`${linesPath}/${id}/explanation`); }
+    // Antes de la primera cuota: participación, cuota estimada y consumo del mes de la unidad
+    getFeePreview(unitId) { return this.http.get(`${linesPath}/preview`, { params: { unitId } }); }
 }

@@ -1001,7 +1001,27 @@
       "askAi": "¿Aún tienes dudas? Pregúntale a IoBuild"
     },
     "residentSubtitle": "Te explicamos paso a paso de dónde sale lo que pagas.",
-    "system": "Sistema"
+    "system": "Sistema",
+    "preview": {
+      "eyebrow": "Departamento {unit} · {condominium}",
+      "title": "Tu primera cuota aún no se emite",
+      "lead": "Tu cuenta ya está vinculada a tu departamento. Cuando la administración liquide el mes, aquí verás tu cuota con su explicación paso a paso.",
+      "yourShare": "Tu participación",
+      "area": "{area} m² de área",
+      "howTitle": "Cómo se calculará tu cuota",
+      "formula": "Gasto común del mes (agua y luz de las áreas comunes más otros gastos) × tu participación de {pct} %.",
+      "estimateLabel": "Cuota estimada",
+      "estimateBasis": "Con el último gasto común del edificio: {month}, {total}. Es una referencia; tu cuota real puede variar.",
+      "example": "Por ejemplo, si el gasto común del mes fuera S/ 10,000.00, tu cuota sería {fee}.",
+      "measuringTitle": "Lo que IoBuild mide en {month}",
+      "measuringNote": "Áreas comunes del edificio, con {days} día(s) de lecturas en el mes.",
+      "noReadings": "Todavía no hay lecturas de las áreas comunes este mes.",
+      "seeConsumption": "Ver mi consumo",
+      "stepsTitle": "¿Cuándo aparece mi cuota?",
+      "step1": "La administración registra los recibos de agua y luz del mes.",
+      "step2": "Calcula el prorrateo entre los departamentos según su participación.",
+      "step3": "Tu cuota aparece aquí y en tu estado de cuenta, lista para pagar."
+    }
   },
   "dashboard": {
     "admin": {

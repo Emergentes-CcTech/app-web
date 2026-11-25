@@ -84,10 +84,11 @@ watch(locale, () => {
     <div v-if="answer" class="ai-answer" tabindex="0" :aria-label="t('ai.answerLabel')" :aria-busy="loading" aria-live="polite">
       <span v-if="periodLabel" class="period"><i class="pi pi-calendar" aria-hidden="true" /> {{ t('ai.period', { period: periodLabel }) }}</span>
       <p class="summary">{{ answer.summary }}</p>
-      <dl>
-        <div><dt><i class="pi pi-filter" aria-hidden="true" /> {{ t('ai.water') }}</dt><dd>{{ answer.waterAnalysis }}</dd></div>
-        <div><dt><i class="pi pi-bolt" aria-hidden="true" /> {{ t('ai.energy') }}</dt><dd>{{ answer.energyAnalysis }}</dd></div>
-        <div><dt><i class="pi pi-percentage" aria-hidden="true" /> {{ t(audience === 'resident' ? 'ai.aliquot' : 'ai.aliquotAdmin') }}</dt><dd>{{ answer.aliquotImpact }}</dd></div>
+      <!-- Las secciones solo aparecen si aportan a la pregunta: una consulta sobre la deuda no necesita el análisis del agua -->
+      <dl v-if="answer.waterAnalysis || answer.energyAnalysis || answer.aliquotImpact">
+        <div v-if="answer.waterAnalysis"><dt><i class="pi pi-filter" aria-hidden="true" /> {{ t('ai.water') }}</dt><dd>{{ answer.waterAnalysis }}</dd></div>
+        <div v-if="answer.energyAnalysis"><dt><i class="pi pi-bolt" aria-hidden="true" /> {{ t('ai.energy') }}</dt><dd>{{ answer.energyAnalysis }}</dd></div>
+        <div v-if="answer.aliquotImpact"><dt><i class="pi pi-percentage" aria-hidden="true" /> {{ t(audience === 'resident' ? 'ai.aliquot' : 'ai.aliquotAdmin') }}</dt><dd>{{ answer.aliquotImpact }}</dd></div>
       </dl>
       <div v-if="answer.recommendations?.length">
         <strong class="rec-title">{{ t('ai.recommendations') }}</strong>
