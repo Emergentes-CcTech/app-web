@@ -19,8 +19,106 @@ public sealed class MockAiCognitiveAdapter(IoBuildDbContext db) : IAiCognitiveSe
     public Task<ConsumptionFacts> BuildFactsAsync(int projectId, int? unitId, string? billingPeriod) =>
         new ConsumptionFactsBuilder(db).BuildAsync(projectId, unitId, billingPeriod);
 
-    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es") =>
-        Render(await BuildFactsAsync(projectId, unitId, billingPeriod), language);
+    public Task<AssistantContext> BuildContextAsync(int projectId, int? unitId, string period) =>
+        new AssistantContextBuilder(db).BuildAsync(projectId, unitId, period);
+
+    public async Task<AiExplanationDto> ExplainConsumptionVariationAsync(int projectId, int? unitId, string billingPeriod, string question, string language = "es")
+    {
+        var facts = await BuildFactsAsync(projectId, unitId, billingPeriod);
+        return Answer(question, facts, await BuildContextAsync(projectId, unitId, facts.Period), language);
+    }
+
+    /// <summary>
+    /// Explicación del periodo con el resumen enfocado en la pregunta: vencimiento y deuda, historial de pagos,
+    /// consumo por área o cómo se calcula la cuota. Si la pregunta no encaja en ninguno, explica la variación del mes.
+    /// </summary>
+    public static AiExplanationDto Answer(string question, ConsumptionFacts f, AssistantContext c, string language = "es")
+    {
+        var baseline = Render(f, language);
+        var direct = DirectAnswer(question, f, c, language == "en");
+        return direct is null ? baseline : baseline with { Summary = direct };
+    }
+
+    private static string? DirectAnswer(string question, ConsumptionFacts f, AssistantContext c, bool english)
+    {
+        string L(string es, string en) => english ? en : es;
+        var q = Normalize(question);
+        bool Has(params string[] words) => words.Any(w => q.Contains(w));
+
+        if (Has("vence", "vencimiento", "debo", "deuda", "pendiente", "saldo", "atrasad", "moros", "due", "owe", "debt", "overdue", "balance"))
+        {
+            if (c.Unit is null) return L("Esa consulta aplica a un departamento: elige uno para ver su deuda.", "That question applies to a unit: pick one to see its balance.");
+            var pending = c.FeeHistory.Where(h => h.Status != "Paid").OrderBy(h => h.Period).ToList();
+            if (c.FeeHistory.Count == 0) return L($"El Departamento {c.Unit.Number} aún no tiene cuotas emitidas, así que no tiene deuda.", $"Unit {c.Unit.Number} has no fees issued yet, so it owes nothing.");
+            if (pending.Count == 0)
+            {
+                var last = c.FeeHistory[0];
+                return L($"No tiene cuotas pendientes. Su última cuota, de {MonthName(last.Period, false)}, fue {Pen(last.TotalSoles)} y está pagada.",
+                    $"You have no pending fees. Your latest fee, for {MonthName(last.Period, true)}, was {Pen(last.TotalSoles)} and is paid.");
+            }
+            var oldest = pending[0];
+            var verb = oldest.Status == "Overdue" ? L("venció", "was due") : L("vence", "is due");
+            return L($"Debe {Pen(c.OutstandingSoles)} en {pending.Count} cuota(s). La más antigua, de {MonthName(oldest.Period, false)} ({Pen(oldest.BalanceSoles)}), {verb} el {oldest.DueDate}.",
+                $"You owe {Pen(c.OutstandingSoles)} across {pending.Count} fee(s). The oldest, for {MonthName(oldest.Period, true)} ({Pen(oldest.BalanceSoles)}), {verb} on {oldest.DueDate}.");
+        }
+
+        if (Has("historial", "pagado", "pague", "he pagado", "total", "ultimos", "ultimas", "meses", "este ano", "history", "paid", "last months", "so far"))
+        {
+            if (c.Unit is null || c.FeeHistory.Count == 0) return L("Aún no hay cuotas emitidas para este departamento.", "No fees have been issued for this unit yet.");
+            var items = c.FeeHistory.Take(6).ToList();
+            var list = string.Join("; ", items.Select(h => $"{MonthName(h.Period, english)} {Pen(h.TotalSoles)} ({StatusName(h.Status, english)})"));
+            var paidTotal = items.Where(h => h.Status == "Paid").Sum(h => h.TotalSoles);
+            return L($"En los últimos {items.Count} mes(es) sus cuotas suman {Pen(items.Sum(h => h.TotalSoles))}, de los cuales pagó {Pen(paidTotal)}: {list}.",
+                $"Over the last {items.Count} month(s) your fees add up to {Pen(items.Sum(h => h.TotalSoles))}, of which you paid {Pen(paidTotal)}: {list}.");
+        }
+
+        if (Has("area", "ascensor", "bomba", "cisterna", "tablero", "mas consume", "consume mas", "mayor consumo", "elevator", "pump", "cistern", "panel", "consumes the most"))
+        {
+            var measured = c.Areas.Where(a => a.Meters > 0).ToList();
+            if (measured.Count == 0 || measured.All(a => a.WaterM3 <= 0 && a.EnergyKwh <= 0))
+                return L($"Aún no hay lecturas por área común en {MonthName(f.Period, false)}.", $"There are no readings per common area for {MonthName(f.Period, true)} yet.");
+            var parts = new List<string>();
+            var topEnergy = measured.OrderByDescending(a => a.EnergyKwh).First();
+            if (topEnergy.EnergyKwh > 0) parts.Add(L($"la que más energía consume es {topEnergy.Name} ({Kwh(topEnergy.EnergyKwh)})", $"the one using the most energy is {topEnergy.Name} ({Kwh(topEnergy.EnergyKwh)})"));
+            var topWater = measured.OrderByDescending(a => a.WaterM3).First();
+            if (topWater.WaterM3 > 0) parts.Add(L($"la que más agua registra es {topWater.Name} ({M3(topWater.WaterM3)})", $"the one recording the most water is {topWater.Name} ({M3(topWater.WaterM3)})"));
+            var detail = string.Join("; ", measured.Select(a => $"{a.Name}: {M3(a.WaterM3)} · {Kwh(a.EnergyKwh)}"));
+            var progress = f.PeriodInProgress ? L(" (mes en curso)", " (month in progress)") : string.Empty;
+            return L($"En {MonthName(f.Period, false)}{progress}, entre las áreas comunes {string.Join(" y ", parts)}. Detalle: {detail}.",
+                $"In {MonthName(f.Period, true)}{progress}, among the common areas {string.Join(" and ", parts)}. Detail: {detail}.");
+        }
+
+        if (Has("alicuota", "participacion", "como se calcula", "calcul", "prorrate", "formula", "porcentaje", "aliquot", "share", "calculated", "how is"))
+        {
+            var latest = c.BuildingExpenses.FirstOrDefault();
+            if (c.Unit is null)
+                return L("Cada cuota es el gasto común del mes multiplicado por la participación del departamento (Ley N.° 27157); las participaciones suman 100 %.",
+                    "Each fee is the month's common expense times the unit's share (Law 27157); all shares add up to 100%.");
+            var pct = c.Unit.ParticipationPct.ToString("F4", Num);
+            var example = latest is null
+                ? L($" Por ejemplo, si el gasto común fuera S/ 10,000.00, su cuota sería {Pen(10000m * c.Unit.ParticipationPct / 100m)}.", $" For example, if the common expense were S/ 10,000.00, your fee would be {Pen(10000m * c.Unit.ParticipationPct / 100m)}.")
+                : L($" En {MonthName(latest.Period, false)} el gasto común fue {Pen(latest.TotalSoles)}, así que le correspondió {Pen(latest.TotalSoles * c.Unit.ParticipationPct / 100m)}.",
+                    $" In {MonthName(latest.Period, true)} the common expense was {Pen(latest.TotalSoles)}, so your share was {Pen(latest.TotalSoles * c.Unit.ParticipationPct / 100m)}.");
+            return L($"Su cuota es el gasto común del mes (recibos de agua y luz de las áreas comunes más otros gastos) multiplicado por su participación de {pct} %, definida en el Reglamento Interno.{example}",
+                $"Your fee is the month's common expense (common-area water and electricity bills plus other expenses) times your {pct}% share, set in the building's bylaws.{example}");
+        }
+
+        return null;
+    }
+
+    private static string StatusName(string status, bool english) => status switch
+    {
+        "Paid" => english ? "paid" : "pagada",
+        "Overdue" => english ? "overdue" : "vencida",
+        _ => english ? "pending" : "pendiente"
+    };
+
+    // Minúsculas y sin tildes para reconocer la intención de la pregunta
+    private static string Normalize(string text)
+    {
+        var formD = (text ?? string.Empty).ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD);
+        return new string(formD.Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark).ToArray());
+    }
 
     public static AiExplanationDto Render(ConsumptionFacts f, string language = "es")
     {

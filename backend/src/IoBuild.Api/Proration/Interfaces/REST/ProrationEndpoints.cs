@@ -673,6 +673,54 @@ public static class ProrationEndpoints
             return Results.Ok(statements.Select(s => ToLineResource(s, periods.GetValueOrDefault(s.BillingPeriodId))));
         }).RequireAuthorization();
 
+        // Antes de la primera cuota: participación del departamento, cuota estimada con el último gasto común del edificio
+        // y lo que IoBuild ya midió en el mes. Lo usa "Mi cuota actual" mientras no hay liquidaciones
+        app.MapGet("/api/v1/settlement_lines/preview", async ([FromQuery] int unitId, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            var unit = await db.Units.FirstOrDefaultAsync(u => u.Id == unitId, ct);
+            if (unit is null) return Results.NotFound();
+            var mayView = IsAdministrator(user)
+                ? await MayManageProjectAsync(user, db, unit.ProjectId, ct)
+                : (await GetResidentUnitIdsAsync(user, db, ct)).Contains(unit.Id);
+            if (!mayView) return Results.NotFound();
+
+            var project = await db.Projects.FindAsync([unit.ProjectId], ct);
+            var lastBill = await db.BillingPeriods
+                .Where(b => b.ProjectId == unit.ProjectId && b.TotalCommonExpenseSoles > 0)
+                .OrderByDescending(b => b.PeriodCode)
+                .FirstOrDefaultAsync(ct);
+
+            var now = DateTime.UtcNow;
+            var period = $"{now:yyyy-MM}";
+            var consumption = await new ConsumptionFactsBuilder(db).BuildAsync(unit.ProjectId, null, period, ct);
+
+            return Results.Ok(new
+            {
+                unitId = unit.Id,
+                unitNumber = unit.UnitNumber,
+                condominiumId = unit.ProjectId,
+                condominiumName = project?.Name,
+                areaM2 = unit.AreaM2,
+                participationPct = unit.AliquotPercentage,
+                lastBill = lastBill is null ? null : new
+                {
+                    period = lastBill.PeriodCode,
+                    water = lastBill.MacroWaterAmountSoles,
+                    energy = lastBill.MacroEnergyAmountSoles,
+                    other = lastBill.OtherCommonExpensesSoles,
+                    total = lastBill.TotalCommonExpenseSoles
+                },
+                estimatedFee = lastBill is null ? (decimal?)null : Math.Round(lastBill.TotalCommonExpenseSoles * unit.AliquotPercentage / 100m, 2),
+                currentMonth = new
+                {
+                    period,
+                    waterM3 = consumption.Consumption.WaterM3,
+                    energyKwh = consumption.Consumption.EnergyKwh,
+                    daysWithData = consumption.Consumption.DaysWithData
+                }
+            });
+        }).RequireAuthorization();
+
         app.MapGet("/api/v1/settlement_lines/{id:int}", async (int id, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var s = await db.StatementOfAccounts.FindAsync([id], ct);

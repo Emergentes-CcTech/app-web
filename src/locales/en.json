@@ -1001,7 +1001,27 @@
       "askAi": "Still have questions? Ask IoBuild"
     },
     "residentSubtitle": "A step-by-step explanation of where your payment comes from.",
-    "system": "System"
+    "system": "System",
+    "preview": {
+      "eyebrow": "Unit {unit} · {condominium}",
+      "title": "Your first fee hasn't been issued yet",
+      "lead": "Your account is already linked to your unit. When management settles the month, you'll see your fee here with a step-by-step explanation.",
+      "yourShare": "Your share",
+      "area": "{area} m² of area",
+      "howTitle": "How your fee will be calculated",
+      "formula": "The month's common expense (common-area water and electricity plus other expenses) × your {pct}% share.",
+      "estimateLabel": "Estimated fee",
+      "estimateBasis": "Based on the building's latest common expense: {month}, {total}. It's a reference; your actual fee may vary.",
+      "example": "For example, if the month's common expense were S/ 10,000.00, your fee would be {fee}.",
+      "measuringTitle": "What IoBuild is measuring in {month}",
+      "measuringNote": "The building's common areas, with {days} day(s) of readings this month.",
+      "noReadings": "There are no common-area readings this month yet.",
+      "seeConsumption": "See my consumption",
+      "stepsTitle": "When does my fee appear?",
+      "step1": "Management records the month's water and electricity bills.",
+      "step2": "It splits the expense among the units by their share.",
+      "step3": "Your fee shows up here and in your account statement, ready to pay."
+    }
   },
   "dashboard": {
     "admin": {

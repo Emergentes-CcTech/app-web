@@ -12,6 +12,7 @@ import { BillingAssembler } from '../../../billing/infrastructure/billing.assemb
 import { CondominiumApi } from '../../../condominiums/infrastructure/condominium-api.js';
 import AuditTable from '../components/audit-table.vue';
 import FeeExplanation from '../components/fee-explanation.vue';
+import FirstFeePreview from '../components/first-fee-preview.vue';
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -35,6 +36,8 @@ const explanation = ref(null);
 const explanationLoading = ref(false);
 const explanationFailed = ref(false);
 const residentLoading = ref(true);
+// Sin cuotas emitidas: vista previa de la primera cuota del departamento
+const preview = ref(null);
 const lineOptions = computed(() => lines.value.map(l => ({ value: l.id, label: `${formatPeriod(l.period, locale.value)} · ${formatPen(l.amount)}` })));
 
 async function loadAdmin() { if (condominiumId.value) await store.fetchEvents(condominiumId.value, { type: type.value, from: from.value && new Date(from.value).toISOString(), to: to.value && new Date(`${to.value}T23:59:59`).toISOString() }); }
@@ -65,6 +68,9 @@ onMounted(async () => {
       lines.value = all.flat().sort((a, b) => String(b.period).localeCompare(String(a.period)));
       const wanted = Number(route.query.line);   // ?line=ID abre un desglose directamente
       selectedLineId.value = (lines.value.find(l => l.id === wanted) || lines.value[0])?.id ?? null;
+      if (!lines.value.length && units.length) {
+        try { preview.value = (await billingApi.getFeePreview(units[0].id)).data; } catch (_) { preview.value = null; }
+      }
     } catch (_) {
       explanationFailed.value = true;
     } finally {
@@ -105,6 +111,7 @@ function exportCsv() {
       </div>
       <div v-if="residentLoading || explanationLoading" class="center"><pv-progress-spinner /></div>
       <pv-message v-else-if="explanationFailed" severity="error" :closable="false">{{ t('audit.fee.loadError') }}</pv-message>
+      <first-fee-preview v-else-if="!lines.length && preview" :preview="preview" />
       <p v-else-if="!lines.length" class="muted">{{ t('payments.statement.empty') }}</p>
       <fee-explanation v-else-if="explanation" :explanation="explanation" />
     </template>

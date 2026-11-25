@@ -1,14 +1,26 @@
 package pe.iobuild.resident
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.app.Activity
+import android.content.Context
+import androidx.annotation.StringRes
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import pe.iobuild.resident.ui.util.AppLocale
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,17 +48,27 @@ import pe.iobuild.resident.ui.viewmodel.ResidentViewModel
 /**
  * Actividad principal de la aplicación móvil exclusiva para el Propietario (Resident) de IoBuild.
  * Aplica el patrón Backend for Frontend (BFF) consumiendo los endpoints agregados
- * `/api/v1/mobile/resident/*` del mismo backend de `app-web`.
+ * `/api/v1/mobile/resident/...` del mismo backend de `app-web`.
  */
 class MainActivity : ComponentActivity() {
+    // Las pantallas leen sus textos del contexto de la actividad, con el idioma elegido
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        AppLocale.applyToApp(applicationContext)
+        // Barras del sistema transparentes con íconos oscuros: la app es clara y la hora queda legible
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+        )
 
         val sessionManager = SessionManager(applicationContext)
         val apiProvider = ApiClientProvider(sessionManager)
-        val repository = ResidentBffRepository(sessionManager, apiProvider)
-        val factory = ResidentViewModel.Factory(sessionManager, repository)
+        val repository = ResidentBffRepository(sessionManager, apiProvider, applicationContext)
+        val factory = ResidentViewModel.Factory(sessionManager, repository, applicationContext)
 
         setContent {
             IoBuildResidentTheme {
@@ -63,20 +85,29 @@ private enum class AuthRoute {
 }
 
 private enum class ResidentTab(
-    val title: String,
+    @StringRes val titleRes: Int,
     val icon: ImageVector
 ) {
-    CONSUMPTION("Mi consumo", Icons.Default.WaterDrop),
-    STATEMENT("Estado cuenta", Icons.Default.ReceiptLong),
-    FEE("Mi cuota", Icons.Default.Verified),
-    PROFILE("Perfil", Icons.Default.Person)
+    CONSUMPTION(R.string.tab_consumption, Icons.Default.WaterDrop),
+    STATEMENT(R.string.tab_payments, Icons.AutoMirrored.Filled.ReceiptLong),
+    FEE(R.string.tab_fee, Icons.Default.PieChart),
+    PROFILE(R.string.tab_profile, Icons.Default.Person)
+}
+
+// Cambia el idioma, lo aplica a toda la app y recrea la pantalla para mostrar los textos nuevos
+private fun changeLanguage(context: Context, language: String) {
+    AppLocale.save(context, language)
+    AppLocale.applyToApp(context.applicationContext)
+    (context as? Activity)?.recreate()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IoBuildResidentApp(viewModel: ResidentViewModel) {
-    var authRoute by remember { mutableStateOf(AuthRoute.LOGIN) }
-    var activeTab by remember { mutableStateOf(ResidentTab.CONSUMPTION) }
+    var authRoute by rememberSaveable { mutableStateOf(AuthRoute.LOGIN) }
+    val context = LocalContext.current
+    val currentLanguage = remember { AppLocale.saved(context) }
+    var activeTab by rememberSaveable { mutableStateOf(ResidentTab.CONSUMPTION) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Al regresar a la app desde el navegador (onResume), confirma cualquier sesión de pago Stripe pendiente
@@ -103,7 +134,9 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                     },
                     onLoginSuccess = {
                         activeTab = ResidentTab.CONSUMPTION
-                    }
+                    },
+                    currentLanguage = currentLanguage,
+                    onChangeLanguage = { changeLanguage(context, it) }
                 )
             }
             AuthRoute.REGISTER -> {
@@ -122,139 +155,107 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
         return
     }
 
-    val unitBadgeText = viewModel.overviewData?.unit?.let { u ->
-        val condoName = viewModel.overviewData?.condominium?.name
-        if (!condoName.isNullOrBlank()) "Dpto. ${u.unitNumber} · $condoName" else "Dpto. ${u.unitNumber}"
-    } ?: viewModel.statementData?.unit?.let { u ->
-        val condoName = u.condominiumName
-        if (!condoName.isNullOrBlank()) "Dpto. ${u.unitNumber} · $condoName" else "Dpto. ${u.unitNumber}"
-    } ?: "Portal Propietario"
+    val unitNumber = viewModel.overviewData?.unit?.unitNumber ?: viewModel.statementData?.unit?.unitNumber
+    val condoName = viewModel.overviewData?.condominium?.name ?: viewModel.statementData?.unit?.condominiumName
+    val unitBadgeText = when {
+        unitNumber == null -> stringResource(R.string.owner_portal)
+        !condoName.isNullOrBlank() -> stringResource(R.string.unit_in_condominium, unitNumber, condoName)
+        else -> stringResource(R.string.unit_short, unitNumber)
+    }
 
     val residentDisplayName = viewModel.profileData?.fullName?.takeIf { it.isNotBlank() }
         ?: viewModel.overviewData?.unit?.residentFullName?.takeIf { it.isNotBlank() }
         ?: viewModel.sessionManager.displayName.takeIf { it.isNotBlank() }
-        ?: "Propietario"
+        ?: stringResource(R.string.owner)
+
+    val initials = residentDisplayName.split(" ").filter { it.isNotBlank() }.take(2)
+        .joinToString("") { it.first().uppercase() }.ifBlank { "P" }
 
     Scaffold(
+        containerColor = IoBuildBackground,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = IoBuildSlate900,
-                    titleContentColor = Color.White
-                ),
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(IoBuildEmerald500, IoBuildEmerald700)
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Apartment,
-                                contentDescription = "IoBuild",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f, fill = false)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "IoBuild",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = IoBuildEmerald500.copy(alpha = 0.2f)
-                                ) {
-                                    Text(
-                                        text = "PROPIETARIO",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = IoBuildEmerald100,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = IoBuildSlate900
+                    ),
+                    title = {
+                        Column {
+                            IoBuildLogo(symbolSize = 24.dp, textSize = 19.sp)
                             Text(
-                                text = "$residentDisplayName · $unitBadgeText",
-                                fontSize = 11.sp,
-                                color = Color(0xFFCBD5E1),
+                                text = unitBadgeText,
+                                fontSize = 12.sp,
+                                color = IoBuildSlate500,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.refreshAllResidentViews() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Sincronizar BFF",
-                            tint = IoBuildEmerald100
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            viewModel.signOut()
-                            authRoute = AuthRoute.LOGIN
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.refreshAllResidentViews() }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = stringResource(R.string.action_refresh),
+                                tint = IoBuildSlate500
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color(0xFFFCA5A5)
-                        )
+                        // Avatar con las iniciales: abre el perfil (ahí está cerrar sesión)
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(IoBuildEmerald600)
+                                .clickable { activeTab = ResidentTab.PROFILE },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                }
-            )
+                )
+                HorizontalDivider(color = IoBuildSlate200, thickness = 1.dp)
+            }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                ResidentTab.entries.forEach { tab ->
-                    val selected = activeTab == tab
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { activeTab = tab },
-                        icon = {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.title
+            Column {
+                HorizontalDivider(color = IoBuildSlate200, thickness = 1.dp)
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 0.dp
+                ) {
+                    ResidentTab.entries.forEach { tab ->
+                        val selected = activeTab == tab
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = { activeTab = tab },
+                            icon = {
+                                Icon(
+                                    imageVector = tab.icon,
+                                    contentDescription = stringResource(tab.titleRes)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = stringResource(tab.titleRes),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = IoBuildEmerald600,
+                                selectedTextColor = IoBuildEmerald700,
+                                indicatorColor = IoBuildEmerald100,
+                                unselectedIconColor = IoBuildSlate500,
+                                unselectedTextColor = IoBuildSlate500
                             )
-                        },
-                        label = {
-                            Text(
-                                text = tab.title,
-                                fontSize = 11.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = IoBuildEmerald600,
-                            selectedTextColor = IoBuildEmerald700,
-                            indicatorColor = IoBuildEmerald100,
-                            unselectedIconColor = IoBuildSlate500,
-                            unselectedTextColor = IoBuildSlate500
                         )
-                    )
+                    }
                 }
             }
         }
@@ -262,8 +263,8 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(IoBuildBackground)
+                .padding(innerPadding)
         ) {
             when (activeTab) {
                 ResidentTab.CONSUMPTION -> {
@@ -310,6 +311,8 @@ fun IoBuildResidentApp(viewModel: ResidentViewModel) {
                             viewModel.saveProfileChanges(fullName, phone, secondEmail, photoUrl)
                         },
                         onClearMessages = { viewModel.clearProfileMessages() },
+                        currentLanguage = currentLanguage,
+                        onChangeLanguage = { changeLanguage(context, it) },
                         onSignOut = {
                             viewModel.signOut()
                             authRoute = AuthRoute.LOGIN
