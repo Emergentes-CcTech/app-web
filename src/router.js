@@ -9,6 +9,7 @@ import billingRoutes from "./billing/presentation/billing-routes.js";
 import paymentsRoutes from "./payments/presentation/payments-routes.js";
 import auditRoutes from "./audit/presentation/audit-routes.js";
 import iamRoutes from "./iam/presentation/iam-routes.js";
+import demoToolsRoutes from "./demo-tools/presentation/demo-tools-routes.js";
 import { SubscriptionApi } from "./subscriptions/infrastructure/subscription-api.js";
 import { TOKEN_KEY, CURRENT_USER_KEY } from "./shared/infrastructure/storage-keys.js";
 import { ROUTES } from "./shared/infrastructure/paths.js";
@@ -53,6 +54,8 @@ const routes = [
     { path: '/payments', children: paymentsRoutes },                                    // el rol se define por hijo
     { path: '/audit', children: auditRoutes },                                          // ambos roles
     { path: '/subscriptions', meta: { requiresRole: ROLES.ADMIN }, children: subscriptionsRoutes },
+    // Herramientas de demostración: el backend las rechaza si DEMO_ENABLED no está activo
+    { path: '/demo-tools', meta: { requiresRole: ROLES.ADMIN }, children: demoToolsRoutes },
     // Route aliases and compatibility redirects matching DDD terminology
     { path: '/cadastre/condominiums', redirect: '/condominiums', meta: { requiresRole: ROLES.ADMIN } },
     { path: '/cadastre/condominiums/:id/units', redirect: to => `/condominiums/${to.params.id}`, meta: { requiresRole: ROLES.ADMIN } },

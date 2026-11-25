@@ -402,7 +402,8 @@
     "subscription": "Suscripción",
     "profile": "Perfil",
     "myConsumption": "Mi consumo",
-    "accountStatement": "Estado de cuenta"
+    "accountStatement": "Estado de cuenta",
+    "demoTools": "Modo demostración"
   },
   "condominiums": {
     "title": "Condominios",
@@ -1143,7 +1144,8 @@
     "device-management": "Dispositivos",
     "profile": "Perfil",
     "my-subscription": "Suscripción",
-    "NotFound": "Página no encontrada"
+    "NotFound": "Página no encontrada",
+    "demo-tools": "Modo demostración"
   },
   "ai": {
     "title": "Pregúntale a IoBuild",
@@ -1198,5 +1200,52 @@
     "more": "y {n} más",
     "viewAll": "Ver todas las alertas",
     "error": "No se pudo reconocer la alerta. Inténtalo de nuevo."
+  },
+  "demoTools": {
+    "title": "Modo demostración",
+    "subtitle": "Herramientas para presentar IoBuild sin esperar eventos reales. Solo aparecen cuando el servidor tiene DEMO_ENABLED.",
+    "condominium": "Condominio",
+    "noCondominium": "No hay condominios activos.",
+    "error": "No se pudo completar la acción.",
+    "alerts": {
+      "title": "Generar alertas",
+      "lead": "Crea la alerta con la misma regla del motor de anomalías, como si el medidor la hubiera reportado. Aparece en la campana, en el panel y en la explicación de la cuota de los residentes.",
+      "open": "{n} abiertas",
+      "view": "Ver alertas",
+      "resolveAll": "Resolver todas",
+      "created": "Alerta generada. Sobrecosto estimado: {amount}.",
+      "createdNoCost": "Alerta generada.",
+      "resolved": "{n} alertas resueltas.",
+      "types": {
+        "leak": {
+          "label": "Fuga nocturna",
+          "hint": "Caudal alto en la cisterna a las 02:30 de la última madrugada (la regla mira de 01:00 a 04:00)."
+        },
+        "overload": {
+          "label": "Sobrecarga de bombas",
+          "hint": "Consumo eléctrico 46 % por encima de la línea base del tablero de bombas."
+        },
+        "gateway": {
+          "label": "Gateway sin señal",
+          "hint": "El concentrador del sótano deja de enviar latidos."
+        }
+      }
+    },
+    "time": {
+      "title": "Adelantar el tiempo",
+      "lead": "Mueve los periodos, cuotas, pagos y alertas de este condominio un mes atrás. La cuota que aún no vencía queda vencida y aparece en Morosidad; el mes actual queda libre para registrar recibos y calcular un nuevo prorrateo.",
+      "confirm": "Los periodos, cuotas, pagos y alertas de este condominio pasarán al mes anterior. Las cuotas impagas que venzan quedarán morosas. ¿Adelantar un mes?",
+      "advance": "Adelantar un mes",
+      "done": "Listo: {n} cuotas vencidas en el condominio.",
+      "overdue": "{n} vencidas",
+      "period": "Periodo",
+      "due": "Vence",
+      "fees": "Cuotas",
+      "paid": "Pagadas",
+      "pending": "Pendientes",
+      "overdueCol": "Vencidas",
+      "empty": "Aún no hay periodos de facturación: registra los recibos del mes y calcula el prorrateo.",
+      "viewDelinquency": "Ver morosidad"
+    }
   }
 }
