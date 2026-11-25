@@ -89,7 +89,11 @@ public sealed class GeminiCognitiveAdapter(
         var text = document.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
         if (string.IsNullOrWhiteSpace(text)) return null;
 
-        var answer = JsonSerializer.Deserialize<GeminiAnswer>(text, Json);
+        // A veces el modelo envuelve el JSON en ```json … ```: se toma desde la primera llave hasta la última
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        if (start < 0 || end <= start) return null;
+        var answer = JsonSerializer.Deserialize<GeminiAnswer>(text[start..(end + 1)], Json);
         // Basta la respuesta directa: las secciones de agua, luz y alícuota se omiten cuando la pregunta no trata de ellas
         if (answer is null || string.IsNullOrWhiteSpace(answer.Summary)) return null;
 
@@ -99,7 +103,10 @@ public sealed class GeminiCognitiveAdapter(
             answer.WaterAnalysis?.Trim() ?? string.Empty,
             answer.EnergyAnalysis?.Trim() ?? string.Empty,
             answer.AliquotImpact?.Trim() ?? string.Empty,
-            (answer.Recommendations ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).Take(5).ToList(),
+            // Si el modelo no propone acciones, se usan las que calculan las reglas con los mismos datos
+            (answer.Recommendations ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).Take(5).ToList() is { Count: > 0 } generated
+                ? generated
+                : baseline.Recommendations.ToList(),
             baseline.HasAnomalies,
             Source: "gemini",
             Period: baseline.Period);
@@ -117,6 +124,7 @@ public sealed class GeminiCognitiveAdapter(
             "(cómo funciona el prorrateo por participación, qué es un recibo matriz, por qué una fuga nocturna sube el gasto). " +
             "Antes de decir que falta un dato, búscalo en 'period' y en 'context'; solo si de verdad no está, dilo en una frase y ofrece lo que sí sabes. " +
             "Si la pregunta no tiene que ver con el condominio ni con sus gastos, responde amablemente que solo puedes ayudar con eso y sugiere dos preguntas útiles. " +
+            "Si preguntan cómo mejorar, ahorrar o responder a quejas, propone medidas concretas de ahorro, mantenimiento y transparencia basadas en lo que muestran los datos (áreas que más consumen, alertas abiertas, diferencia con el recibo). " +
             "No des consejos legales ni financieros. " +
             "Pon la respuesta directa a la pregunta en 'summary'. Llena 'waterAnalysis', 'energyAnalysis' y 'aliquotImpact' solo si aportan a esa pregunta; si no, déjalos vacíos. " +
             "Compara con el periodo anterior cuando haya datos; si el periodo está en curso, aclara que es parcial. " +
@@ -143,7 +151,8 @@ public sealed class GeminiCognitiveAdapter(
             generationConfig = new
             {
                 temperature = 0.2,
-                maxOutputTokens = 900,
+                // Con el historial y el detalle por área las respuestas son más largas: 900 tokens cortaban el JSON
+                maxOutputTokens = 1600,
                 responseMimeType = "application/json",
                 responseSchema = new
                 {
