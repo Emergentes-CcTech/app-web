@@ -12,6 +12,7 @@ import { ROUTES } from "../../infrastructure/paths.js";
 import { isActiveStatus } from "../../../subscriptions/domain/model/subscription-status.enum.js";
 import { useTelemetryStore } from "../../../telemetry/application/telemetry.store.js";
 import { ROLES, normalizeRole, isAdmin } from "../../infrastructure/roles.js";
+import { DemoToolsApi } from "../../../demo-tools/infrastructure/demo-tools-api.js";
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -32,6 +33,8 @@ const toggleDrawer = () => {
 
 const currentUser = computed(() => iamStore.currentUser);
 const userRole = computed(() => normalizeRole(currentUser.value?.role) || ROLES.RESIDENT);
+// El menú de demostración aparece solo si el servidor tiene DEMO_ENABLED
+const demoEnabled = ref(false);
 const hasActiveSubscription = computed(() =>
   (subscriptionStore.subscriptions || []).some((sub) => isActiveStatus(sub?.status, sub?.endDate))
 );
@@ -51,6 +54,9 @@ onMounted(async () => {
   // Los administradores necesitan sus suscripciones para habilitar las secciones de pago.
   if (isAdmin(userRole.value) && !subscriptionStore.subscriptions?.length) {
     try { await subscriptionStore.fetchSubscriptions(); } catch (_) { /* sin suscripción activa */ }
+  }
+  if (isAdmin(userRole.value)) {
+    new DemoToolsApi().status().then(s => { demoEnabled.value = !!s?.enabled; }).catch(() => { demoEnabled.value = false; });
   }
   // RF-011: contador de alertas abiertas en el encabezado (polling 15 s, RNF-012)
   if (isAdmin(userRole.value)) {
@@ -97,6 +103,7 @@ const items = [
   { label: 'option.devices', to: ROUTES.DEVICES, use_role: ROLES.ADMIN, icon: 'pi pi-microchip' },
   { label: 'option.billing', to: ROUTES.BILLING, use_role: ROLES.ADMIN, icon: 'pi pi-calculator', requiresSubscription: true },
   { label: 'option.subscription', to: ROUTES.SUBSCRIPTION_DETAIL, use_role: ROLES.ADMIN, icon: 'pi pi-credit-card' },
+  { label: 'option.demoTools', to: ROUTES.DEMO_TOOLS, use_role: ROLES.ADMIN, icon: 'pi pi-sliders-h', requiresDemo: true },
   { label: 'option.profile', to: ROUTES.PROFILES, use_role: ROLES.ADMIN, icon: 'pi pi-user' },
   // Residente (Permanece intacto)
   { label: 'option.myConsumption', to: ROUTES.DASHBOARD, use_role: ROLES.RESIDENT, icon: 'pi pi-chart-line' },
@@ -109,6 +116,7 @@ const filteredItems = computed(() => {
   const currentRole = userRole.value;
   return items.filter(item => {
     if (item.requiresSubscription && !hasActiveSubscription.value) return false;
+    if (item.requiresDemo && !demoEnabled.value) return false;
     return item.use_role === currentRole;
   });
 });

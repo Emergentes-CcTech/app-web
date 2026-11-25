@@ -381,6 +381,7 @@ app.MapDevicesEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapProrationEndpoints();
 app.MapMobileResidentBffEndpoints();
+app.MapDemoEndpoints();
 app.MapCutoverEndpoints();
 
 app.Run();
