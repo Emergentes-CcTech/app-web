@@ -402,7 +402,8 @@
     "subscription": "Subscription",
     "profile": "Profile",
     "myConsumption": "My consumption",
-    "accountStatement": "Account statement"
+    "accountStatement": "Account statement",
+    "demoTools": "Demo mode"
   },
   "condominiums": {
     "title": "Condominiums",
@@ -1143,7 +1144,8 @@
     "device-management": "Devices",
     "profile": "Profile",
     "my-subscription": "Subscription",
-    "NotFound": "Page not found"
+    "NotFound": "Page not found",
+    "demo-tools": "Demo mode"
   },
   "ai": {
     "title": "Ask IoBuild",
@@ -1198,5 +1200,52 @@
     "more": "and {n} more",
     "viewAll": "View all alerts",
     "error": "The alert could not be acknowledged. Try again."
+  },
+  "demoTools": {
+    "title": "Demo mode",
+    "subtitle": "Tools to present IoBuild without waiting for real events. They only appear when the server has DEMO_ENABLED.",
+    "condominium": "Condominium",
+    "noCondominium": "There are no active condominiums.",
+    "error": "The action could not be completed.",
+    "alerts": {
+      "title": "Generate alerts",
+      "lead": "Creates the alert with the same anomaly engine rule, as if the meter had reported it. It shows in the bell, on the dashboard and in residents' fee explanation.",
+      "open": "{n} open",
+      "view": "View alerts",
+      "resolveAll": "Resolve all",
+      "created": "Alert generated. Estimated overcost: {amount}.",
+      "createdNoCost": "Alert generated.",
+      "resolved": "{n} alerts resolved.",
+      "types": {
+        "leak": {
+          "label": "Night leak",
+          "hint": "High cistern flow at 2:30 AM last night (the rule checks 1 to 4 AM)."
+        },
+        "overload": {
+          "label": "Pump overload",
+          "hint": "Power use 46% above the pump panel's baseline."
+        },
+        "gateway": {
+          "label": "Gateway without signal",
+          "hint": "The basement gateway stops sending heartbeats."
+        }
+      }
+    },
+    "time": {
+      "title": "Advance time",
+      "lead": "Moves this condominium's periods, fees, payments and alerts one month back. The fee that wasn't due yet becomes overdue and shows in Delinquency; the current month is free to register bills and calculate a new proration.",
+      "confirm": "This condominium's periods, fees, payments and alerts will move to the previous month. Unpaid fees that fall due become delinquent. Advance one month?",
+      "advance": "Advance one month",
+      "done": "Done: {n} overdue fees in the condominium.",
+      "overdue": "{n} overdue",
+      "period": "Period",
+      "due": "Due",
+      "fees": "Fees",
+      "paid": "Paid",
+      "pending": "Pending",
+      "overdueCol": "Overdue",
+      "empty": "There are no billing periods yet: register the month's bills and calculate the proration.",
+      "viewDelinquency": "View delinquency"
+    }
   }
 }

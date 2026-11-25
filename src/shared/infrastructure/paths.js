@@ -9,6 +9,7 @@ export const ROUTES = {
     LOGIN: '/login',
     HOME: '/home',
     DASHBOARD: '/telemetry/dashboard',
+    DEMO_TOOLS: '/demo-tools',
     MONITORING: '/telemetry/monitoring',
     ALERTS: '/telemetry/alerts',
     ANALYTICS: '/telemetry/analytics',

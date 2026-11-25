@@ -94,7 +94,8 @@ internal static class CoreBusinessTestSupport
         public Task<string?> UploadAsync(string content, CancellationToken cancellationToken = default) => Task.FromResult<string?>("cloudinary://asset");
     }
 
-    internal sealed class CoreBusinessApiFactory : Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>
+    // Ajustes extra de configuración por prueba, p. ej. ("Demo:Enabled", "true")
+    internal sealed class CoreBusinessApiFactory(params (string Key, string Value)[] settings) : Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
         {
@@ -114,7 +115,7 @@ internal static class CoreBusinessTestSupport
             {
                 ["Stripe:RestrictedApiKey"] = "rk_test_minimum",
                 ["Mqtt:Enabled"] = "false"
-            }));
+            }.Concat(settings.Select(s => new KeyValuePair<string, string?>(s.Key, s.Value)))));
         }
     }
 
