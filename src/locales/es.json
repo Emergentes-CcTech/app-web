@@ -933,6 +933,15 @@
         "transfer": "Transferencia",
         "card": "Tarjeta"
       }
+    },
+    "receiptPdf": {
+      "number": "N.° de comprobante",
+      "issuedAt": "Emitido",
+      "breakdown": "Desglose de la cuota",
+      "total": "Total pagado",
+      "payment": "Datos del pago",
+      "error": "No se pudo generar el comprobante.",
+      "footer": "Comprobante de pago de la cuota de mantenimiento generado por IoBuild. No reemplaza a un comprobante electrónico de SUNAT."
     }
   },
   "audit": {
