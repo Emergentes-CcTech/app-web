@@ -33,7 +33,8 @@ public sealed class DemoEndpointsTests
             new Device { Name = "GW-01", Type = "GatewayHub", Subsystem = "MainCistern", ProjectId = Project, OwnerId = 95 });
         // Cuota del mes actual que vence en 10 días: hoy nadie está moroso
         var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var period = new BillingPeriod { ProjectId = Project, PeriodCode = ThisMonth, StartDate = start, EndDate = start.AddMonths(1).AddDays(-1), DueDate = DateTime.UtcNow.Date.AddDays(10), Status = "Settled" };
+        var period = new BillingPeriod { ProjectId = Project, PeriodCode = ThisMonth, StartDate = start, EndDate = start.AddMonths(1).AddDays(-1), DueDate = DateTime.UtcNow.Date.AddDays(10), Status = "Settled",
+            WaterReadingFrom = start, WaterReadingTo = start.AddDays(20), EnergyReadingFrom = start.AddDays(-2), EnergyReadingTo = start.AddDays(18) };
         db.BillingPeriods.Add(period);
         await db.SaveChangesAsync();
         var paidAt = DateTime.UtcNow.AddDays(-1);
@@ -109,5 +110,10 @@ public sealed class DemoEndpointsTests
         var paid = await db.StatementOfAccounts.SingleAsync(s => s.ProjectId == Project && s.Status == "Paid");
         Assert.True(paid.PaidAtUtc < DateTime.UtcNow.AddDays(-25));
         Assert.False(await db.BillingPeriods.AnyAsync(p => p.ProjectId == Project && p.PeriodCode == ThisMonth));
+        // El periodo de lectura de los recibos se movió con su mes
+        var moved = await db.BillingPeriods.SingleAsync(p => p.ProjectId == Project);
+        var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(start.AddMonths(-1), moved.WaterReadingFrom);
+        Assert.Equal(start.AddDays(-2).AddMonths(-1), moved.EnergyReadingFrom);
     }
 }

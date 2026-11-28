@@ -16,6 +16,7 @@ const condoStore = useCondominiumStore();
 const condominiumId = ref(null);
 const period = ref(new Date().toISOString().slice(0, 7));
 const saving = ref(false);
+const billForm = ref(null);
 
 onMounted(async () => {
   if (!condoStore.condominiums.length) await condoStore.fetchAll().catch(() => {});
@@ -30,6 +31,7 @@ async function submit(bill) {
   saving.value = true;
   try {
     await store.addBill({ ...bill, condominiumId: condominiumId.value });
+    billForm.value?.reset();
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('billing.bills.saved'), life: 2500 });
   } catch (_) {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('billing.messages.error'), life: 3000 });
@@ -44,7 +46,7 @@ async function submit(bill) {
       <pv-select v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
       <div><label class="lbl">{{ t('billing.bills.period') }}</label><pv-input-text v-model="period" type="month" /></div>
     </div>
-    <bill-form :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submit" />
+    <bill-form ref="billForm" :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submit" />
     <reconciliation-card :bill="periodBill" />
     <pv-data-table :value="store.bills" :loading="store.isLoading" dataKey="id" stripedRows>
       <template #empty>{{ t('billing.bills.empty') }}</template>

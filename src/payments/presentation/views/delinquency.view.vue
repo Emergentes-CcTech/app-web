@@ -29,7 +29,7 @@ const rows = computed(() => store.overdueUnitIds.map(unitId => {
   const list = store.overduePayments.filter(p => p.unitId === unitId);
   const resident = residentStore.residents.find(r => r.unitId === unitId);
   return {
-    unitId, unitNumber: resident?.unitNumber ?? unitId, resident: resident?.fullName || '—',
+    unitId, unitNumber: list[0]?.unitNumber || resident?.unitNumber || unitId, resident: resident?.fullName || "—",
     periods: list.map(p => p.period).sort().join(', '), amount: Math.round(list.reduce((a, p) => a + p.amount * 100, 0)) / 100,
     daysOverdue: Math.max(...list.map(p => p.daysOverdue)), first: [...list].sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0],
   };

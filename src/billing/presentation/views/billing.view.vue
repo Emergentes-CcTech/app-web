@@ -32,6 +32,7 @@ const residentStore = useResidentStore();
 const condominiumId = ref(null);
 const period = ref(new Date().toISOString().slice(0, 7));
 const saving = ref(false);
+const billForm = ref(null);
 const calculating = ref(false);
 
 // State for active tab synchronized with route query or props
@@ -83,7 +84,8 @@ const overdueRows = computed(() => paymentStore.overdueUnitIds.map(unitId => {
   const resident = residentStore.residents.find(r => r.unitId === unitId);
   return {
     unitId,
-    unitNumber: resident?.unitNumber ?? unitId,
+    // Número de la unidad desde la cuota (unidades sin residente también lo tienen); el id interno no es legible
+    unitNumber: list[0]?.unitNumber || resident?.unitNumber || unitId,
     resident: resident?.fullName || '—',
     periods: list.map(p => p.period).sort().join(', '),
     amount: Math.round(list.reduce((a, p) => a + p.amount * 100, 0)) / 100,
@@ -113,6 +115,7 @@ async function submitBill(bill) {
   saving.value = true;
   try {
     await store.addBill({ ...bill, condominiumId: condominiumId.value });
+    billForm.value?.reset();
     toast.add({ severity: 'success', summary: t('common.success'), detail: t('billing.bills.saved'), life: 2500 });
   } catch (_) {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('billing.messages.error'), life: 3000 });
@@ -193,7 +196,7 @@ async function confirmPayment(data) {
                 <pv-input-text v-model="period" type="month" />
               </div>
             </div>
-            <bill-form :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submitBill" />
+            <bill-form ref="billForm" :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submitBill" />
             <reconciliation-card :bill="periodBill" />
             <pv-data-table :value="store.bills" :loading="store.isLoading" dataKey="id" stripedRows class="mt-4">
               <template #empty>{{ t('billing.bills.empty') }}</template>
