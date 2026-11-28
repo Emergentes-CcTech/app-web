@@ -149,6 +149,11 @@ public static class DemoEndpoints
                     p.DueDate = p.DueDate.AddMonths(-1);
                     if (p.ReconciledAtUtc.HasValue) p.ReconciledAtUtc = p.ReconciledAtUtc.Value.AddMonths(-1);
                     if (p.SettledAtUtc.HasValue) p.SettledAtUtc = p.SettledAtUtc.Value.AddMonths(-1);
+                    // El periodo de lectura de cada recibo se mueve con su mes
+                    if (p.WaterReadingFrom.HasValue) p.WaterReadingFrom = p.WaterReadingFrom.Value.AddMonths(-1);
+                    if (p.WaterReadingTo.HasValue) p.WaterReadingTo = p.WaterReadingTo.Value.AddMonths(-1);
+                    if (p.EnergyReadingFrom.HasValue) p.EnergyReadingFrom = p.EnergyReadingFrom.Value.AddMonths(-1);
+                    if (p.EnergyReadingTo.HasValue) p.EnergyReadingTo = p.EnergyReadingTo.Value.AddMonths(-1);
                 }
 
                 var statements = await db.StatementOfAccounts.Where(s => s.ProjectId == id && s.PaidAtUtc != null).ToListAsync(ct);

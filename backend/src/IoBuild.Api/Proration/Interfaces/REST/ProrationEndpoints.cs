@@ -936,14 +936,16 @@ public static class ProrationEndpoints
                     id = s.Id,
                     settlementLineId = s.Id,
                     unitId = s.UnitId,
+                    unitNumber = s.UnitNumber,
                     condominiumId = s.ProjectId,
                     period = p?.PeriodCode ?? "2026-10",
                     amount = s.IndividualAmountSoles,
                     dueDate = p?.DueDate.ToString("yyyy-MM-dd") ?? "2026-10-31",
                     paidAt = s.PaidAtUtc?.ToString("yyyy-MM-dd"),
                     status = s.Status.ToLowerInvariant(),
-                    method = s.PaymentMethod ?? "Transferencia Bancaria",
-                    reference = s.PaymentReference ?? $"OP-{s.Id:D6}"
+                    // Método y operación solo existen si se pagó: no se inventan para una cuota pendiente
+                    method = s.PaymentMethod,
+                    reference = s.PaymentReference
                 };
             });
             return Results.Ok(payments);
