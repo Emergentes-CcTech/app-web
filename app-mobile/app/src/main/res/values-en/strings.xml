@@ -144,16 +144,6 @@
     <string name="profile_phone">Phone number</string>
     <string name="profile_second_email">Alternative email</string>
     <string name="profile_save_changes">Save changes</string>
-    <string name="profile_notifications">Notifications</string>
-    <string name="profile_notifications_subtitle">Choose how you want to hear about your fee and the common areas.</string>
-    <string name="notif_email">Email notifications</string>
-    <string name="notif_email_hint">Get receipts and notices by email</string>
-    <string name="notif_new_settlement">New settlement</string>
-    <string name="notif_new_settlement_hint">When management publishes the monthly fee</string>
-    <string name="notif_due">Due date reminders</string>
-    <string name="notif_due_hint">A reminder 3 days before the due date</string>
-    <string name="notif_alerts">Condominium alerts</string>
-    <string name="notif_alerts_hint">Leaks, maintenance or anomalies in common areas</string>
     <string name="profile_security">Session security</string>
     <string name="profile_device">Mobile device</string>
     <string name="profile_session_active">Active</string>

@@ -5,7 +5,6 @@ import { useToast } from 'primevue/usetoast';
 import { useProfileStore } from '../../application/profile.store.js';
 import { ProfileAssembler } from '../../infrastructure/profile.assembler.js';
 import { isValidName, isValidPhone, isValidEmail } from '../../../shared/presentation/validators.js';
-import NotificationsSection from './notifications-section.vue';
 import SecuritySection from './security-section.vue';
 
 // Editor de perfil compartido por los dos roles (RF-003).
@@ -97,7 +96,6 @@ async function save() {
           <option value="en">English</option>
         </select>
 
-        <notifications-section :variant="variant" />
         <security-section />
       </main>
     </div>

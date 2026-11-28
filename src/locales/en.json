@@ -31,17 +31,6 @@
     "residentRole": "Apartment owner",
     "companyName": "Company name",
     "legalRepresentative": "Legal representative",
-    "notifications": {
-      "title": "Notifications",
-      "save": "Save preferences",
-      "email": "Email notifications",
-      "sms": "SMS alerts",
-      "criticalAlerts": "Critical alerts",
-      "billingReminders": "Billing reminders",
-      "newSettlement": "New settlement notice",
-      "dueDates": "Due dates",
-      "condominiumAlerts": "Condominium alerts"
-    },
     "security": {
       "title": "Account security",
       "current": "Current password",
@@ -53,9 +42,7 @@
       "passwordError": "Could not change the password.",
       "sessions": "Active sessions",
       "noSessions": "No sessions to show.",
-      "closeSession": "Sign out",
-      "twoFactor": "Two-factor authentication (2FA)",
-      "comingSoon": "Coming soon"
+      "closeSession": "Sign out"
     }
   },
   "subscriptions": {

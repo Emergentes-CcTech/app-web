@@ -31,17 +31,6 @@
     "residentRole": "Dueño de departamento",
     "companyName": "Razón social",
     "legalRepresentative": "Representante legal",
-    "notifications": {
-      "title": "Notificaciones",
-      "save": "Guardar preferencias",
-      "email": "Notificaciones por correo",
-      "sms": "Alertas por SMS",
-      "criticalAlerts": "Alertas críticas",
-      "billingReminders": "Recordatorios de cobranza",
-      "newSettlement": "Aviso de nueva liquidación",
-      "dueDates": "Vencimientos",
-      "condominiumAlerts": "Alertas del condominio"
-    },
     "security": {
       "title": "Seguridad de la cuenta",
       "current": "Contraseña actual",
@@ -53,9 +42,7 @@
       "passwordError": "No se pudo cambiar la contraseña.",
       "sessions": "Sesiones activas",
       "noSessions": "Sin sesiones para mostrar.",
-      "closeSession": "Cerrar sesión",
-      "twoFactor": "Autenticación en dos pasos (2FA)",
-      "comingSoon": "Próximamente"
+      "closeSession": "Cerrar sesión"
     }
   },
   "subscriptions": {

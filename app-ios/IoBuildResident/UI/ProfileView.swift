@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Mi perfil": datos del propietario, avisos, idioma y cierre de sesión.
+/// "Mi perfil": datos del propietario, idioma y cierre de sesión.
 struct ProfileView: View {
     @Environment(AppModel.self) private var model
     @State private var fullName = ""
@@ -8,12 +8,6 @@ struct ProfileView: View {
     @State private var secondEmail = ""
     @State private var loadedProfileKey = ""
     @State private var confirmSignOut = false
-
-    // Preferencias de aviso (se guardan en el teléfono, como en Android)
-    @AppStorage("notif_email") private var notifEmail = true
-    @AppStorage("notif_new_settlement") private var notifSettlement = true
-    @AppStorage("notif_due_dates") private var notifDue = true
-    @AppStorage("notif_condo_alerts") private var notifAlerts = true
 
     var body: some View {
         ScrollView {
@@ -28,7 +22,6 @@ struct ProfileView: View {
                 } else {
                     header
                     accountForm
-                    notifications
                     language
                     security
                 }
@@ -139,28 +132,6 @@ struct ProfileView: View {
             .disabled(model.profileSaving)
         }
         .card()
-    }
-
-    private var notifications: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.t("profile_notifications")).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.slate900)
-            Text(L10n.t("profile_notifications_subtitle")).font(.system(size: 12)).foregroundStyle(Theme.slate500)
-            preference("notif_email", "notif_email_hint", isOn: $notifEmail)
-            preference("notif_new_settlement", "notif_new_settlement_hint", isOn: $notifSettlement)
-            preference("notif_due", "notif_due_hint", isOn: $notifDue)
-            preference("notif_alerts", "notif_alerts_hint", isOn: $notifAlerts)
-        }
-        .card()
-    }
-
-    private func preference(_ title: String, _ hint: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.t(title)).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.slate900)
-                Text(L10n.t(hint)).font(.system(size: 12)).foregroundStyle(Theme.slate500)
-            }
-        }
-        .tint(Theme.emerald600)
     }
 
     /// iOS guarda el idioma de cada app en Ajustes; desde aquí se abre directamente esa pantalla.
