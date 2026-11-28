@@ -77,7 +77,7 @@ public static class DevicesEndpoints
         }).RequireAuthorization();
         group.MapGet("/devices/{id:int}", async (int id, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
             await db.Devices.FindAsync([id], ct) is { } device && await MaySeeDeviceAsync(user, db, device, ct) ? Results.Ok(DeviceResponse.From(device)) : Results.NotFound()).RequireAuthorization();
-        group.MapPost("/devices", async (CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) =>
+        group.MapPost("/devices", async (CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, KitProvisioningService kit, CancellationToken ct) =>
         {
             var ownerId = int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.Sid)?.Value, out var id) ? id : 0;
             var isOwnerCustom = request.UnitId.HasValue;
@@ -130,6 +130,8 @@ public static class DevicesEndpoints
                 LastEventAt = DateTime.UtcNow
             });
             await db.SaveChangesAsync(ct);
+            // Un equipo común en un área aún no registrada la crea, para que aparezca entre las áreas monitoreadas
+            if (!isOwnerCustom && device.Type != "GatewayHub") await kit.EnsureAreasAsync(device.ProjectId, [device.Subsystem], ct);
             await registry.AnnounceAsync(device, ct); return Results.Created($"/api/v1/devices/{device.Id}", DeviceResponse.From(device));
         }).RequireAuthorization();
         group.MapPut("/devices/{id:int}", async (int id, CreateDeviceRequest request, System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, DeviceRegistryService registry, CancellationToken ct) =>

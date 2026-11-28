@@ -5,8 +5,8 @@ import { useI18n } from 'vue-i18n';
 import { useToast } from 'primevue/usetoast';
 import { useCondominiumStore } from '../../application/condominium.store.js';
 import { Condominium } from '../../domain/model/condominium.entity.js';
-import { CommonArea, COMMON_AREA_TYPES } from '../../domain/model/common-area.entity.js';
-import { recommendedTier, kitTotal, withIgv, MAX_PLAN_UNITS } from '../../../subscriptions/domain/model/plan-limits.js';
+import { COMMON_AREA_TYPES } from '../../domain/model/common-area.entity.js';
+import { recommendedTier, kitTotal, withIgv, MAX_PLAN_UNITS, KIT_AREAS } from '../../../subscriptions/domain/model/plan-limits.js';
 import { isValidName, isValidSupplyCode, isValidPositiveInteger } from '../../../shared/presentation/validators.js';
 import { loadCloudinaryWidget } from '../../../shared/infrastructure/cloudinary-loader.js';
 import { getProjectImageUploadConfig } from '../../../shared/infrastructure/cloudinary-config.js';
@@ -30,16 +30,10 @@ const LIMA_DISTRICTS = ['Barranco', 'Breña', 'Chorrillos', 'Jesús María', 'La
   'Miraflores', 'Pueblo Libre', 'San Borja', 'San Isidro', 'San Miguel', 'Santiago de Surco', 'Surquillo', 'Cercado de Lima'];
 
 // ── Áreas comunes: solo los subsistemas que el kit HaaS monitorea ──
-const areaCatalog = computed(() => COMMON_AREA_TYPES.map(a => ({ ...a, label: t(`condominiums.commonAreas.types.${a.type}`) })));
-const areaOf = (type) => form.commonAreas.find(a => a.type === type) || null;
-function toggleArea(type) {
-  const existing = areaOf(type);
-  if (existing) form.commonAreas.splice(form.commonAreas.indexOf(existing), 1);
-  else form.commonAreas.push(new CommonArea({ type, name: t(`condominiums.commonAreas.types.${type}`) }));
-}
-
-// ── Plan HaaS que corresponde (Esencial / Urbano / Gran Torre) ──
 const plan = computed(() => form.totalUnits ? recommendedTier(form.totalUnits) : null);
+// Las áreas monitoreadas no se eligen: son las que mide el kit del plan
+const kitAreas = computed(() => (plan.value ? KIT_AREAS[plan.value.code] || [] : [])
+  .map(type => ({ type, icon: COMMON_AREA_TYPES.find(a => a.type === type)?.icon, label: t(`condominiums.commonAreas.types.${type}`) })));
 
 // ── Foto del edificio (Cloudinary) ──
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -64,8 +58,6 @@ onMounted(async () => {
   if (isEdit.value) Object.assign(form, await store.fetchById(route.params.id));
   else {
     form.totalUnits = null; // vacío para que el placeholder guíe en lugar de un 0
-    // Un condominio nuevo parte con los cuatro subsistemas que incluye el kit
-    COMMON_AREA_TYPES.forEach(a => toggleArea(a.type));
   }
 });
 
@@ -78,8 +70,6 @@ function validate() {
   if (form.totalFloors !== null && !isValidPositiveInteger(form.totalFloors, 1, 80)) errors.totalFloors = t('condominiums.validation.floors');
   if (!isValidSupplyCode(form.waterSupplyCode)) errors.waterSupplyCode = t('condominiums.validation.supplyCode');
   if (!isValidSupplyCode(form.electricitySupplyCode)) errors.electricitySupplyCode = t('condominiums.validation.supplyCode');
-  if (!form.commonAreas.length) errors.commonAreas = t('condominiums.validation.commonAreasRequired');
-  else if (form.commonAreas.some(a => !isValidName(a.name, 2, 80))) errors.commonAreas = t('condominiums.validation.commonAreaName');
   return !Object.keys(errors).length;
 }
 
@@ -90,7 +80,8 @@ async function save() {
   }
   saving.value = true;
   try {
-    const payload = { ...form, commonAreas: form.commonAreas.map(a => ({ ...a })) };
+    // Sin áreas: el backend registra las del kit del plan al activar y conserva las existentes al editar
+    const payload = { ...form, commonAreas: [] };
     const saved = isEdit.value ? await store.update(payload) : await store.create(payload);
     if (!isEdit.value) {
       // El condominio queda pendiente hasta pagar la activación: se abre la pasarela de pago de una vez
@@ -195,27 +186,6 @@ async function save() {
           </div>
         </section>
 
-        <!-- 3. Áreas comunes monitoreadas -->
-        <section class="section">
-          <h2><span class="step">3</span>{{ t('condominiums.form.areas') }}</h2>
-          <p class="section-hint">{{ t('condominiums.form.areasHint') }}</p>
-          <div class="areas">
-            <div v-for="a in areaCatalog" :key="a.type" class="area" :class="{ on: areaOf(a.type) }">
-              <label class="area-toggle">
-                <pv-checkbox :modelValue="!!areaOf(a.type)" binary @update:modelValue="toggleArea(a.type)" />
-                <i :class="a.icon" aria-hidden="true" />
-                <span class="area-label">{{ a.label }}</span>
-                <span class="area-meter">{{ t(`condominiums.form.meter.${a.meter}`) }}</span>
-              </label>
-              <div v-if="areaOf(a.type)" class="area-fields">
-                <pv-input-text v-model="areaOf(a.type).name" :aria-label="t('condominiums.commonAreas.name')" :placeholder="a.label" />
-                <pv-input-text v-model="areaOf(a.type).location" :aria-label="t('condominiums.form.areaLocation')" :placeholder="t('condominiums.form.areaLocationPlaceholder')" />
-              </div>
-            </div>
-          </div>
-          <small v-if="errors.commonAreas" class="p-error block">{{ errors.commonAreas }}</small>
-        </section>
-
         <div class="actions">
           <pv-button type="button" :label="t('common.cancel')" icon="pi pi-times" severity="secondary" outlined class="flex-1" @click="router.back()" />
           <pv-button type="submit" :label="isEdit ? t('common.save') : t('condominiums.form.create')" icon="pi pi-check" :loading="saving" class="flex-1" />
@@ -241,13 +211,19 @@ async function save() {
           </dl>
         </template>
         <p v-else class="muted">{{ t('condominiums.form.planPending') }}</p>
-        <p class="summary-areas"><i class="pi pi-eye" aria-hidden="true" /> {{ t('condominiums.form.areasCount', { n: form.commonAreas.length }) }}</p>
+        <div v-if="kitAreas.length" class="summary-areas">
+          <strong>{{ t('condominiums.form.kitAreas') }}</strong>
+          <ul><li v-for="a in kitAreas" :key="a.type"><i :class="a.icon" aria-hidden="true" /> {{ a.label }}</li></ul>
+          <small class="muted">{{ t('condominiums.form.kitAreasHint') }}</small>
+        </div>
       </aside>
     </form>
   </div>
 </template>
 
 <style scoped>
+.summary-areas ul { list-style: none; padding: 0; margin: .4rem 0; display: grid; gap: .3rem; }
+.summary-areas i { color: #10B981; margin-right: .35rem; }
 .page { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
 .breadcrumb { display: flex; align-items: center; gap: .5rem; font-size: .875rem; color: #6b7280; margin-bottom: .5rem; }
 .breadcrumb a { color: #6b7280; text-decoration: none; }
