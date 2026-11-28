@@ -55,6 +55,41 @@ public sealed class FeeCheckoutTests
     }
 
     [Fact]
+    public async Task An_owner_outside_condominium_1_sees_their_pending_fee()
+    {
+        await using var factory = new CoreBusinessApiFactory();
+        using var client = factory.CreateClient();
+        var id = await SeedAsync(factory);
+        int unitId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
+            var unit = new Unit(Project, "101", 1, 80m, 100m) { OwnerId = 98 };
+            db.Units.Add(unit);
+            await db.SaveChangesAsync();
+            var statement = await db.StatementOfAccounts.SingleAsync(s => s.Id == id);
+            statement.UnitId = unit.Id;
+            await db.SaveChangesAsync();
+            unitId = unit.Id;
+        }
+        var owner = Token(98, "owner98@example.test", "Resident");
+
+        // El estado de cuenta pide por unidad, sin condominio: antes se buscaba solo en el condominio 1 y salía vacío
+        var response = await SendAuthorizedAsync(client, HttpMethod.Get, $"/api/v1/payments?unitId={unitId}", owner);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var fees = System.Text.Json.JsonDocument.Parse(body).RootElement.EnumerateArray().ToList();
+        var fee = Assert.Single(fees);
+        Assert.Equal("pending", fee.GetProperty("status").GetString());
+        Assert.Equal(150m, fee.GetProperty("amount").GetDecimal());
+
+        // Otro administrador no ve las cuotas de este condominio
+        var stranger = Token(99, "otro@example.test", "PropertyManager");
+        var foreign = await SendAuthorizedAsync(client, HttpMethod.Get, $"/api/v1/payments?condominiumId={Project}", stranger);
+        Assert.Equal("[]", (await foreign.Content.ReadAsStringAsync()).Trim());
+    }
+
+    [Fact]
     public async Task Simulated_mode_only_pays_when_explicitly_enabled()
     {
         await using var factory = new CoreBusinessApiFactory(("Stripe:RestrictedApiKey", ""), ("Stripe:UseSimulatedPayments", "true"));

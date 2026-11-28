@@ -900,8 +900,11 @@ public static class ProrationEndpoints
             IoBuildDbContext db,
             CancellationToken ct) =>
         {
-            var targetProjectId = condominiumId ?? projectId ?? 1;
-            var query = db.StatementOfAccounts.Where(s => s.ProjectId == targetProjectId);
+            // Sin condominio en la consulta (el residente pide por su unidad) no se filtra por proyecto:
+            // antes se asumía el condominio 1 y un residente de otro edificio veía su estado de cuenta vacío
+            var targetProjectId = condominiumId ?? projectId;
+            var query = db.StatementOfAccounts.AsQueryable();
+            if (targetProjectId.HasValue) query = query.Where(s => s.ProjectId == targetProjectId.Value);
 
             int? effectiveUnitId = unitId;
             if (!effectiveUnitId.HasValue && httpContext.Request.Query.TryGetValue("unitId[]", out var qVal) && int.TryParse(qVal.FirstOrDefault(), out var parsedId))
@@ -931,6 +934,10 @@ public static class ProrationEndpoints
             }
             else
             {
+                // El administrador solo ve las cuotas de sus propios condominios
+                var self = SelfId(user);
+                var ownProjects = db.Projects.Where(p => p.BuilderId == self).Select(p => p.Id);
+                query = query.Where(s => ownProjects.Contains(s.ProjectId));
                 if (effectiveUnitId.HasValue) query = query.Where(s => s.UnitId == effectiveUnitId.Value);
                 if (residentUserId.HasValue)
                 {
@@ -944,8 +951,9 @@ public static class ProrationEndpoints
                 query = query.Where(s => s.Status.ToLower() == status.ToLower());
             }
 
-            var periods = await db.BillingPeriods.Where(p => p.ProjectId == targetProjectId).ToDictionaryAsync(p => p.Id, ct);
             var statements = await query.ToListAsync(ct);
+            var periodIds = statements.Select(s => s.BillingPeriodId).Distinct().ToList();
+            var periods = await db.BillingPeriods.Where(p => periodIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
 
             var payments = statements.Select(s =>
             {
