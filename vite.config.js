@@ -7,6 +7,8 @@ export function vendorChunk(id) {
   if (!path.includes('/node_modules/')) return;
   if (/\/node_modules\/(chart\.js|vue-chartjs|@kurkle\/color)\//.test(path)) return 'charts';
   if (path.includes('/node_modules/@stripe/')) return 'stripe';
+  // jsPDF y sus dependencias solo se cargan al descargar un comprobante
+  if (/\/node_modules\/(jspdf|html2canvas|dompurify|canvg|fflate|fast-png|iobuffer|pako|core-js|raf|rgbcolor|stackblur-canvas|svg-pathdata|@babel\/runtime)\//.test(path)) return 'pdf';
   // Match package boundaries: primevue and vue-chartjs are not Vue core.
   if (/\/node_modules\/(primevue|@primevue\/[^/]+|@primeuix\/[^/]+)\//.test(path)) return 'primevue';
   return 'vendor';

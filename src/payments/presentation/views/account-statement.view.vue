@@ -7,12 +7,15 @@ import { usePaymentStore } from '../../application/payment.store.js';
 import { PaymentStatus } from '../../domain/model/payment.entity.js';
 import { getSessionUserId, formatPeriod, formatPen } from '../../../shared/infrastructure/session.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
+import { BillingApi } from '../../../billing/infrastructure/billing-api.js';
+import { buildReceiptPdf } from '../../application/receipt-pdf.js';
 
 const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const store = usePaymentStore();
+const billingApi = new BillingApi();
 
 const pending = computed(() => store.pendingForResident);
 const history = computed(() => [...store.payments].sort((a, b) => String(b.period).localeCompare(String(a.period))));
@@ -63,20 +66,49 @@ async function payWithCard() {
   }
 }
 
-// Comprobante simple descargable (texto plano)
-function downloadReceipt(p) {
-  const text = [`IoBuild`, t('payments.statement.receipt'), '',
-    `${t('payments.statement.unit')}: ${unitNumber.value} - ${condominiumName.value}`,
-    `${t('payments.statement.holder')}: ${residentName.value} (${t('payments.statement.aliquot')}: ${aliquotFormatted.value}%)`,
-    `${t('payments.statement.period')}: ${formatPeriod(p.period, locale.value)}`,
-    `${t('payments.statement.amount')}: ${formatPen(p.amount)}`,
-    `${t('payments.register.paidAt')}: ${p.paidAt}`,
-    `${t('payments.register.reference')}: ${p.reference || '—'}`].join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-  a.download = `comprobante-${p.period}.txt`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+// Comprobante en PDF con el desglose de la cuota (agua, luz y otros gastos)
+const downloading = ref(null);
+const longDate = (iso) => iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).toLocaleDateString(locale.value, { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+async function downloadReceipt(p) {
+  if (downloading.value) return;
+  downloading.value = p.id;
+  try {
+    // Si no se puede leer el desglose, el comprobante muestra la cuota completa en una sola línea
+    let lines = [{ concept: t('payments.statement.conceptValue'), amount: formatPen(p.amount) }];
+    try {
+      const { mine } = (await billingApi.getLineExplanation(p.settlementLineId)).data;
+      const parts = [['water', mine.water], ['energy', mine.energy], ['other', mine.other]].filter(([key, v]) => key !== 'other' || Number(v) > 0);
+      if (parts.length) lines = parts.map(([key, v]) => ({ concept: t(`audit.fee.concepts.${key}`), amount: formatPen(Number(v)) }));
+    } catch (_) { /* desglose no disponible */ }
+
+    const doc = await buildReceiptPdf({
+      labels: {
+        title: t('payments.statement.receipt'), number: t('payments.receiptPdf.number'), issuedAt: t('payments.receiptPdf.issuedAt'),
+        paid: t('payments.status.paid'), condominium: t('payments.statement.condominium'), unit: t('payments.statement.unit'),
+        holder: t('payments.statement.holder'), aliquot: t('payments.statement.aliquot'), period: t('payments.statement.period'),
+        breakdown: t('payments.receiptPdf.breakdown'), concept: t('payments.statement.concept'), amount: t('payments.statement.amount'),
+        total: t('payments.receiptPdf.total'), payment: t('payments.receiptPdf.payment'), paidAt: t('payments.register.paidAt'),
+        method: t('payments.register.method'), reference: t('payments.register.reference'), footer: t('payments.receiptPdf.footer'),
+      },
+      number: `CP-${String(p.period).replace('-', '')}-${String(p.id).padStart(6, '0')}`,
+      issuedAt: longDate(new Date().toISOString()),
+      condominium: condominiumName.value,
+      unit: p.unitNumber || unitNumber.value,
+      holder: residentName.value,
+      aliquot: `${aliquotFormatted.value}%`,
+      period: formatPeriod(p.period, locale.value),
+      lines,
+      total: formatPen(p.amount),
+      paidAt: longDate(p.paidAt),
+      method: p.method,
+      reference: p.reference,
+    });
+    doc.save(`comprobante-${p.period}-${p.unitNumber || unitNumber.value}.pdf`);
+  } catch (_) {
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('payments.receiptPdf.error'), life: 3500 });
+  } finally {
+    downloading.value = null;
+  }
 }
 // RNF-006: el desglose se abre en un clic desde el estado de cuenta
 const viewBreakdown = (p) => router.push({ path: ROUTES.AUDIT, query: { line: p.settlementLineId } });
@@ -125,7 +157,7 @@ const viewBreakdown = (p) => router.push({ path: ROUTES.AUDIT, query: { line: p.
           <pv-column :header="t('common.actions')">
             <template #body="{ data }">
               <pv-button :label="t('payments.statement.viewBreakdown')" icon="pi pi-search" text size="small" @click="viewBreakdown(data)" />
-              <pv-button v-if="data.effectiveStatus === PaymentStatus.PAID" :label="t('payments.statement.download')" icon="pi pi-download" text size="small" @click="downloadReceipt(data)" />
+              <pv-button v-if="data.effectiveStatus === PaymentStatus.PAID" :label="t('payments.statement.download')" icon="pi pi-file-pdf" text size="small" :loading="downloading === data.id" @click="downloadReceipt(data)" />
             </template>
           </pv-column>
         </pv-data-table>
