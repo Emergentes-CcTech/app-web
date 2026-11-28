@@ -809,7 +809,11 @@
       "uploadReceipt": "Subir recibo",
       "replaceReceipt": "Reemplazar recibo",
       "viewReceipt": "Ver recibo",
-      "uploadError": "No se pudo subir el recibo. Intenta de nuevo."
+      "uploadError": "No se pudo subir el recibo. Intenta de nuevo.",
+      "measuredBySensors": "medido por los sensores de IoBuild",
+      "measuredRange": "del {from} al {to}",
+      "measuredGap": "Diferencia con el recibo: {diff} {unit} ({pct} %) no pasó por los medidores",
+      "measuredUnavailable": "Elige el periodo para ver lo que midieron los sensores."
     },
     "reconciliation": {
       "title": "Conciliación: facturado vs medido",

@@ -44,7 +44,7 @@ async function submit(bill) {
       <pv-select v-model="condominiumId" :options="condoStore.activeCondominiums" optionLabel="name" optionValue="id" class="filter" />
       <div><label class="lbl">{{ t('billing.bills.period') }}</label><pv-input-text v-model="period" type="month" /></div>
     </div>
-    <bill-form :period="period" :loading="saving" @submit="submit" />
+    <bill-form :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submit" />
     <reconciliation-card :bill="periodBill" />
     <pv-data-table :value="store.bills" :loading="store.isLoading" dataKey="id" stripedRows>
       <template #empty>{{ t('billing.bills.empty') }}</template>

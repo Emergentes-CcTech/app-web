@@ -809,7 +809,11 @@
       "uploadReceipt": "Upload bill",
       "replaceReceipt": "Replace bill",
       "viewReceipt": "View bill",
-      "uploadError": "The bill could not be uploaded. Try again."
+      "uploadError": "The bill could not be uploaded. Try again.",
+      "measuredBySensors": "measured by IoBuild's sensors",
+      "measuredRange": "from {from} to {to}",
+      "measuredGap": "Difference with the bill: {diff} {unit} ({pct}%) didn't go through the meters",
+      "measuredUnavailable": "Choose the period to see what the sensors measured."
     },
     "reconciliation": {
       "title": "Reconciliation: billed vs measured",

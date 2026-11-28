@@ -7,6 +7,8 @@ const linesPath = import.meta.env.VITE_SETTLEMENT_LINES_ENDPOINT_PATH;
 export class BillingApi extends BaseApi {
     getBills(condominiumId, period = null) { return this.http.get(billsPath, { params: { condominiumId, period } }); }
     createBill(resource) { return this.http.post(billsPath, resource); }   // RF-012
+    // Consumo de áreas comunes medido por los sensores en el periodo: se compara con el facturado del recibo
+    getMeasured(condominiumId, period) { return this.http.get(`${billsPath}/measured`, { params: { condominiumId, period } }).then(r => r.data); }
 
     getSettlements(condominiumId) {
         return this.http.get(settlementsPath, { params: { condominiumId, _sort: 'period', _order: 'desc' } });
