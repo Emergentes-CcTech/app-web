@@ -416,6 +416,13 @@ public static class ProrationEndpoints
             if (!string.IsNullOrWhiteSpace(period)) query = query.Where(p => p.PeriodCode == period);
             var periods = await query.OrderByDescending(p => p.PeriodCode).ToListAsync(ct);
             var bills = new List<object>();
+            // Consumo medido por los sensores en cada periodo: se concilia con lo facturado en el recibo
+            var measured = new Dictionary<int, (decimal WaterM3, decimal EnergyKwh)>();
+            foreach (var mp in periods.Where(x => IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(x.PeriodCode)))
+            {
+                var m = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, mp.ProjectId, mp.PeriodCode, ct);
+                measured[mp.Id] = (m.WaterM3, m.EnergyKwh);
+            }
             foreach (var p in periods)
             {
                 bills.Add(new
@@ -427,7 +434,7 @@ public static class ProrationEndpoints
                     service = "water",
                     billedConsumption = p.MacroWaterM3,
                     consumptionUnit = "m³",
-                    measuredConsumption = p.MeasuredCommonWaterM3,
+                    measuredConsumption = measured.GetValueOrDefault(p.Id).WaterM3,
                     billedAmount = p.MacroWaterAmountSoles,
                     dueDate = p.DueDate.ToString("yyyy-MM-dd"),
                     receiptImageUrl = p.WaterReceiptImageUrl
@@ -441,13 +448,22 @@ public static class ProrationEndpoints
                     service = "electricity",
                     billedConsumption = p.MacroEnergyKwh,
                     consumptionUnit = "kWh",
-                    measuredConsumption = p.MeasuredCommonEnergyKwh,
+                    measuredConsumption = measured.GetValueOrDefault(p.Id).EnergyKwh,
                     billedAmount = p.MacroEnergyAmountSoles,
                     dueDate = p.DueDate.ToString("yyyy-MM-dd"),
                     receiptImageUrl = p.EnergyReceiptImageUrl
                 });
             }
             return Results.Ok(bills);
+        }).RequireAuthorization();
+
+        app.MapGet("/api/v1/utility_bills/measured", async ([FromQuery] int condominiumId, [FromQuery] string? period, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        {
+            if (!await MayManageProjectAsync(user, db, condominiumId, ct)) return Results.Forbid();
+            if (!IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(period))
+                return Results.BadRequest(new { error = "Indica el periodo con el formato yyyy-MM." });
+            var m = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, condominiumId, period!, ct);
+            return Results.Ok(new { period, waterM3 = m.WaterM3, energyKwh = m.EnergyKwh, from = m.From.ToString("yyyy-MM-dd"), to = m.To.ToString("yyyy-MM-dd") });
         }).RequireAuthorization();
 
         app.MapPost("/api/v1/utility_bills", async ([FromBody] System.Text.Json.JsonElement body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
@@ -476,12 +492,15 @@ public static class ProrationEndpoints
             var period = await db.BillingPeriods.FirstOrDefaultAsync(p => p.ProjectId == condoId && p.PeriodCode == periodCode, ct);
             if (period is null)
             {
+                var monthStart = IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(periodCode)
+                    ? DateTime.SpecifyKind(DateTime.ParseExact(periodCode + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), DateTimeKind.Utc)
+                    : DateTime.UtcNow.AddMonths(-1);
                 period = new BillingPeriod
                 {
                     ProjectId = condoId,
                     PeriodCode = periodCode,
-                    StartDate = DateTime.UtcNow.AddMonths(-1),
-                    EndDate = DateTime.UtcNow,
+                    StartDate = monthStart,
+                    EndDate = monthStart.AddMonths(1).AddTicks(-1),
                     DueDate = dueDate,
                     Status = "Draft"
                 };
@@ -501,6 +520,15 @@ public static class ProrationEndpoints
                 if (receiptImageUrl is not null) period.EnergyReceiptImageUrl = receiptImageUrl;
             }
             period.TotalCommonExpenseSoles = period.MacroWaterAmountSoles + period.MacroEnergyAmountSoles + period.OtherCommonExpensesSoles;
+            // El consumo medido no se escribe: sale de las lecturas de los sensores del periodo
+            if (IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(periodCode))
+            {
+                var measuredNow = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, condoId, periodCode, ct);
+                period.MeasuredCommonWaterM3 = measuredNow.WaterM3;
+                period.MeasuredCommonEnergyKwh = measuredNow.EnergyKwh;
+                period.WaterLossM3 = Math.Max(0m, period.MacroWaterM3 - measuredNow.WaterM3);
+                period.EnergyLossKwh = Math.Max(0m, period.MacroEnergyKwh - measuredNow.EnergyKwh);
+            }
             await db.SaveChangesAsync(ct);
 
             var createdBill = new
