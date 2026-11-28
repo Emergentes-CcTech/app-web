@@ -53,6 +53,9 @@ async function submit(bill) {
       <pv-column :header="t('billing.bills.billedConsumption')"><template #body="{ data }">{{ data.billedConsumption }} {{ data.consumptionUnit }}</template></pv-column>
       <pv-column :header="t('billing.bills.measuredConsumption')"><template #body="{ data }">{{ data.measuredConsumption ?? '—' }}</template></pv-column>
       <pv-column :header="t('billing.bills.amount')"><template #body="{ data }">{{ formatPen(data.billedAmount) }}</template></pv-column>
+      <pv-column :header="t('billing.bills.readingPeriod')">
+        <template #body="{ data }"><span v-if="data.readingFrom">{{ data.readingFrom }} → {{ data.readingTo }}</span><span v-else>—</span></template>
+      </pv-column>
       <pv-column field="dueDate" :header="t('billing.bills.dueDate')" />
     </pv-data-table>
   </div>

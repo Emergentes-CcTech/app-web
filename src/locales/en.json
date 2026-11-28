@@ -818,7 +818,14 @@
       "measuredBySensors": "measured by IoBuild's sensors",
       "measuredRange": "from {from} to {to}",
       "measuredGap": "Difference with the bill: {diff} {unit} ({pct}%) didn't go through the meters",
-      "measuredUnavailable": "Choose the period to see what the sensors measured."
+      "measuredUnavailable": "Choose the period to see what the sensors measured.",
+      "readingPeriod": "Bill reading period",
+      "readingFrom": "Previous reading",
+      "readingTo": "Current reading",
+      "readingHint": "Copy it from the bill (previous reading → current reading): the measured amount is compared only on those days.",
+      "readingRequired": "Enter the bill's reading dates.",
+      "readingOrder": "The previous reading must be before the current one.",
+      "readingFuture": "The current reading can't be after today."
     },
     "reconciliation": {
       "title": "Reconciliation: billed vs measured",

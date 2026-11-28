@@ -71,16 +71,34 @@ public sealed class ConsumptionFactsBuilder(IoBuildDbContext db)
     public static async Task<(decimal WaterM3, decimal EnergyKwh, DateTime From, DateTime To)> MeasureCommonAsync(IoBuildDbContext db, int projectId, string periodCode, CancellationToken ct = default)
     {
         var (start, end) = Range(periodCode);
-        var to = end < DateTime.UtcNow ? end : DateTime.UtcNow;
+        var m = await MeasureRangeAsync(db, projectId, start, end, ct);
+        return (m.WaterM3, m.EnergyKwh, start, end < DateTime.UtcNow ? end : DateTime.UtcNow);
+    }
+
+    // El tablero general alimenta bombas, ascensores e iluminación: si el condominio lo mide, solo él cuenta para la luz;
+    // sumar también los tableros dedicados contaría ese consumo dos veces
+    public static async Task<List<int>?> GeneralPanelIdsAsync(IoBuildDbContext db, int projectId, CancellationToken ct = default)
+    {
+        var panels = await db.Devices
+            .Where(d => d.ProjectId == projectId && d.UnitId == null && d.Type == "CurrentTransformerCT" && d.Subsystem == "GeneralElectricalPanel")
+            .Select(d => d.Id)
+            .ToListAsync(ct);
+        return panels.Count > 0 ? panels : null;
+    }
+
+    /// <summary>Consumo común medido entre dos fechas (inclusive): el periodo de lectura de un recibo.</summary>
+    public static async Task<(decimal WaterM3, decimal EnergyKwh)> MeasureRangeAsync(IoBuildDbContext db, int projectId, DateTime from, DateTime to, CancellationToken ct = default)
+    {
         var excludedWaterIds = await NonIntakeWaterSensorIdsAsync(db, projectId, ct);
+        var generalPanels = await GeneralPanelIdsAsync(db, projectId, ct);
         var perDevice = await db.ConsumptionRecords
-            .Where(c => c.ProjectId == projectId && c.TimestampUtc >= start && c.TimestampUtc <= end)
+            .Where(c => c.ProjectId == projectId && c.TimestampUtc >= from && c.TimestampUtc <= to)
             .GroupBy(c => new { c.DeviceId, c.MetricType })
             .Select(g => new { g.Key.DeviceId, g.Key.MetricType, Delta = g.Max(c => c.Value) - g.Min(c => c.Value) })
             .ToListAsync(ct);
         var water = perDevice.Where(r => r.MetricType == "WaterM3" && !excludedWaterIds.Contains(r.DeviceId)).Sum(r => r.Delta);
-        var energy = perDevice.Where(r => r.MetricType == "EnergyKwh").Sum(r => r.Delta);
-        return (Math.Round((decimal)water, 2), Math.Round((decimal)energy, 2), start, to);
+        var energy = perDevice.Where(r => r.MetricType == "EnergyKwh" && (generalPanels is null || generalPanels.Contains(r.DeviceId))).Sum(r => r.Delta);
+        return (Math.Round((decimal)water, 2), Math.Round((decimal)energy, 2));
     }
 
     public static bool IsPeriodCode(string? period) =>
