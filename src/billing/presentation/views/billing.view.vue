@@ -193,7 +193,7 @@ async function confirmPayment(data) {
                 <pv-input-text v-model="period" type="month" />
               </div>
             </div>
-            <bill-form :period="period" :loading="saving" @submit="submitBill" />
+            <bill-form :period="period" :condominiumId="condominiumId" :loading="saving" @submit="submitBill" />
             <reconciliation-card :bill="periodBill" />
             <pv-data-table :value="store.bills" :loading="store.isLoading" dataKey="id" stripedRows class="mt-4">
               <template #empty>{{ t('billing.bills.empty') }}</template>

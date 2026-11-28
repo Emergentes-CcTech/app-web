@@ -52,11 +52,39 @@ public sealed class ConsumptionFactsBuilder(IoBuildDbContext db)
     {
         var waterSensors = await db.Devices
             .Where(d => d.ProjectId == projectId && d.Type == "WaterFlowSensor")
-            .Select(d => new { d.Id, d.Name })
+            .Select(d => new { d.Id, d.Name, d.Subsystem })
             .ToListAsync(ct);
         var intakeIds = waterSensors.Where(d => d.Name.EndsWith("-IN", StringComparison.OrdinalIgnoreCase)).Select(d => d.Id).ToList();
+        // Kit registrado automáticamente (AGUA-01, AGUA-02…): el ingreso es el primer punto de agua de la cisterna
+        if (intakeIds.Count == 0 && waterSensors.Count > 1)
+        {
+            var cistern = waterSensors.Where(d => d.Subsystem == "MainCistern").OrderBy(d => d.Id).FirstOrDefault();
+            if (cistern is not null) intakeIds.Add(cistern.Id);
+        }
         return intakeIds.Count > 0 ? waterSensors.Select(d => d.Id).Except(intakeIds).ToList() : new List<int>();
     }
+
+    /// <summary>
+    /// Consumo de áreas comunes medido por los sensores en un periodo (yyyy-MM): agua del medidor de ingreso y energía de los tableros.
+    /// Es lo que se concilia con el consumo facturado del recibo matriz.
+    /// </summary>
+    public static async Task<(decimal WaterM3, decimal EnergyKwh, DateTime From, DateTime To)> MeasureCommonAsync(IoBuildDbContext db, int projectId, string periodCode, CancellationToken ct = default)
+    {
+        var (start, end) = Range(periodCode);
+        var to = end < DateTime.UtcNow ? end : DateTime.UtcNow;
+        var excludedWaterIds = await NonIntakeWaterSensorIdsAsync(db, projectId, ct);
+        var perDevice = await db.ConsumptionRecords
+            .Where(c => c.ProjectId == projectId && c.TimestampUtc >= start && c.TimestampUtc <= end)
+            .GroupBy(c => new { c.DeviceId, c.MetricType })
+            .Select(g => new { g.Key.DeviceId, g.Key.MetricType, Delta = g.Max(c => c.Value) - g.Min(c => c.Value) })
+            .ToListAsync(ct);
+        var water = perDevice.Where(r => r.MetricType == "WaterM3" && !excludedWaterIds.Contains(r.DeviceId)).Sum(r => r.Delta);
+        var energy = perDevice.Where(r => r.MetricType == "EnergyKwh").Sum(r => r.Delta);
+        return (Math.Round((decimal)water, 2), Math.Round((decimal)energy, 2), start, to);
+    }
+
+    public static bool IsPeriodCode(string? period) =>
+        !string.IsNullOrWhiteSpace(period) && DateTime.TryParseExact(period + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
 
     public async Task<ConsumptionFacts> BuildAsync(int projectId, int? unitId, string? requestedPeriod, CancellationToken ct = default)
     {
