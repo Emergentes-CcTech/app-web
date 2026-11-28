@@ -144,8 +144,27 @@ public static class ProrationEndpoints
 
         var effectiveKey = restrictedKey ?? secretKey;
 
-        // Sin claves de Stripe se opera en modo simulado seguro aunque no se haya pedido explícitamente
-        return (isSimulated || string.IsNullOrWhiteSpace(effectiveKey), effectiveKey);
+        // El modo simulado marca la cuota como pagada sin cobrar: solo se usa si se pide explícitamente.
+        // Sin claves y sin modo simulado, la pasarela responde que no está configurada (nunca paga en silencio)
+        return (isSimulated, effectiveKey);
+    }
+
+    // Un rechazo de Stripe (clave inválida, sin permisos, etc.) es un fallo de la pasarela, no de la sesión del usuario:
+    // se responde 502 para que el frontend no lo confunda con un 401 propio y cierre la sesión
+    private static IResult StripeGatewayError(System.Net.HttpStatusCode stripeStatus, string body)
+    {
+        string? stripeMessage = null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var error) && error.TryGetProperty("type", out var type)) stripeMessage = type.GetString();
+        }
+        catch (System.Text.Json.JsonException) { }
+        Console.Error.WriteLine($"[Stripe] {(int)stripeStatus} {stripeMessage}");
+        var detail = (int)stripeStatus is 401 or 403
+            ? "La pasarela de pago rechazó las credenciales de Stripe configuradas en el servidor."
+            : "La pasarela de pago no pudo crear o consultar el cobro.";
+        return Results.Problem(detail: detail, statusCode: StatusCodes.Status502BadGateway);
     }
 
     // Valida que el usuario sea el administrador del condominio
@@ -998,6 +1017,8 @@ public static class ProrationEndpoints
             }
 
             var (isSimulated, effectiveKey) = ResolveStripeSettings(configuration);
+            if (!isSimulated && string.IsNullOrWhiteSpace(effectiveKey))
+                return Results.Problem(detail: "La pasarela de pago no está configurada (faltan las claves de Stripe).", statusCode: 503);
 
             if (isSimulated)
             {
@@ -1055,7 +1076,7 @@ public static class ProrationEndpoints
                     if (!resp.IsSuccessStatusCode)
                     {
                         var err = await resp.Content.ReadAsStringAsync(ct);
-                        return Results.Problem(detail: $"Stripe gateway error: {err}", statusCode: (int)resp.StatusCode);
+                        return StripeGatewayError(resp.StatusCode, err);
                     }
 
                     using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
@@ -1110,6 +1131,8 @@ public static class ProrationEndpoints
 
             // En modo simulado el pago se concilia al crear la sesión; aquí no hay nada que consultar
             if (isSimulated) return Results.Ok(new { paymentId = statement.Id, status = statement.Status });
+            if (string.IsNullOrWhiteSpace(effectiveKey))
+                return Results.Problem(detail: "La pasarela de pago no está configurada (faltan las claves de Stripe).", statusCode: 503);
 
             // La pertenencia se valida con el client_reference_id que reporta Stripe, no con la última sesión guardada:
             // si el residente abrió Checkout dos veces y pagó en la primera, el cobro igual debe conciliarse
@@ -1123,7 +1146,7 @@ public static class ProrationEndpoints
                 if (!resp.IsSuccessStatusCode)
                 {
                     var err = await resp.Content.ReadAsStringAsync(ct);
-                    return Results.Problem(detail: $"Stripe gateway error: {err}", statusCode: (int)resp.StatusCode);
+                    return StripeGatewayError(resp.StatusCode, err);
                 }
 
                 using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
