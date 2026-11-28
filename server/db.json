@@ -33,14 +33,12 @@
       "id": 12,
       "userId": 2,
       "fullName": "Carla Flores",
-      "dni": "45678912",
       "phoneNumber": "+51987654321"
     },
     {
       "id": 13,
       "userId": 3,
       "fullName": "Miguel Veramendi",
-      "dni": "40123456",
       "phoneNumber": "+51912345678"
     }
   ],
@@ -58,14 +56,12 @@
       "id": 12,
       "userId": 2,
       "fullName": "Carla Flores",
-      "dni": "45678912",
       "phoneNumber": "+51987654321"
     },
     {
       "id": 13,
       "userId": 3,
       "fullName": "Miguel Veramendi",
-      "dni": "40123456",
       "phoneNumber": "+51912345678"
     }
   ],

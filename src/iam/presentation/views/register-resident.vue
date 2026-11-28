@@ -157,20 +157,6 @@
             <small v-if="fieldErrors.fullName" class="p-error block mt-1">{{ fieldErrors.fullName }}</small>
           </div>
 
-          <!-- dni -->
-          <div class="mb-3">
-            <label for="dni" class="block mb-2">{{ $t('iam.registerResident.dni') }} *</label>
-            <pv-input-text
-              id="dni"
-              v-model="registerForm.dni"
-              :placeholder="$t('iam.registerResident.dniPlaceholder')"
-              :invalid="!!fieldErrors.dni"
-              maxlength="8"
-              class="w-full"
-            />
-            <small v-if="fieldErrors.dni" class="p-error block mt-1">{{ fieldErrors.dni }}</small>
-          </div>
-
           <!-- phoneNumber -->
           <div class="mb-3">
             <label for="phoneNumber" class="block mb-2">{{ $t('iam.registerResident.phoneNumber') }} *</label>
@@ -240,7 +226,6 @@ import {
   isValidEmail,
   isValidPhone,
   isValidName,
-  isValidDni,
   isValidPassword,
   normalizeEmail
 } from '../../../shared/presentation/validators.js';
@@ -312,7 +297,6 @@ const registerForm = ref({
   confirmPassword: '',
   photoUrl: '',
   fullName: '',
-  dni: '',
   phoneNumber: '',
   acceptPrivacy: false
 });
@@ -393,18 +377,12 @@ async function handleRegister() {
   fieldErrors.value = {};
 
   const fullName = (registerForm.value.fullName || '').trim();
-  const dni = (registerForm.value.dni || '').trim();
   const phoneNumber = (registerForm.value.phoneNumber || '').trim();
 
   if (!fullName) {
     fieldErrors.value.fullName = t('iam.validation.fullNameRequired');
   } else if (!isValidName(fullName)) {
     fieldErrors.value.fullName = t('iam.validation.nameInvalid');
-  }
-  if (!dni) {
-    fieldErrors.value.dni = t('iam.validation.dniRequired');
-  } else if (!isValidDni(dni)) {
-    fieldErrors.value.dni = t('iam.validation.dniInvalid');
   }
   if (!phoneNumber) {
     fieldErrors.value.phoneNumber = t('iam.validation.phoneRequired');
@@ -431,7 +409,6 @@ async function handleRegister() {
     await profileStore.createProfile({
       userId: authenticatedUser.id,
       fullName,
-      dni,
       phoneNumber,
       photoUrl: registerForm.value.photoUrl || ''
     });

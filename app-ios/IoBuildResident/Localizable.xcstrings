@@ -987,23 +987,6 @@
         }
       }
     },
-    "err_dni": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your DNI must have exactly 8 digits."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El DNI debe tener exactamente 8 dígitos."
-          }
-        }
-      }
-    },
     "err_email_invalid": {
       "extractionState": "manual",
       "localizations": {
@@ -2156,23 +2139,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirmar contraseña"
-          }
-        }
-      }
-    },
-    "field_dni": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DNI"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DNI"
           }
         }
       }

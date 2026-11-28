@@ -7,7 +7,6 @@ export class ResidentAssembler {
             id: unit.id,
             userId: unit.residentUserId,
             fullName: profile?.fullName || '',
-            dni: profile?.dni || '',
             email: user?.email || '',
             phoneNumber: profile?.phoneNumber || '',
             condominiumId: unit.condominiumId,
