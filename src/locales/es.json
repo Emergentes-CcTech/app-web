@@ -31,7 +31,6 @@
     "residentRole": "Dueño de departamento",
     "companyName": "Razón social",
     "legalRepresentative": "Representante legal",
-    "dni": "DNI",
     "notifications": {
       "title": "Notificaciones",
       "save": "Guardar preferencias",
@@ -314,8 +313,6 @@
       "registrationFailed": "No se pudo completar el registro. Inténtelo de nuevo.",
       "legalRepresentativeRequired": "El representante legal es obligatorio.",
       "nameInvalid": "Ingrese un nombre válido.",
-      "dniRequired": "El DNI es obligatorio.",
-      "dniInvalid": "El DNI debe tener 8 dígitos.",
       "privacyRequired": "Debes aceptar las políticas de privacidad.",
       "addressRequired": "Ingresa la dirección de la administradora (5 a 200 caracteres)."
     },
@@ -364,8 +361,6 @@
       "cancelButton": "Cancelar",
       "fullName": "Nombre completo",
       "fullNamePlaceholder": "Nombre y apellidos",
-      "dni": "DNI",
-      "dniPlaceholder": "12345678",
       "acceptPrivacy": "Acepto las políticas de privacidad y de datos de telemetría",
       "notInvited": "Este correo no está registrado en ningún condominio. Pide a tu administración que te registre como propietario.",
       "invitedUnits": "Tu administración te asignó: {units}.",
@@ -617,7 +612,6 @@
     "confirmUnassign": "¿Desvincular a {name} de la unidad {unit}? Se conserva su historial.",
     "fields": {
       "fullName": "Nombre",
-      "dni": "DNI",
       "email": "Correo",
       "contact": "Contacto",
       "phoneNumber": "Teléfono",

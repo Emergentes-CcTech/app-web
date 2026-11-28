@@ -30,7 +30,6 @@ export class ProfileAssembler {
       companyName: response.companyName || (isAdministrator ? response.name || '' : ''),
       legalRepresentative: response.legalRepresentative || '',
       fullName: response.fullName || (!isAdministrator ? response.name || '' : ''),
-      dni: response.dni || '',
       notificationPrefs: response.notificationPrefs || null,
     });
 

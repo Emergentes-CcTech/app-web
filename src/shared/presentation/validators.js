@@ -10,7 +10,6 @@ const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
 // MAC address: 6 pairs of hex digits separated by colon or hyphen, or 12 continuous hex chars
 const MAC_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$|^[0-9A-Fa-f]{12}$/;
 const RUC_REGEX = /^(10|15|17|20)\d{9}$/;
-const DNI_REGEX = /^\d{8}$/;
 // RF-001: mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial
 const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 // Código de suministro (agua / luz): 6 a 12 dígitos
@@ -39,7 +38,6 @@ export function isValidName(name, minLength = 2, maxLength = 120) {
 }
 
 export const isValidRuc = (v) => RUC_REGEX.test(String(v ?? '').trim());
-export const isValidDni = (v) => DNI_REGEX.test(String(v ?? '').trim());
 export const isValidSupplyCode = (v) => SUPPLY_CODE_REGEX.test(String(v ?? '').trim());
 
 /** RF-001: contraseña fuerte. */

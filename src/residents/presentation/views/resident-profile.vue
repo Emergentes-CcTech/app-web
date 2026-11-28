@@ -84,10 +84,6 @@ onMounted(async () => {
                 <dt>{{ t('residents.fields.phoneNumber') }}</dt>
                 <dd><a v-if="resident.phoneNumber" :href="`tel:${resident.phoneNumber}`">{{ resident.phoneNumber }}</a><span v-else class="muted">{{ t('residents.profile.notRegistered') }}</span></dd>
               </div>
-              <div>
-                <dt>{{ t('residents.fields.dni') }}</dt>
-                <dd><span v-if="resident.dni">{{ resident.dni }}</span><span v-else class="muted">{{ t('residents.profile.notRegistered') }}</span></dd>
-              </div>
             </dl>
           </section>
 

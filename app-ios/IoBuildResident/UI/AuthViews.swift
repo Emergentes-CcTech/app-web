@@ -164,7 +164,6 @@ struct RegisterView: View {
     @State private var password = ""
     @State private var confirmation = ""
     @State private var fullName = ""
-    @State private var dni = ""
     @State private var phone = ""
     @State private var acceptedPrivacy = false
 
@@ -245,9 +244,6 @@ struct RegisterView: View {
             LabeledField(title: L10n.t("field_full_name")) {
                 TextField("", text: $fullName).textContentType(.name)
             }
-            LabeledField(title: L10n.t("field_dni")) {
-                TextField("", text: $dni).keyboardType(.numberPad)
-            }
             LabeledField(title: L10n.t("field_mobile")) {
                 TextField("", text: $phone).keyboardType(.phonePad).textContentType(.telephoneNumber)
             }
@@ -259,7 +255,7 @@ struct RegisterView: View {
             Button {
                 Task {
                     await model.completeRegistration(email: email, password: password, fullName: fullName,
-                                                     dni: dni, phone: phone, acceptedPrivacy: acceptedPrivacy)
+                                                     phone: phone, acceptedPrivacy: acceptedPrivacy)
                 }
             } label: {
                 if model.authLoading { ProgressView().tint(.white) } else { Text(L10n.t("action_create_account")) }
