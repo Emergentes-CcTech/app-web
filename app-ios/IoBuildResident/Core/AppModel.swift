@@ -165,9 +165,8 @@ final class AppModel {
     }
 
     /// Paso 2: crea la cuenta (el backend la vincula a la unidad invitada) y completa el perfil.
-    func completeRegistration(email: String, password: String, fullName: String, dni: String, phone: String, acceptedPrivacy: Bool) async {
+    func completeRegistration(email: String, password: String, fullName: String, phone: String, acceptedPrivacy: Bool) async {
         guard fullName.trimmed.count >= 2 else { authError = L10n.t("err_full_name"); return }
-        guard dni.trimmed.count == 8, dni.trimmed.allSatisfy(\.isNumber) else { authError = L10n.t("err_dni"); return }
         guard phone.trimmed.count >= 7 else { authError = L10n.t("err_phone"); return }
         guard acceptedPrivacy else { authError = L10n.t("err_privacy"); return }
 

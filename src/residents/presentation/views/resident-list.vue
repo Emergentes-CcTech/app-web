@@ -37,7 +37,7 @@ const filtered = computed(() => {
   const q = search.value.trim().toLowerCase();
   return store.residents.filter(r =>
     (!status.value || r.collectionStatus === status.value) &&
-    (!q || `${r.fullName} ${r.email} ${r.unitNumber} ${r.dni}`.toLowerCase().includes(q)));
+    (!q || `${r.fullName} ${r.email} ${r.unitNumber}`.toLowerCase().includes(q)));
 });
 
 const reload = () => condominiumId.value && store.fetchByCondominium(condominiumId.value);

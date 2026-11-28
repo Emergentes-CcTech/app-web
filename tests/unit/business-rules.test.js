@@ -7,7 +7,7 @@ import { Settlement } from '../../src/billing/domain/model/settlement.entity.js'
 import { recommendedTier, PLAN_TIERS } from '../../src/subscriptions/domain/model/plan-limits.js';
 import { Plan } from '../../src/subscriptions/domain/model/plan.entity.js';
 import { buildCommonAreaReport, dailySeries, sumTotals, changePct } from '../../src/telemetry/application/common-area-report.js';
-import { isParticipationBalanced, isValidRuc, isValidPassword, isValidDni, sumParticipation, isValidPercentage } from '../../src/shared/presentation/validators.js';
+import { isParticipationBalanced, isValidRuc, isValidPassword, sumParticipation, isValidPercentage } from '../../src/shared/presentation/validators.js';
 import { normalizeRole, ROLES } from '../../src/shared/infrastructure/roles.js';
 
 const units = [
@@ -146,10 +146,9 @@ describe('Analytics: reporte de áreas comunes', () => {
 });
 
 describe('RF-001 validaciones y roles', () => {
-  it('RUC, DNI y contraseña fuerte', () => {
+  it('RUC y contraseña fuerte', () => {
     expect(isValidRuc('20601234567')).toBe(true);
     expect(isValidRuc('30601234567')).toBe(false);
-    expect(isValidDni('45678912')).toBe(true);
     expect(isValidPassword('abc12345')).toBe(false);
     expect(isValidPassword('Abc12345!')).toBe(true);
   });

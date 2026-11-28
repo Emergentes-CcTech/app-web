@@ -31,7 +31,6 @@
     "residentRole": "Apartment owner",
     "companyName": "Company name",
     "legalRepresentative": "Legal representative",
-    "dni": "DNI",
     "notifications": {
       "title": "Notifications",
       "save": "Save preferences",
@@ -314,8 +313,6 @@
       "registrationFailed": "Registration failed. Please try again.",
       "legalRepresentativeRequired": "Legal representative is required.",
       "nameInvalid": "Enter a valid name.",
-      "dniRequired": "DNI is required.",
-      "dniInvalid": "DNI must have 8 digits.",
       "privacyRequired": "You must accept the privacy policies.",
       "addressRequired": "Enter the management company address (5 to 200 characters)."
     },
@@ -364,8 +361,6 @@
       "cancelButton": "Cancel",
       "fullName": "Full name",
       "fullNamePlaceholder": "Full name",
-      "dni": "DNI",
-      "dniPlaceholder": "12345678",
       "acceptPrivacy": "I accept the privacy and telemetry data policies",
       "notInvited": "This email isn't registered in any condominium. Ask your management to register you as an owner.",
       "invitedUnits": "Your management assigned you: {units}.",
@@ -617,7 +612,6 @@
     "confirmUnassign": "Unlink {name} from unit {unit}? Their history is kept.",
     "fields": {
       "fullName": "Name",
-      "dni": "DNI",
       "email": "Email",
       "contact": "Contact",
       "phoneNumber": "Phone",

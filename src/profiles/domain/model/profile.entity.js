@@ -3,11 +3,11 @@ export class Profile {
                 // administrador
                 companyName = '', legalRepresentative = '', address = '',
                 // residente
-                fullName = '', dni = '',
+                fullName = '',
                 notificationPrefs = null } = {}) {
     const defaults = { email: true, sms: false, criticalAlerts: true, billingReminders: true, newSettlement: true, dueDates: true, condominiumAlerts: true };
     Object.assign(this, { id, userId, role, email, phoneNumber, secondEmail, photoUrl,
-      companyName, legalRepresentative, address, fullName, dni,
+      companyName, legalRepresentative, address, fullName,
       notificationPrefs: { ...defaults, ...(notificationPrefs || {}) } });
   }
 

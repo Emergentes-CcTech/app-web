@@ -1,9 +1,9 @@
 export class Resident {
-    constructor({ id = null, userId = null, fullName = '', dni = '', email = '', phoneNumber = '',
+    constructor({ id = null, userId = null, fullName = '', email = '', phoneNumber = '',
                   condominiumId = null, condominiumName = '', unitId = null, unitNumber = '',
                   relation = 'owner', collectionStatus = 'current', aliquotPercentage = null, photoUrl = null,
                   accountStatus = 'active' } = {}) {
-        Object.assign(this, { id, userId, fullName, dni: dni || '', email: email || '', phoneNumber: phoneNumber || '', condominiumId,
+        Object.assign(this, { id, userId, fullName, email: email || '', phoneNumber: phoneNumber || '', condominiumId,
             condominiumName, unitId, unitNumber, relation, collectionStatus, accountStatus,
             aliquotPercentage: aliquotPercentage === null || aliquotPercentage === undefined ? null : Number(aliquotPercentage), photoUrl });
     }
