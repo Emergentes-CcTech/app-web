@@ -142,4 +142,28 @@ public sealed class KitProvisioningTests
         Assert.Equal(35.40m, after.GetProperty("extrasMonthlyWithIgv").GetDecimal());
         Assert.Equal(before.GetProperty("monthlyTotal").GetDecimal() + 30.00m, after.GetProperty("monthlyTotal").GetDecimal());
     }
+    [Theory]
+    [InlineData(24, "Esencial", new[] { "MainCistern", "GeneralElectricalPanel" })]
+    [InlineData(65, "Urbano", new[] { "MainCistern", "PressurePumpsRoom", "ElevatorsBank" })]
+    [InlineData(95, "GranTorre", new[] { "MainCistern", "PressurePumpsRoom", "ElevatorsBank", "GeneralElectricalPanel" })]
+    public async Task Without_registered_areas_the_plan_kit_defines_the_monitored_areas(int units, string planName, string[] expectedAreas)
+    {
+        await using var factory = new CoreBusinessApiFactory();
+        using var client = factory.CreateClient();
+        // El formulario ya no pide áreas: el condominio se crea sin ellas
+        var id = await CreateAsync(client, Condominium(units));
+        using (var before = factory.Services.CreateScope())
+            Assert.False(await before.ServiceProvider.GetRequiredService<IoBuildDbContext>().CommonAreas.AnyAsync(a => a.ProjectId == id));
+
+        await PayActivationAsync(factory, client, id, planName);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
+        var areas = await db.CommonAreas.Where(a => a.ProjectId == id).Select(a => a.Subsystem.ToString()).ToListAsync();
+        Assert.Equal(expectedAreas.OrderBy(a => a), areas.OrderBy(a => a));
+        // Cada área monitoreada tiene al menos un medidor (sin contar el gateway)
+        var meters = await db.Devices.Where(d => d.ProjectId == id && d.Type != "GatewayHub").Select(d => d.Subsystem).ToListAsync();
+        Assert.All(expectedAreas, area => Assert.Contains(area, meters));
+        Assert.All(meters, m => Assert.Contains(m, expectedAreas));
+    }
 }

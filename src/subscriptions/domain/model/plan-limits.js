@@ -3,6 +3,13 @@
  * Cada plan incluye un kit de equipos IoT no invasivos para las áreas comunes:
  * gateway 4G + puntos de medición de agua + puntos de medición de energía (un tablero trifásico cada uno).
  */
+// Áreas comunes que mide el kit de cada plan; se registran solas al activar la suscripción
+export const KIT_AREAS = Object.freeze({
+    'esencial': ['cistern', 'panel'],
+    'urbano': ['cistern', 'pump_room', 'elevator'],
+    'gran-torre': ['cistern', 'pump_room', 'elevator', 'panel'],
+});
+
 export const PLAN_TIERS = Object.freeze([
   { code: 'esencial',   name: 'Esencial',   minUnits: 1,  maxUnits: 40,  monthlyPen: 350, kit: { gateways: 1, flowMeters: 1, ctClamps: 1 } },
   { code: 'urbano',     name: 'Urbano',     minUnits: 41, maxUnits: 80,  monthlyPen: 420, kit: { gateways: 1, flowMeters: 2, ctClamps: 2 } },

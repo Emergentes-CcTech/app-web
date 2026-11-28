@@ -6,7 +6,8 @@ import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useCondominiumStore } from '../../application/condominium.store.js';
 import { useSubscriptionStore } from '../../../subscriptions/application/subscription.store.js';
-import { commonAreaIcon } from '../../domain/model/common-area.entity.js';
+import { commonAreaIcon, COMMON_AREA_TYPES } from '../../domain/model/common-area.entity.js';
+import { useDeviceStore } from '../../../devices/application/device.store.js';
 import { kitSummary } from '../../../subscriptions/presentation/plan-copy.js';
 import { ROUTES } from '../../../shared/infrastructure/paths.js';
 import { Unit } from '../../domain/model/unit.entity.js';
@@ -24,6 +25,11 @@ const store = useCondominiumStore();
 const subscriptions = useSubscriptionStore();
 const subscription = computed(() => subscriptions.subscriptionFor(id.value));
 const plan = computed(() => subscriptions.planFor(subscription.value));
+// Áreas del catálogo del kit con su nombre traducido; las de tipos antiguos conservan el nombre guardado
+// Medidores instalados en cada área (sin contar el gateway): deja claro qué mide realmente el kit
+const deviceStore = useDeviceStore();
+const metersIn = (a) => deviceStore.devices.filter(d => d.type !== 'gateway' && d.measurementPoint === a.type).length;
+const areaLabel = (a) => COMMON_AREA_TYPES.some(c => c.type === a.type) ? t(`condominiums.commonAreas.types.${a.type}`) : a.name;
 
 const id = computed(() => Number(route.params.id));
 const rows = ref([]);              // copia local del padrón; los cambios se envían juntos al guardar
@@ -64,7 +70,7 @@ function onOwnerSaved(result) {
 async function load() {
   loading.value = true;
   try {
-    await Promise.all([store.fetchById(id.value), subscriptions.fetchAvailablePlans(), subscriptions.fetchSubscriptions()]);
+    await Promise.all([store.fetchById(id.value), subscriptions.fetchAvailablePlans(), subscriptions.fetchSubscriptions(), deviceStore.fetchByCondominium(id.value)]);
     const list = await store.fetchUnits(id.value);
     rows.value = list.map(u => ({ ...u }));
   } finally { loading.value = false; }
@@ -269,10 +275,11 @@ function deactivate() {
         <ul v-if="store.current.commonAreasCount" class="areas">
           <li v-for="a in store.current.commonAreas" :key="a.id">
             <i :class="commonAreaIcon(a.type)" aria-hidden="true" />
-            <span>{{ a.name }}<small v-if="a.location" class="muted"> · {{ a.location }}</small></span>
+            <span>{{ areaLabel(a) }}<small v-if="a.location" class="muted"> · {{ a.location }}</small>
+              <small class="meters" :class="{ none: !metersIn(a) }"> · {{ metersIn(a) ? t('condominiums.commonAreas.meters', { n: metersIn(a) }, metersIn(a)) : t('condominiums.commonAreas.noMeter') }}</small></span>
           </li>
         </ul>
-        <small v-else class="muted">{{ t('condominiums.commonAreas.empty') }}</small>
+        <small v-else class="muted">{{ store.current.isPending ? t('condominiums.commonAreas.pendingKit') : t('condominiums.commonAreas.empty') }}</small>
       </section>
       <section class="info">
         <h2>{{ t('condominiums.subscription') }}</h2>
@@ -388,6 +395,8 @@ function deactivate() {
 </template>
 
 <style scoped>
+.meters { color: #059669; }
+.meters.none { color: #9ca3af; }
 .page { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
 .breadcrumb { display: flex; align-items: center; gap: .5rem; font-size: .875rem; color: #6b7280; margin-bottom: 1rem; }
 .breadcrumb a { color: #6b7280; text-decoration: none; }

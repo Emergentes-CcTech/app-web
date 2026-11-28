@@ -37,6 +37,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
         Assert.NotEmpty(planList);
 
         var buyer = Token(11, "buyer11@example.test", "Builder");
+        await OwnCondominiumAsync(factory, 11, 100);
         var checkout = await SendAsync(client, HttpMethod.Post, "/api/v1/subscriptions/payments/sessions", buyer,
             "{\"builderId\":11,\"planId\":3,\"successUrl\":\"https://success.example\",\"cancelUrl\":\"https://cancel.example\"}");
         Assert.Equal(HttpStatusCode.Created, checkout.StatusCode);
@@ -97,6 +98,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
         await using var factory = new PurchaseApiFactory();
         using var client = factory.CreateClient();
         var buyer12 = Token(12, "buyer12@example.test", "Builder");
+        await OwnCondominiumAsync(factory, 12, 60);
         await ConfirmPlanAsync(client, buyer12, builderId: 12, planId: 2);
         var id = (await (await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions", buyer12)).Content.ReadFromJsonAsync<List<JsonElement>>())!
             .First(s => s.GetProperty("builderId").GetInt32() == 12).GetProperty("id").GetInt32();
@@ -127,7 +129,10 @@ public sealed partial class SubscriptionPurchaseFlowTests
         using var client = factory.CreateClient();
 
         var buyer2 = Token(2, "buyer2@example.test", "Builder");
+        await OwnCondominiumAsync(factory, 2, 20);
         await ConfirmPlanAsync(client, buyer2, builderId: 2, planId: 1);
+        // El condominio crece a 60 departamentos y pasa al plan Urbano
+        await OwnCondominiumAsync(factory, 2, 60);
         await ConfirmPlanAsync(client, buyer2, builderId: 2, planId: 2);
 
         var all = await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions", buyer2);
@@ -220,6 +225,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
         var buyer5 = Token(5, "buyer5@example.test", "Builder");
         Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(client, HttpMethod.Post, "/api/v1/subscriptions/999999/cancel", buyer5)).StatusCode);
 
+        await OwnCondominiumAsync(factory, 5, 20);
         await ConfirmPlanAsync(client, buyer5, builderId: 5, planId: 1);
         var mine = await SendAsync(client, HttpMethod.Get, "/api/v1/subscriptions", buyer5);
         var sub = (await mine.Content.ReadFromJsonAsync<List<JsonElement>>())!
@@ -241,6 +247,7 @@ public sealed partial class SubscriptionPurchaseFlowTests
         await using var factory = new PurchaseApiFactory();
         using var client = factory.CreateClient();
         var buyer6 = Token(6, "buyer6@example.test", "Builder");
+        await OwnCondominiumAsync(factory, 6, 20);
         var intruder = Token(1, "intruder@example.test", "Builder");
 
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(client, HttpMethod.Post, "/api/v1/subscriptions/payments/sessions", intruder,
@@ -265,6 +272,8 @@ public sealed partial class SubscriptionPurchaseFlowTests
         using var client = factory.CreateClient();
         var buyer8 = Token(8, "buyer8@example.test", "Builder");
         var buyer9 = Token(9, "buyer9@example.test", "Builder");
+        await OwnCondominiumAsync(factory, 8, 20);
+        await OwnCondominiumAsync(factory, 9, 20);
         await ConfirmPlanAsync(client, buyer8, builderId: 8, planId: 1);
         await ConfirmPlanAsync(client, buyer9, builderId: 9, planId: 1);
 
@@ -357,6 +366,23 @@ public sealed partial class SubscriptionPurchaseFlowTests
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         if (json is not null) request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         return client.SendAsync(request);
+    }
+
+    // Cada comprador administra su condominio (mismo id que el usuario, solo por comodidad de la prueba);
+    // los departamentos definen el plan que le corresponde: 20 Esencial, 60 Urbano, 100 Gran Torre
+    private static async Task OwnCondominiumAsync(PurchaseApiFactory factory, int id, int units)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IoBuildDbContext>();
+        var project = await db.Projects.FindAsync(id);
+        if (project is null)
+        {
+            project = new IoBuild.Api.Publishing.Domain.Model.Aggregates.Project { Id = id, Name = $"Condominio {id}" };
+            db.Projects.Add(project);
+        }
+        project.BuilderId = id;
+        project.TotalUnits = units;
+        await db.SaveChangesAsync();
     }
 
     private static async Task ConfirmPlanAsync(HttpClient client, string token, int builderId, int planId)

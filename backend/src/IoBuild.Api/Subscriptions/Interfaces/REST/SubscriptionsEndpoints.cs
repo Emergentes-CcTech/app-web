@@ -26,9 +26,9 @@ public static class SubscriptionsEndpoints
     private static Task<int> CommunalDevicesAsync(IoBuildDbContext db, int projectId, CancellationToken ct) =>
         db.Devices.CountAsync(d => d.ProjectId == projectId && d.UnitId == null, ct);
 
+    // Solo administra el condominio quien lo registró: el id del usuario no se confunde con el id de un condominio
     private static async Task<bool> OwnsProjectAsync(System.Security.Claims.ClaimsPrincipal user, IoBuildDbContext db, int projectId, CancellationToken ct)
     {
-        if (OwnsBuilder(user, projectId)) return true;
         var self = SelfId(user);
         return self != 0 && await db.Projects.AnyAsync(p => p.Id == projectId && p.BuilderId == self, ct);
     }
@@ -105,7 +105,7 @@ public static class SubscriptionsEndpoints
                 .Select(p => p.Id)
                 .ToListAsync(ct);
             var subscriptions = await db.Subscriptions
-                .Where(s => s.ProjectId == self || s.BuilderId == self || adminProjectIds.Contains(s.ProjectId) || self == 0)
+                .Where(s => adminProjectIds.Contains(s.ProjectId))
                 .ToListAsync(ct);
             var plansDict = await db.Plans.ToDictionaryAsync(p => p.Id, ct);
             var projectsDict = await db.Projects.ToDictionaryAsync(p => p.Id, ct);
@@ -157,7 +157,7 @@ public static class SubscriptionsEndpoints
             var project = await db.Projects.FindAsync([s.ProjectId], ct);
             var adminId = project != null ? project.AdministratorId : s.BuilderId;
             var self = SelfId(user);
-            if (self != 0 && s.ProjectId != self && s.BuilderId != self && adminId != self) return Results.NotFound();
+            if (self == 0 || project is null || adminId != self) return Results.NotFound();
             var plan = await db.Plans.FindAsync([s.PlanId], ct);
             return Results.Ok(new
             {
