@@ -111,11 +111,17 @@ internal static class CoreBusinessTestSupport
                 services.RemoveAll<IPaymentProvider>();
                 services.AddSingleton<IPaymentProvider, FakePaymentProvider>();
                 services.RemoveAll<IHostedService>();
-            }).ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            }).ConfigureAppConfiguration((_, configuration) =>
             {
-                ["Stripe:RestrictedApiKey"] = "rk_test_minimum",
-                ["Mqtt:Enabled"] = "false"
-            }.Concat(settings.Select(s => new KeyValuePair<string, string?>(s.Key, s.Value)))));
+                var values = new Dictionary<string, string?>
+                {
+                    ["Stripe:RestrictedApiKey"] = "rk_test_minimum",
+                    ["Mqtt:Enabled"] = "false"
+                };
+                // Cada test puede reemplazar los valores por defecto (por ejemplo, quitar la clave de Stripe)
+                foreach (var (key, value) in settings) values[key] = value;
+                configuration.AddInMemoryCollection(values);
+            });
         }
     }
 
