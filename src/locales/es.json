@@ -818,7 +818,14 @@
       "measuredBySensors": "medido por los sensores de IoBuild",
       "measuredRange": "del {from} al {to}",
       "measuredGap": "Diferencia con el recibo: {diff} {unit} ({pct} %) no pasó por los medidores",
-      "measuredUnavailable": "Elige el periodo para ver lo que midieron los sensores."
+      "measuredUnavailable": "Elige el periodo para ver lo que midieron los sensores.",
+      "readingPeriod": "Periodo de lectura del recibo",
+      "readingFrom": "Lectura anterior",
+      "readingTo": "Lectura actual",
+      "readingHint": "Cópialo del recibo (lectura anterior → lectura actual): lo medido se compara solo en esos días.",
+      "readingRequired": "Indica las fechas de lectura del recibo.",
+      "readingOrder": "La lectura anterior debe ser antes que la actual.",
+      "readingFuture": "La lectura actual no puede ser posterior a hoy."
     },
     "reconciliation": {
       "title": "Conciliación: facturado vs medido",

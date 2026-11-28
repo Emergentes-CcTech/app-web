@@ -221,6 +221,23 @@ public sealed class EfMigrationRunner(IoBuildDbContext dbContext) : IMigrationRu
                     "CREATE TABLE IF NOT EXISTS statement_of_accounts (Id INT AUTO_INCREMENT PRIMARY KEY, BillingPeriodId INT NOT NULL, ProjectId INT NOT NULL, UnitId INT NOT NULL, UnitNumber VARCHAR(32) NOT NULL, ResidentFullName VARCHAR(150) NULL, ResidentEmail VARCHAR(150) NULL, AliquotPercentage DECIMAL(10,4) NOT NULL, IndividualWaterSoles DECIMAL(18,2) NOT NULL, IndividualEnergySoles DECIMAL(18,2) NOT NULL, IndividualOtherExpensesSoles DECIMAL(18,2) NOT NULL, IndividualAmountSoles DECIMAL(18,2) NOT NULL, PaidAmountSoles DECIMAL(18,2) NOT NULL DEFAULT 0.00, BalanceSoles DECIMAL(18,2) NOT NULL DEFAULT 0.00, Status VARCHAR(32) NOT NULL, PaidAtUtc DATETIME(6) NULL, PaymentReference VARCHAR(100) NULL, PaymentMethod VARCHAR(50) NULL, UNIQUE KEY uq_soa_period_unit (BillingPeriodId, UnitId), INDEX idx_soa_proj (ProjectId));",
                     cancellationToken);
 
+                // Periodo de lectura de cada recibo matriz (agua y luz pueden tener ciclos distintos)
+                var existingPeriodCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                await using (var periodCmd = connection.CreateCommand())
+                {
+                    periodCmd.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'billing_periods';";
+                    await using var periodReader = await periodCmd.ExecuteReaderAsync(cancellationToken);
+                    while (await periodReader.ReadAsync(cancellationToken))
+                    {
+                        existingPeriodCols.Add(periodReader.GetString(0));
+                    }
+                }
+                foreach (var col in new[] { "WaterReadingFrom", "WaterReadingTo", "EnergyReadingFrom", "EnergyReadingTo" })
+                {
+                    if (!existingPeriodCols.Contains(col))
+                        await dbContext.Database.ExecuteSqlRawAsync($"ALTER TABLE billing_periods ADD COLUMN {col} DATETIME(6) NULL;", cancellationToken);
+                }
+
                 // Asegura las columnas para alícuotas y catastro en la tabla units
                 var existingUnitCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 // El lector se cierra antes de los ALTER: con un DataReader abierto la conexión no acepta otro comando

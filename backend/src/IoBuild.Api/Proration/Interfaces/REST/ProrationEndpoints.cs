@@ -95,6 +95,30 @@ public static class ProrationEndpoints
     };
 
     // Resuelve el modo de pago y la clave de Stripe desde appsettings, .env o variables de entorno
+    // Periodo de lectura guardado de un recibo; sin fechas (recibos anteriores) se usa el mes del periodo
+    private static (DateTime From, DateTime To) ReadingRange(BillingPeriod p, DateTime? from, DateTime? to) =>
+        from.HasValue && to.HasValue ? (from.Value, to.Value) : (p.StartDate, p.EndDate);
+
+    // Fechas del recibo (yyyy-MM-dd): la lectura actual incluye todo ese día; un ciclo de facturación dura hasta ~2 meses
+    private static (DateTime From, DateTime To) ParseReadingRange(string periodCode, string? from, string? to, out string? error)
+    {
+        error = null;
+        var month = DateTime.SpecifyKind(DateTime.ParseExact(periodCode + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), DateTimeKind.Utc);
+        if (string.IsNullOrWhiteSpace(from) && string.IsNullOrWhiteSpace(to)) return (month, month.AddMonths(1).AddTicks(-1));
+        if (!DateTime.TryParseExact(from, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var start)
+            || !DateTime.TryParseExact(to, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var end))
+        {
+            error = "Indica las fechas de lectura del recibo (desde y hasta).";
+            return default;
+        }
+        start = DateTime.SpecifyKind(start, DateTimeKind.Utc);
+        end = DateTime.SpecifyKind(end, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
+        if (start >= end) error = "La fecha de lectura inicial debe ser anterior a la final.";
+        else if (start > DateTime.UtcNow) error = "El periodo de lectura no puede empezar en el futuro.";
+        else if ((end - start).TotalDays > 70) error = "El periodo de lectura de un recibo no puede pasar de 70 días.";
+        return (start, end);
+    }
+
     private static (bool IsSimulated, string? ApiKey) ResolveStripeSettings(IConfiguration configuration)
     {
         // appsettings trae las claves como "" de marcador: se toma el primer valor no vacío para que el .env prevalezca
@@ -408,6 +432,7 @@ public static class ProrationEndpoints
         }).RequireAuthorization();
 
         // ── Compatibilidad REST: /api/v1/utility_bills ──
+        // Cada recibo se concilia con lo que midieron los sensores en SU periodo de lectura (fechas impresas en el recibo)
         app.MapGet("/api/v1/utility_bills", async ([FromQuery] int? condominiumId, [FromQuery] int? projectId, [FromQuery] string? period, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             var targetProjectId = condominiumId ?? projectId ?? 1;
@@ -416,15 +441,12 @@ public static class ProrationEndpoints
             if (!string.IsNullOrWhiteSpace(period)) query = query.Where(p => p.PeriodCode == period);
             var periods = await query.OrderByDescending(p => p.PeriodCode).ToListAsync(ct);
             var bills = new List<object>();
-            // Consumo medido por los sensores en cada periodo: se concilia con lo facturado en el recibo
-            var measured = new Dictionary<int, (decimal WaterM3, decimal EnergyKwh)>();
-            foreach (var mp in periods.Where(x => IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(x.PeriodCode)))
-            {
-                var m = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, mp.ProjectId, mp.PeriodCode, ct);
-                measured[mp.Id] = (m.WaterM3, m.EnergyKwh);
-            }
             foreach (var p in periods)
             {
+                var (waterFrom, waterTo) = ReadingRange(p, p.WaterReadingFrom, p.WaterReadingTo);
+                var (energyFrom, energyTo) = ReadingRange(p, p.EnergyReadingFrom, p.EnergyReadingTo);
+                var water = await ConsumptionFactsBuilder.MeasureRangeAsync(db, p.ProjectId, waterFrom, waterTo, ct);
+                var energy = await ConsumptionFactsBuilder.MeasureRangeAsync(db, p.ProjectId, energyFrom, energyTo, ct);
                 bills.Add(new
                 {
                     id = p.Id * 10 + 1,
@@ -434,7 +456,9 @@ public static class ProrationEndpoints
                     service = "water",
                     billedConsumption = p.MacroWaterM3,
                     consumptionUnit = "m³",
-                    measuredConsumption = measured.GetValueOrDefault(p.Id).WaterM3,
+                    measuredConsumption = water.WaterM3,
+                    readingFrom = waterFrom.ToString("yyyy-MM-dd"),
+                    readingTo = waterTo.ToString("yyyy-MM-dd"),
                     billedAmount = p.MacroWaterAmountSoles,
                     dueDate = p.DueDate.ToString("yyyy-MM-dd"),
                     receiptImageUrl = p.WaterReceiptImageUrl
@@ -448,7 +472,9 @@ public static class ProrationEndpoints
                     service = "electricity",
                     billedConsumption = p.MacroEnergyKwh,
                     consumptionUnit = "kWh",
-                    measuredConsumption = measured.GetValueOrDefault(p.Id).EnergyKwh,
+                    measuredConsumption = energy.EnergyKwh,
+                    readingFrom = energyFrom.ToString("yyyy-MM-dd"),
+                    readingTo = energyTo.ToString("yyyy-MM-dd"),
                     billedAmount = p.MacroEnergyAmountSoles,
                     dueDate = p.DueDate.ToString("yyyy-MM-dd"),
                     receiptImageUrl = p.EnergyReceiptImageUrl
@@ -457,13 +483,16 @@ public static class ProrationEndpoints
             return Results.Ok(bills);
         }).RequireAuthorization();
 
-        app.MapGet("/api/v1/utility_bills/measured", async ([FromQuery] int condominiumId, [FromQuery] string? period, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
+        // Vista previa del formulario: lo que midieron los sensores entre las fechas de lectura del recibo
+        app.MapGet("/api/v1/utility_bills/measured", async ([FromQuery] int condominiumId, [FromQuery] string? period, [FromQuery] string? from, [FromQuery] string? to,
+            ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
         {
             if (!await MayManageProjectAsync(user, db, condominiumId, ct)) return Results.Forbid();
-            if (!IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(period))
-                return Results.BadRequest(new { error = "Indica el periodo con el formato yyyy-MM." });
-            var m = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, condominiumId, period!, ct);
-            return Results.Ok(new { period, waterM3 = m.WaterM3, energyKwh = m.EnergyKwh, from = m.From.ToString("yyyy-MM-dd"), to = m.To.ToString("yyyy-MM-dd") });
+            if (!ConsumptionFactsBuilder.IsPeriodCode(period)) return Results.BadRequest(new { error = "Indica el periodo con el formato yyyy-MM." });
+            var range = ParseReadingRange(period!, from, to, out var rangeError);
+            if (rangeError is not null) return Results.BadRequest(new { error = rangeError });
+            var m = await ConsumptionFactsBuilder.MeasureRangeAsync(db, condominiumId, range.From, range.To, ct);
+            return Results.Ok(new { period, waterM3 = m.WaterM3, energyKwh = m.EnergyKwh, from = range.From.ToString("yyyy-MM-dd"), to = range.To.ToString("yyyy-MM-dd") });
         }).RequireAuthorization();
 
         app.MapPost("/api/v1/utility_bills", async ([FromBody] System.Text.Json.JsonElement body, ClaimsPrincipal user, IoBuildDbContext db, CancellationToken ct) =>
@@ -488,11 +517,20 @@ public static class ProrationEndpoints
             var amount = body.TryGetProperty("billedAmount", out var baProp) ? baProp.GetDecimal() : 500.0m;
             var dueDateStr = body.TryGetProperty("dueDate", out var ddProp) ? ddProp.GetString() : null;
             var dueDate = DateTime.TryParse(dueDateStr, out var parsedDate) ? parsedDate : DateTime.UtcNow.AddDays(15);
+            string? Text(string name) => body.TryGetProperty(name, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.String ? prop.GetString() : null;
+
+            // Periodo de lectura del recibo (lectura anterior → lectura actual); sin fechas se toma el mes del periodo
+            (DateTime From, DateTime To)? reading = null;
+            if (ConsumptionFactsBuilder.IsPeriodCode(periodCode))
+            {
+                reading = ParseReadingRange(periodCode, Text("readingFrom"), Text("readingTo"), out var rangeError);
+                if (rangeError is not null) return Results.BadRequest(new { message = rangeError });
+            }
 
             var period = await db.BillingPeriods.FirstOrDefaultAsync(p => p.ProjectId == condoId && p.PeriodCode == periodCode, ct);
             if (period is null)
             {
-                var monthStart = IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(periodCode)
+                var monthStart = ConsumptionFactsBuilder.IsPeriodCode(periodCode)
                     ? DateTime.SpecifyKind(DateTime.ParseExact(periodCode + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), DateTimeKind.Utc)
                     : DateTime.UtcNow.AddMonths(-1);
                 period = new BillingPeriod
@@ -507,30 +545,38 @@ public static class ProrationEndpoints
                 db.BillingPeriods.Add(period);
             }
 
+            // El consumo medido no se escribe: sale de los sensores en el periodo de lectura de ESTE recibo
+            var measured = reading is { } r ? await ConsumptionFactsBuilder.MeasureRangeAsync(db, condoId, r.From, r.To, ct) : default;
             if (service == "water")
             {
                 period.MacroWaterM3 = consumption;
                 period.MacroWaterAmountSoles = amount;
                 if (receiptImageUrl is not null) period.WaterReceiptImageUrl = receiptImageUrl;
+                if (reading is { } wr)
+                {
+                    period.WaterReadingFrom = wr.From;
+                    period.WaterReadingTo = wr.To;
+                    period.MeasuredCommonWaterM3 = measured.WaterM3;
+                    period.WaterLossM3 = Math.Max(0m, consumption - measured.WaterM3);
+                }
             }
             else
             {
                 period.MacroEnergyKwh = consumption;
                 period.MacroEnergyAmountSoles = amount;
                 if (receiptImageUrl is not null) period.EnergyReceiptImageUrl = receiptImageUrl;
+                if (reading is { } er)
+                {
+                    period.EnergyReadingFrom = er.From;
+                    period.EnergyReadingTo = er.To;
+                    period.MeasuredCommonEnergyKwh = measured.EnergyKwh;
+                    period.EnergyLossKwh = Math.Max(0m, consumption - measured.EnergyKwh);
+                }
             }
             period.TotalCommonExpenseSoles = period.MacroWaterAmountSoles + period.MacroEnergyAmountSoles + period.OtherCommonExpensesSoles;
-            // El consumo medido no se escribe: sale de las lecturas de los sensores del periodo
-            if (IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.IsPeriodCode(periodCode))
-            {
-                var measuredNow = await IoBuild.Api.Analytics.Application.Internal.QueryServices.ConsumptionFactsBuilder.MeasureCommonAsync(db, condoId, periodCode, ct);
-                period.MeasuredCommonWaterM3 = measuredNow.WaterM3;
-                period.MeasuredCommonEnergyKwh = measuredNow.EnergyKwh;
-                period.WaterLossM3 = Math.Max(0m, period.MacroWaterM3 - measuredNow.WaterM3);
-                period.EnergyLossKwh = Math.Max(0m, period.MacroEnergyKwh - measuredNow.EnergyKwh);
-            }
             await db.SaveChangesAsync(ct);
 
+            var (billFrom, billTo) = service == "water" ? ReadingRange(period, period.WaterReadingFrom, period.WaterReadingTo) : ReadingRange(period, period.EnergyReadingFrom, period.EnergyReadingTo);
             var createdBill = new
             {
                 id = period.Id * 10 + (service == "water" ? 1 : 2),
@@ -541,6 +587,8 @@ public static class ProrationEndpoints
                 billedConsumption = consumption,
                 consumptionUnit = service == "water" ? "m³" : "kWh",
                 measuredConsumption = service == "water" ? period.MeasuredCommonWaterM3 : period.MeasuredCommonEnergyKwh,
+                readingFrom = billFrom.ToString("yyyy-MM-dd"),
+                readingTo = billTo.ToString("yyyy-MM-dd"),
                 billedAmount = amount,
                 dueDate = period.DueDate.ToString("yyyy-MM-dd"),
                 receiptImageUrl = service == "water" ? period.WaterReceiptImageUrl : period.EnergyReceiptImageUrl
