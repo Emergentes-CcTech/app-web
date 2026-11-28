@@ -77,6 +77,13 @@ const gap = computed(() => {
 const fmt = (n) => Number(n).toLocaleString('es-PE', { maximumFractionDigits: 2 });
 const rangeText = computed(() => measured.value ? t('billing.bills.measuredRange', { from: measured.value.from, to: measured.value.to }) : '');
 
+// Tras guardar se limpian los datos del recibo (el periodo de lectura se conserva: suele repetirse en el otro servicio)
+function reset() {
+  Object.assign(form, { billedConsumption: null, billedAmount: null, attachmentUrl: '' });
+  Object.keys(errors).forEach(k => delete errors[k]);
+}
+defineExpose({ reset });
+
 function submit() {
   Object.keys(errors).forEach(k => delete errors[k]);
   if (!props.period) errors.period = t('billing.validation.period');

@@ -56,8 +56,12 @@ export const useBillingStore = defineStore('billing', () => {
         const total = Math.round(periodBills.reduce((a, b) => a + b.billedAmount * 100, 0)) / 100;
         const billIds = periodBills.map(b => b.id);
         const { data } = await api.calculate(condominiumId, period, billIds);
-        const settlement = BillingAssembler.toSettlement({ ...data, commonAreaAmount: data.commonAreaAmount ?? total });
-        // json-server no genera las líneas: se crean desde la vista previa (en el backend real las crea el servidor)
+        let settlement = BillingAssembler.toSettlement({ ...data, commonAreaAmount: data.commonAreaAmount ?? total });
+        // El backend real crea las líneas al calcular, pero no las devuelve en la respuesta: se consultan antes de suponer que faltan
+        if (!settlement.lines.length) {
+            try { settlement = BillingAssembler.toSettlement((await api.getSettlement(settlement.id)).data); } catch (_) { /* sin detalle: se usa la respuesta */ }
+        }
+        // json-server no genera las líneas: se crean desde la vista previa
         if (!settlement.lines.length) {
             const preview = previewProration(total, units);
             for (const row of preview) {

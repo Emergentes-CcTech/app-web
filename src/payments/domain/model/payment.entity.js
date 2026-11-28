@@ -1,10 +1,10 @@
 export const PaymentStatus = Object.freeze({ PENDING: 'pending', PAID: 'paid', OVERDUE: 'overdue' });
 
 export class Payment {
-    constructor({ id = null, settlementLineId = null, unitId = null, condominiumId = null, period = '', amount = 0,
+    constructor({ id = null, settlementLineId = null, unitId = null, unitNumber = null, condominiumId = null, period = '', amount = 0,
                   dueDate = '', paidAt = null, status = 'pending', method = null, reference = '' } = {}) {
-        Object.assign(this, { id, settlementLineId, unitId, condominiumId, period, amount: Number(amount),
-            dueDate, paidAt, status, method, reference });
+        Object.assign(this, { id, settlementLineId, unitId, unitNumber, condominiumId, period, amount: Number(amount),
+            dueDate, paidAt, status, method, reference: reference || '' });
     }
 
     // El backend es la fuente de verdad; esto cubre el mock y la hora del día de vencimiento.
