@@ -144,16 +144,6 @@
     <string name="profile_phone">Número de teléfono</string>
     <string name="profile_second_email">Correo electrónico alternativo</string>
     <string name="profile_save_changes">Guardar Cambios</string>
-    <string name="profile_notifications">Notificaciones del Propietario</string>
-    <string name="profile_notifications_subtitle">Configura cómo deseas recibir avisos sobre tu cuota y áreas comunes.</string>
-    <string name="notif_email">Notificaciones por correo</string>
-    <string name="notif_email_hint">Recibir copia de recibos y comunicados en tu correo</string>
-    <string name="notif_new_settlement">Aviso de nueva liquidación</string>
-    <string name="notif_new_settlement_hint">Cuando la administración publica la cuota del mes</string>
-    <string name="notif_due">Recordatorio de vencimientos</string>
-    <string name="notif_due_hint">Aviso preventivo 3 días antes de la fecha límite</string>
-    <string name="notif_alerts">Alertas del condominio</string>
-    <string name="notif_alerts_hint">Fugas, mantenimientos o anomalías en áreas comunes</string>
     <string name="profile_security">Seguridad de la Sesión</string>
     <string name="profile_device">Dispositivo móvil</string>
     <string name="profile_session_active">Activa</string>

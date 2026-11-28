@@ -106,12 +106,6 @@ export const useProfileStore = defineStore('profile', () => {
         }
     }
 
-    /** RF-003: preferencias de notificación (se persisten de inmediato). */
-    async function updateNotificationPrefs(prefs) {
-        const merged = { ...profile.value.notificationPrefs, ...prefs };
-        return updateProfile(profile.value.id, { ...ProfileAssembler.toResource(profile.value), notificationPrefs: merged });
-    }
-
     return {
         profile,
         viewType,
@@ -120,7 +114,6 @@ export const useProfileStore = defineStore('profile', () => {
         errors,
         fetchProfile,
         createProfile,
-        updateProfile,
-        updateNotificationPrefs
+        updateProfile
     };
 });

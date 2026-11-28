@@ -49,12 +49,6 @@ class SessionManager(context: Context) {
         // Estado persistido de Checkout Stripe pendiente de confirmar al volver a la app (onResume)
         private const val KEY_PENDING_CHECKOUT_PAYMENT_ID = "pending_checkout_payment_id"
         private const val KEY_PENDING_CHECKOUT_SESSION_ID = "pending_checkout_session_id"
-
-        // Preferencias de notificación exclusivas de Residente (RF-003)
-        private const val PREF_NOTIF_EMAIL = "notif_email"
-        private const val PREF_NOTIF_NEW_SETTLEMENT = "notif_new_settlement"
-        private const val PREF_NOTIF_DUE_DATES = "notif_due_dates"
-        private const val PREF_NOTIF_CONDO_ALERTS = "notif_condo_alerts"
     }
 
     var token: String?
@@ -142,22 +136,6 @@ class SessionManager(context: Context) {
             .remove(KEY_PENDING_CHECKOUT_SESSION_ID)
             .apply()
     }
-
-    var notifEmail: Boolean
-        get() = prefs.getBoolean(PREF_NOTIF_EMAIL, true)
-        set(value) = prefs.edit().putBoolean(PREF_NOTIF_EMAIL, value).apply()
-
-    var notifNewSettlement: Boolean
-        get() = prefs.getBoolean(PREF_NOTIF_NEW_SETTLEMENT, true)
-        set(value) = prefs.edit().putBoolean(PREF_NOTIF_NEW_SETTLEMENT, value).apply()
-
-    var notifDueDates: Boolean
-        get() = prefs.getBoolean(PREF_NOTIF_DUE_DATES, true)
-        set(value) = prefs.edit().putBoolean(PREF_NOTIF_DUE_DATES, value).apply()
-
-    var notifCondoAlerts: Boolean
-        get() = prefs.getBoolean(PREF_NOTIF_CONDO_ALERTS, true)
-        set(value) = prefs.edit().putBoolean(PREF_NOTIF_CONDO_ALERTS, value).apply()
 
     val isAuthenticated: Boolean
         get() = !token.isNullOrBlank() && userId > 0
