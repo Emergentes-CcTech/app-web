@@ -505,7 +505,10 @@
         "laundry": "Lavandería",
         "other": "Otra",
         "panel": "Tablero eléctrico general"
-      }
+      },
+      "pendingKit": "Se definen al activar la suscripción: son las que mide el kit del plan.",
+      "meters": "{n} medidor | {n} medidores",
+      "noMeter": "sin medidor en tu plan"
     },
     "form": {
       "breadcrumb": "Ruta de navegación",
@@ -544,7 +547,9 @@
       "areasCount": "{n} áreas comunes monitoreadas",
       "reviewTitle": "Revisa el formulario",
       "reviewDetail": "Hay campos obligatorios sin completar o con errores.",
-      "withIgv": "S/ {amount} al mes con IGV · S/ {perUnit} por departamento"
+      "withIgv": "S/ {amount} al mes con IGV · S/ {perUnit} por departamento",
+      "kitAreas": "Áreas que mide el kit",
+      "kitAreasHint": "Se registran solas al activar la suscripción, junto con los equipos."
     },
     "card": {
       "units": "Departamentos",

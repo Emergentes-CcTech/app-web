@@ -20,6 +20,37 @@ public sealed class KitProvisioningService(IoBuildDbContext db, DeviceRegistrySe
     private static readonly CommonAreaSubsystem[] WaterPoints = [CommonAreaSubsystem.MainCistern, CommonAreaSubsystem.PressurePumpsRoom];
     private static readonly CommonAreaSubsystem[] EnergyPanels = [CommonAreaSubsystem.PressurePumpsRoom, CommonAreaSubsystem.ElevatorsBank, CommonAreaSubsystem.GeneralElectricalPanel];
 
+    // Dónde instala el kit de cada plan cuando el condominio no registró áreas: las áreas monitoreadas salen de aquí.
+    // Esencial mide el agua de la cisterna y el tablero general (el que cuadra con el recibo de luz)
+    public static (CommonAreaSubsystem[] Water, CommonAreaSubsystem[] Energy) KitPlacement(string planName) => planName switch
+    {
+        "Esencial" => ([CommonAreaSubsystem.MainCistern], [CommonAreaSubsystem.GeneralElectricalPanel]),
+        "Urbano" => ([CommonAreaSubsystem.MainCistern, CommonAreaSubsystem.PressurePumpsRoom], [CommonAreaSubsystem.PressurePumpsRoom, CommonAreaSubsystem.ElevatorsBank]),
+        _ => ([CommonAreaSubsystem.MainCistern, CommonAreaSubsystem.PressurePumpsRoom, CommonAreaSubsystem.MainCistern],
+              [CommonAreaSubsystem.PressurePumpsRoom, CommonAreaSubsystem.ElevatorsBank, CommonAreaSubsystem.GeneralElectricalPanel])
+    };
+
+    public static string DefaultAreaName(CommonAreaSubsystem subsystem) => subsystem switch
+    {
+        CommonAreaSubsystem.MainCistern => "Cisterna",
+        CommonAreaSubsystem.PressurePumpsRoom => "Cuarto de bombas",
+        CommonAreaSubsystem.ElevatorsBank => "Ascensores",
+        _ => "Tablero general"
+    };
+
+    // Un equipo instalado en un subsistema sin área registrada crea el área: lo monitoreado siempre se ve en el condominio
+    public async Task EnsureAreasAsync(int projectId, IEnumerable<string> subsystems, CancellationToken ct = default)
+    {
+        var existing = await db.CommonAreas.Where(a => a.ProjectId == projectId).Select(a => a.Subsystem).ToListAsync(ct);
+        foreach (var name in subsystems.Distinct())
+        {
+            if (!Enum.TryParse<CommonAreaSubsystem>(name, out var subsystem) || existing.Contains(subsystem)) continue;
+            db.CommonAreas.Add(new IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea(projectId, DefaultAreaName(subsystem), subsystem, string.Empty));
+            existing.Add(subsystem);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Device>> ProvisionAsync(int projectId, CancellationToken ct = default)
     {
         var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct);
@@ -30,10 +61,12 @@ public sealed class KitProvisioningService(IoBuildDbContext db, DeviceRegistrySe
         var ownerId = project.AdministratorId;
 
         var added = new List<Device>();
-        void AddMissing(string type, int allowance, CommonAreaSubsystem[] preferred, CommonAreaSubsystem fallback, string prefix, string label)
+        var placement = KitPlacement(plan.Name);
+        void AddMissing(string type, int allowance, CommonAreaSubsystem[] preferred, CommonAreaSubsystem[] planDefault, string prefix, string label)
         {
-            // Se instalan primero en las áreas comunes que el condominio registró; si no tiene ninguna del tipo, en el lugar por defecto
-            var targets = preferred.Where(s => areas.Any(a => a.Subsystem == s)).DefaultIfEmpty(fallback).ToArray();
+            // Con áreas registradas (condominios anteriores) se instala en ellas; si no, donde lo ubica el kit del plan
+            var registered = preferred.Where(s => areas.Any(a => a.Subsystem == s)).ToArray();
+            var targets = registered.Length > 0 ? registered : planDefault;
             for (var i = existing.Count(d => d.Type == type) + added.Count(d => d.Type == type); i < allowance; i++)
             {
                 var subsystem = targets[i % targets.Length];
@@ -57,11 +90,13 @@ public sealed class KitProvisioningService(IoBuildDbContext db, DeviceRegistrySe
             }
         }
 
-        AddMissing("GatewayHub", plan.GatewayHubAllowance, [CommonAreaSubsystem.MainCistern], CommonAreaSubsystem.MainCistern, "GW", "Gateway del edificio");
-        AddMissing("WaterFlowSensor", plan.WaterFlowSensorAllowance, WaterPoints, CommonAreaSubsystem.MainCistern, "AGUA", "Punto de agua");
-        AddMissing("CurrentTransformerCT", plan.CurrentTransformerAllowance, EnergyPanels, CommonAreaSubsystem.GeneralElectricalPanel, "ENERGIA", "Tablero de energía");
+                AddMissing("GatewayHub", plan.GatewayHubAllowance, [CommonAreaSubsystem.MainCistern], [CommonAreaSubsystem.MainCistern], "GW", "Gateway del edificio");
+        AddMissing("WaterFlowSensor", plan.WaterFlowSensorAllowance, WaterPoints, placement.Water, "AGUA", "Punto de agua");
+        AddMissing("CurrentTransformerCT", plan.CurrentTransformerAllowance, EnergyPanels, placement.Energy, "ENERGIA", "Tablero de energía");
         if (added.Count == 0) return [];
 
+        // Las áreas monitoreadas son las del kit: se registran las que aún no existan
+        await EnsureAreasAsync(projectId, added.Where(d => d.Type != "GatewayHub").Select(d => d.Subsystem), ct);
         db.Devices.AddRange(added);
         await db.SaveChangesAsync(ct);
         db.DeviceProjections.AddRange(added.Select(d => new DeviceProjection

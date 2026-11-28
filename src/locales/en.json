@@ -505,7 +505,10 @@
         "laundry": "Laundry",
         "other": "Other",
         "panel": "Main electrical panel"
-      }
+      },
+      "pendingKit": "Defined when the subscription is activated: they're the areas the plan's kit measures.",
+      "meters": "{n} meter | {n} meters",
+      "noMeter": "no meter in your plan"
     },
     "form": {
       "breadcrumb": "Breadcrumb",
@@ -544,7 +547,9 @@
       "areasCount": "{n} monitored common areas",
       "reviewTitle": "Check the form",
       "reviewDetail": "Some required fields are missing or invalid.",
-      "withIgv": "S/ {amount} per month incl. VAT · S/ {perUnit} per unit"
+      "withIgv": "S/ {amount} per month incl. VAT · S/ {perUnit} per unit",
+      "kitAreas": "Areas the kit measures",
+      "kitAreasHint": "They're registered automatically with the devices when the subscription is activated."
     },
     "card": {
       "units": "Units",

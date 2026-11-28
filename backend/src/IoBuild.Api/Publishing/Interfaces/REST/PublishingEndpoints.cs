@@ -96,8 +96,7 @@ public static class PublishingEndpoints
         if (!Len(r.District, 3, 80)) return "El distrito debe tener entre 3 y 80 caracteres.";
         if (r.TotalUnits < 1 || r.TotalUnits > 500) return "El número de departamentos debe estar entre 1 y 500.";
         if (r.TotalFloors is < 1 or > 80) return "El número de pisos debe estar entre 1 y 80.";
-        if (r.CommonAreas is null || r.CommonAreas.Count == 0) return "Registra al menos un área común monitoreada.";
-        foreach (var area in r.CommonAreas)
+        foreach (var area in r.CommonAreas ?? [])
         {
             if (!Enum.TryParse<IoBuild.Api.Publishing.Domain.Model.ValueObjects.CommonAreaSubsystem>(area.Subsystem, true, out _))
                 return $"Subsistema de área común no válido: {area.Subsystem}.";
@@ -129,7 +128,7 @@ public static class PublishingEndpoints
     }
 
     private static IEnumerable<IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea> ToCommonAreas(int projectId, CondominiumRequest r) =>
-        r.CommonAreas!.Select(a => new IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea(
+        (r.CommonAreas ?? []).Select(a => new IoBuild.Api.Publishing.Domain.Model.Aggregates.CommonArea(
             projectId,
             a.Name.Trim(),
             Enum.Parse<IoBuild.Api.Publishing.Domain.Model.ValueObjects.CommonAreaSubsystem>(a.Subsystem, true),
@@ -1695,9 +1694,12 @@ public static class PublishingEndpoints
             if (error is not null) return Results.BadRequest(new { message = error });
 
             ApplyCondominium(item, request);
-            // Las áreas comunes se reemplazan por las enviadas; los equipos se vinculan por subsistema, no por id de área
-            db.CommonAreas.RemoveRange(await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct));
-            db.CommonAreas.AddRange(ToCommonAreas(id, request));
+            // Las áreas salen del kit del plan; solo se reemplazan si el cliente las envía explícitamente (integraciones anteriores)
+            if (request.CommonAreas is { Count: > 0 })
+            {
+                db.CommonAreas.RemoveRange(await db.CommonAreas.Where(c => c.ProjectId == id).ToListAsync(ct));
+                db.CommonAreas.AddRange(ToCommonAreas(id, request));
+            }
             await db.SaveChangesAsync(ct);
             // Con el servicio activo, si el condominio pasó a un plan con más equipos se agregan los que faltan
             if (await db.Subscriptions.AnyAsync(s => s.ProjectId == id && s.Status == "active", ct))
