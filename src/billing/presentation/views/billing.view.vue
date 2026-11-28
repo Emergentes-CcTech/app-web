@@ -210,6 +210,9 @@ async function confirmPayment(data) {
               <pv-column :header="t('billing.bills.amount')">
                 <template #body="{ data }">{{ formatPen(data.billedAmount) }}</template>
               </pv-column>
+              <pv-column :header="t('billing.bills.readingPeriod')">
+                <template #body="{ data }"><span v-if="data.readingFrom">{{ data.readingFrom }} → {{ data.readingTo }}</span><span v-else>—</span></template>
+              </pv-column>
               <pv-column field="dueDate" :header="t('billing.bills.dueDate')" />
               <pv-column :header="t('billing.bills.attachment')">
                 <template #body="{ data }">

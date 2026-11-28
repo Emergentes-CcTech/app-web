@@ -1,12 +1,14 @@
 export class UtilityBill {
     constructor({ id = null, condominiumId = null, service = 'water', period = '', // 'YYYY-MM'
                   billedConsumption = 0, consumptionUnit = 'm3', billedAmount = 0, dueDate = '',
-                  measuredConsumption = null, attachmentUrl = '' } = {}) {
+                  measuredConsumption = null, attachmentUrl = '', readingFrom = '', readingTo = '' } = {}) {
         Object.assign(this, {
             id, condominiumId, service, period, billedConsumption: Number(billedConsumption), consumptionUnit,
             billedAmount: Number(billedAmount), dueDate,
             measuredConsumption: measuredConsumption === null || measuredConsumption === '' ? null : Number(measuredConsumption),
             attachmentUrl,
+            // Periodo de lectura impreso en el recibo: ahí se compara lo facturado con lo medido
+            readingFrom: readingFrom || '', readingTo: readingTo || '',
         });
     }
 

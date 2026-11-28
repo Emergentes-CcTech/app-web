@@ -33,6 +33,12 @@ public sealed class BillingPeriod
     public decimal MacroEnergyAmountSoles { get; set; }
     public string? EnergyReceiptImageUrl { get; set; }
 
+    // Periodo de lectura impreso en cada recibo (lectura anterior → lectura actual): ahí se concilia lo medido
+    public DateTime? WaterReadingFrom { get; set; }
+    public DateTime? WaterReadingTo { get; set; }
+    public DateTime? EnergyReadingFrom { get; set; }
+    public DateTime? EnergyReadingTo { get; set; }
+
     // Consumos medidos acumulados por los sensores IoT en áreas comunes
     public decimal MeasuredCommonWaterM3 { get; set; }
     public decimal MeasuredCommonEnergyKwh { get; set; }
