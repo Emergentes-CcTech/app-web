@@ -53,12 +53,6 @@ fun ProfileScreen(
     var phoneInput by remember(data) { mutableStateOf(data?.phoneNumber.orEmpty()) }
     var secondEmailInput by remember(data) { mutableStateOf(data?.secondEmail.orEmpty()) }
 
-    // Preferencias de notificación del residente (RF-003)
-    var notifyByEmail by remember { mutableStateOf(true) }
-    var notifyOnNewSettlement by remember { mutableStateOf(true) }
-    var notifyDueSoon by remember { mutableStateOf(true) }
-    var notifyCondoAlerts by remember { mutableStateOf(true) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -483,61 +477,7 @@ fun ProfileScreen(
             }
         }
 
-        // ── 3. Preferencias de Notificación del Propietario ──
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.profile_notifications),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = IoBuildSlate900
-                )
-                Text(
-                    text = stringResource(R.string.profile_notifications_subtitle),
-                    fontSize = 12.sp,
-                    color = IoBuildSlate500
-                )
-
-                NotificationToggleRow(
-                    title = stringResource(R.string.notif_email),
-                    subtitle = stringResource(R.string.notif_email_hint),
-                    checked = notifyByEmail,
-                    onCheckedChange = { notifyByEmail = it }
-                )
-                HorizontalDivider(color = IoBuildSlate200)
-                NotificationToggleRow(
-                    title = stringResource(R.string.notif_new_settlement),
-                    subtitle = stringResource(R.string.notif_new_settlement_hint),
-                    checked = notifyOnNewSettlement,
-                    onCheckedChange = { notifyOnNewSettlement = it }
-                )
-                HorizontalDivider(color = IoBuildSlate200)
-                NotificationToggleRow(
-                    title = stringResource(R.string.notif_due),
-                    subtitle = stringResource(R.string.notif_due_hint),
-                    checked = notifyDueSoon,
-                    onCheckedChange = { notifyDueSoon = it }
-                )
-                HorizontalDivider(color = IoBuildSlate200)
-                NotificationToggleRow(
-                    title = stringResource(R.string.notif_alerts),
-                    subtitle = stringResource(R.string.notif_alerts_hint),
-                    checked = notifyCondoAlerts,
-                    onCheckedChange = { notifyCondoAlerts = it }
-                )
-            }
-        }
-
-        // ── 4. Seguridad y Cierre de Sesión ──
+        // ── 3. Seguridad y Cierre de Sesión ──
         Card(
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -637,44 +577,5 @@ fun ProfileScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun NotificationToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = IoBuildSlate900
-            )
-            Text(
-                text = subtitle,
-                fontSize = 11.sp,
-                color = IoBuildSlate500
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = IoBuildEmerald600
-            )
-        )
     }
 }

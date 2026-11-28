@@ -55,11 +55,6 @@ onMounted(loadSessions);
         <pv-button :label="t('profile.security.closeSession')" size="small" text severity="danger" @click="closeSession(s.id)" />
       </li>
     </ul>
-
-    <div class="toggle-row mt-3">
-      <label>{{ t('profile.security.twoFactor') }}</label>
-      <pv-tag severity="secondary" :value="t('profile.security.comingSoon')" />
-    </div>
   </section>
 </template>
 
@@ -69,6 +64,5 @@ onMounted(loadSessions);
 .muted { color: #6B7280; }
 .sessions { list-style: none; padding: 0; }
 .sessions li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
-.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #F9FAFB; border: 1px solid #e5e7eb; border-radius: 6px; }
 .card-title { margin: 1rem 0 .75rem; }
 </style>
